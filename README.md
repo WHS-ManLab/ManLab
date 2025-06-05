@@ -1,7 +1,12 @@
 # ManLab
 
 <p align="center">
-  <img src="로고.jpg" alt="ManLab 로고" width="200">
+  <img src="로고.jpg" alt="ManLab 로고" width="300">
 </p>
 
-ManLab은 Linux 환경을 위한 강력한 보안 솔루션입니다.
+<p align="center">
+  ManLab은 Linux 환경에서 동작하는 미니 보안제품입니다.
+</p>
+<p align="center">
+  ManLab is a mini security product for Linux.
+</p>
