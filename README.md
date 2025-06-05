@@ -1,6 +1,7 @@
 # ManLab
 
-![로고](로고.jpg)
+<p align="center">
+  <img src="로고.jpg" alt="ManLab 로고" width="200">
+</p>
 
-ManLab is an security product for Linux
-ManLab은 리눅스에서 동작하는 미니 보안제품입니다.
+ManLab은 Linux 환경을 위한 강력한 보안 솔루션입니다.
