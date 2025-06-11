@@ -26,6 +26,7 @@ void CommandHandler::parse_options() {
         {"fim",     no_argument,       0,  'F' },
         {"sig",     no_argument,       0,  'S' },
         {"log",     no_argument,       0,  'L' },
+        {"config",  no_argument,       0,  'c' },
         {"enable",  no_argument,       0,  'e' },
         {"disable", no_argument,       0,  'd' },
         {"start",   no_argument,       0,  's' },
@@ -33,7 +34,7 @@ void CommandHandler::parse_options() {
         {0,         0,                 0,  0 }
     };
 
-    const char* optstring = "FSLedsph?";
+    const char* optstring = "FSLcedsph?";
 
     while ((c = getopt_long(argc, argv, optstring, long_options, &option_index)) != -1) {
         switch (c) {
@@ -46,11 +47,12 @@ void CommandHandler::parse_options() {
             case 'L': // --log 옵션
                 log_flag = true;
                 break;
+            case 'c' : // -config 옵션
             case 'e': // -e 또는 --enable 옵션
                 enable_option = true;
                 break;
             case 'd': // -d 또는 --disable 옵션
-                disable_option = true;
+                enable_option = false;
                 break;
             case 's': // -s 또는 --start 옵션
                 start_option = true;
@@ -96,18 +98,6 @@ void CommandHandler::run() {
     } else {
         std::cerr << "Unknown command type: " << command_type << std::endl;
     }
-}
-
-void CommandHandler::exec_sig_scan() {
-    // TODO 
-}
-
-void CommandHandler::exec_sig_restore() {
-    // TODO
-}
-
-void CommandHandler::exec_fim_scan() {
-    // TODO
 }
 
 void CommandHandler::report_error_to_user() {
