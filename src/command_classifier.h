@@ -3,8 +3,7 @@
 
 #include <vector>
 #include <string>
-
-using namespace std;
+#include <algorithm>
 
 class CommandClassifier {
 public:
@@ -16,12 +15,9 @@ public:
     bool get_valid() const;
 
 private:
-    // Internal validation logic
-    bool validate();
-
     std::vector<std::string> args;
     std::string command_type;
-    bool valid_command;
+    bool valid_command = flase;
 };
 
 #endif // COMMAND_CLASSIFIER_H
