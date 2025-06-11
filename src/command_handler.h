@@ -29,7 +29,6 @@ private :
 
     // 검사 옵션
     bool enable_option;
-    bool disable_option;
     bool start_option;
     bool stop_option;
 
