@@ -1,9 +1,12 @@
 #include "command_handler.h"
+#include "command_classifier.h"
+#include "config_manager.h"
 #include <iostream>
 #include <sstream>   
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/wait.h> 
+#include <cstdlib>
 
 CommandHandler::CommandHandler(int argc, char** argv) 
     : argc(argc), argv(argv) {
@@ -26,44 +29,28 @@ void CommandHandler::parse_options() {
         {"fim",     no_argument,       0,  'F' },
         {"sig",     no_argument,       0,  'S' },
         {"log",     no_argument,       0,  'L' },
-        {"config",  no_argument,       0,  'c' },
+        {"config",  required_argument, 0,  'c' },
         {"enable",  no_argument,       0,  'e' },
         {"disable", no_argument,       0,  'd' },
-        {"start",   no_argument,       0,  's' },
+        {"start",   required_argument, 0,  's' },
         {"stop",    no_argument,       0,  'p' },
         {0,         0,                 0,  0 }
     };
 
-    const char* optstring = "FSLcedsph?";
+    const char* optstring = "FSLc:eds:p";
 
     while ((c = getopt_long(argc, argv, optstring, long_options, &option_index)) != -1) {
         switch (c) {
-            case 'F': // --fim 옵션
-                fim_flag = true;
-                break;
-            case 'S': // --sig 옵션
-                sig_flag = true;
-                break;
-            case 'L': // --log 옵션
-                log_flag = true;
-                break;
-            case 'c' : // -config 옵션
-            case 'e': // -e 또는 --enable 옵션
-                enable_option = true;
-                break;
-            case 'd': // -d 또는 --disable 옵션
-                enable_option = false;
-                break;
-            case 's': // -s 또는 --start 옵션
-                start_option = true;
-                break;
-            case 'p': // -p 또는 --stop 옵션
-                stop_option = true;
-                break;
-            case '?': // 알 수 없는 옵션 또는 필수 인자 누락
-                throw std::invalid_argument("Unknown or malformed command-line option");
-            default: // 예상치 못한 경우
-                throw std::invalid_argument("Unknown option character encountered");
+            case 'F': args.emplace_back("--fim"); break;
+            case 'S': args.emplace_back("--sig"); break;
+            case 'L': args.emplace_back("--log"); break;
+            case 'c': args.emplace_back("-config"); args.emplace_back(optarg); break;
+            case 'e': args.emplace_back("-enable"); break;
+            case 'd': args.emplace_back("-disable"); break;
+            case 's': args.emplace_back("-start"); args.emplace_back(optarg); break;
+            case 'p': args.emplace_back("-stop"); break;
+            case '?': throw std::invalid_argument("Unknown or malformed command-line option");
+            default: throw std::invalid_argument("Unexpected option encountered");
         }
     }
 
@@ -97,10 +84,11 @@ void CommandHandler::run() {
         exec_fim_scan();
     } else {
         std::cerr << "Unknown command type: " << command_type << std::endl;
+        std::exit(EXIT_FAILURE);
     }
 }
 
 void CommandHandler::report_error_to_user() {
-    cerr << "Invalid or missing command." << endl;
-    exit(1);
+    std::cerr << "Invalid or missing command." << std::endl;
+    std::exit(EXIT_FAILURE);
 }
