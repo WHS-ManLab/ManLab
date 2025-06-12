@@ -36,7 +36,7 @@ private:
     sqlite3* mDb; // SQLite DB 연결 상태를 저장하는 포인터
 
     // 악성코드 파일 격리 시, 암호화(XOR) 키
-    constexpr unsigned char ENCRYPTION_KEY = 0xA5;  // 키 값은 임의로 작성하였습니다.
+    static constexpr unsigned char ENCRYPTION_KEY = 0xA5;  // 키 값은 임의로 작성하였습니다.
 
     // 멤버 함수 선언
     bool openDatabase();    // DB 연결
