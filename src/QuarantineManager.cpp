@@ -25,7 +25,7 @@ QuarantineManager::QuarantineManager(const std::vector<std::string>& filesToQuar
         mFilesToQuarantine.size() != mMalwareNamesOrRules.size() ||
         mFilesToQuarantine.size() != mOriginalFileSizes.size())
     {
-        std::cerr << "Error: Input vectors to QuarantineManager constructor have different sizes." << std::endl;
+        std::cerr << "ERROR: Input vectors to QuarantineManager constructor have different sizes." << std::endl;
     }
 
     // 각 악성코드 파일의 격리 성공 여부 목록을 파일 갯수만큼 만들고, 모두 'false'로 초기화
@@ -37,11 +37,11 @@ QuarantineManager::QuarantineManager(const std::vector<std::string>& filesToQuar
         try
         {
             fs::create_directories(mQuarantineDir);  // 디렉토리 생성(필요한 상위 디렉토리까지 생성)
-            std::cout << "Quarantine directory created: " << mQuarantineDir << std::endl;
+            std::cout << "DEBUG: Quarantine directory created: " << mQuarantineDir << std::endl;
         }
         catch (const fs::filesystem_error& e)
         {
-            std::cerr << "Error creating quarantine directory " << mQuarantineDir << ": " << e.what() << std::endl;
+            std::cerr << "ERROR: Error creating quarantine directory " << mQuarantineDir << ": " << e.what() << std::endl;
         }
     }
     // 격리 메타데이터 DB 파일에 연결
@@ -60,13 +60,13 @@ bool QuarantineManager::openDatabase()
     int rc = sqlite3_open(mMetadataDbPath.c_str(), &mDb);
     if (rc)     // 연결 실패 시, false 반환
     {
-        std::cerr << "Can't open database: " << sqlite3_errmsg(mDb) << std::endl;
+        std::cerr << "ERROR: Can't open database: " << sqlite3_errmsg(mDb) << std::endl;
         mDb = nullptr;
         return false;
     }
     else    // 연결 성공 시, true 반환
     {
-        std::cout << "Opened database successfully: " << mMetadataDbPath << std::endl;
+        std::cout << "DEBUG: Opened database successfully: " << mMetadataDbPath << std::endl;
         return true;
     }
 }
@@ -78,7 +78,7 @@ void QuarantineManager::closeDatabase()
     {
         sqlite3_close(mDb);  // 연결 종료
         mDb = nullptr;   // 포인터 초기화, nullptr 사용
-        std::cout << "Database connection closed." << std::endl;
+        std::cout << "DEBUG: Database connection closed." << std::endl;
     }
 }
 
@@ -87,7 +87,7 @@ bool QuarantineManager::logQuarantineMetadata(const QuarantineMetadata& metadata
 {
     if (!mDb)    // DB 연결이 안되어 있으면, false 반환
     {
-        std::cerr << "Database not open. Cannot log metadata." << std::endl;
+        std::cerr << "ERROR: Database not open. Cannot log metadata." << std::endl;
         return false;
     }
 
@@ -99,7 +99,7 @@ bool QuarantineManager::logQuarantineMetadata(const QuarantineMetadata& metadata
     int rc = sqlite3_prepare_v2(mDb, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK)
     {
-        std::cerr << "SQL error preparing statement: " << sqlite3_errmsg(mDb) << std::endl;
+        std::cerr << "ERROR: SQL error preparing statement: " << sqlite3_errmsg(mDb) << std::endl;
         return false;
     }
 
@@ -116,7 +116,7 @@ bool QuarantineManager::logQuarantineMetadata(const QuarantineMetadata& metadata
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE)  // 실행 실패 시, false 반환
     {
-        std::cerr << "SQL error executing statement: " << sqlite3_errmsg(mDb) << std::endl;
+        std::cerr << "ERROR: SQL error executing statement: " << sqlite3_errmsg(mDb) << std::endl;
         sqlite3_finalize(stmt);
         return false;
     }
@@ -132,7 +132,7 @@ bool QuarantineManager::applySimpleXOREncryption(const fs::path& filePath)
     std::fstream file(filePath, std::ios::in | std::ios::out | std::ios::binary);
     if (!file)  // 파일 열기 실패 시, false 반환
     {
-        std::cerr << "Error: Could not open file for encryption: " << filePath << std::endl;
+        std::cerr << "ERROR: Could not open file for encryption: " << filePath << std::endl;
         return false;
     }
 
@@ -172,23 +172,23 @@ bool QuarantineManager::processQuarantine(const std::string& originalPath, const
         if (!fs::exists(mQuarantineDir))
         {
              fs::create_directories(mQuarantineDir);
-             std::cout << "Quarantine directory created: " << mQuarantineDir << std::endl;
+             std::cout << "DEBUG: Quarantine directory created: " << mQuarantineDir << std::endl;
         }
 
         fs::rename(originalFilePath, quarantinedFilePath);
-        std::cout << "File moved to quarantine: " << originalPath << " -> " << quarantinedFilePath << std::endl;
+        std::cout << "DEBUG: File moved to quarantine: " << originalPath << " -> " << quarantinedFilePath << std::endl;
         metadata.IsSuccess = true;
 
         if (!applySimpleXOREncryption(quarantinedFilePath))
         {
-             std::cerr << "Warning: File moved but failed to apply simple encryption: " << originalPath << std::endl;
+             std::cerr << "ERROR: Warning: File moved but failed to apply simple encryption: " << originalPath << std::endl;
              metadata.IsSuccess = false;
         }
 
     }
     catch (const fs::filesystem_error& e)
     {
-        std::cerr << "Error during quarantine process for " << originalPath << ": " << e.what() << std::endl;
+        std::cerr << "ERROR: Error during quarantine process for " << originalPath << ": " << e.what() << std::endl;
         metadata.IsSuccess = false;
     }
 
@@ -211,9 +211,9 @@ std::string QuarantineManager::getCurrentDateTime() const
 // 격리 작업 실행
 void QuarantineManager::Run()
 {
-    if (!mDb)
+    if (!mDb)    // DB 연결이 안되어 있으면, mbIsQuarantineSuccess(격리 성공 여부 저장 벡터)의 모든 요소를 false로 저장 및 함수 종료
     {
-        std::cerr << "Database connection failed. Cannot perform quarantine." << std::endl;
+        std::cerr << "ERROR: Database connection failed. Cannot perform quarantine." << std::endl;
         for(size_t i = 0; i < mbIsQuarantineSuccess.size(); ++i)
         {
             mbIsQuarantineSuccess[i] = false;
@@ -221,22 +221,25 @@ void QuarantineManager::Run()
         return;
     }
 
-    std::cout << "Starting quarantine process for " << mFilesToQuarantine.size() << " files..." << std::endl;
+    // DB 연결 성공 시, mbIsQuarantineSuccess(격리 성공 여부 저장 벡터)의 크기(파일 갯수) 출력
+    std::cout << "DEBUG: Starting quarantine process for " << mFilesToQuarantine.size() << " files..." << std::endl;
     for (size_t i = 0; i < mFilesToQuarantine.size(); ++i)
     {
+        // 격리 원인, 악성코드 정보, 원본 파일 크기에 대한 정보가 각각의 벡터에 존재하는지 확인
         if (i < mQuarantineReasons.size() && i < mMalwareNamesOrRules.size() && i < mOriginalFileSizes.size())
-        {
+        {  
+            // processQuarantine(격리 처리 함수) 호출 및 격리 작업 수행, 벡터에서 i번째에 있는 인자(원래 파일 경로, 격리 원인, 악성코드명, 원래 파일 크기)에 대한 격리 수행 결과(true, false) 반환
             bool success = processQuarantine(mFilesToQuarantine[i], mQuarantineReasons[i], mMalwareNamesOrRules[i], mOriginalFileSizes[i]);
-            mbIsQuarantineSuccess[i] = success;
+            mbIsQuarantineSuccess[i] = success;     // i번째 파일의 격리 성공 여부 기록
         }
-        else
+        else    // 격리 원인, 악성코드 정보, 원본 파일 크기에 대한 정보가 각각의 벡터에 존재하지 않을 경우, false 기록
         {
-            std::cerr << "Error: Mismatch in input vector sizes at index " << i << ". Skipping quarantine for this file." << std::endl;
+            std::cerr << "ERROR: Mismatch in input vector sizes at index " << i << ". Skipping quarantine for this file." << std::endl;
             mbIsQuarantineSuccess[i] = false;
         }
     }
 
-    std::cout << "Quarantine process finished." << std::endl;
+    std::cout << "DEBUG: Quarantine process finished." << std::endl;
 }
 
 // 격리 성공 여부 가져오기 구현
