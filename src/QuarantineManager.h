@@ -53,8 +53,8 @@ public:
                       const std::vector<std::string>& reasons,
                       const std::vector<std::string>& namesOrRules,
                       const std::vector<long long>& sizes,
-                      const std::string& quarantineDirectory = "/quarantine_zone", // 격리 디렉토리 경로(임의 작성)
-                      const std::string& metadataDatabasePath = "/db/quarantine_metadata.db"); // DB 파일 경로 (임의 작성)
+                      const std::string& quarantineDirectory = "./quarantine_zone", // 격리 디렉토리 경로(임의 작성)
+                      const std::string& metadataDatabasePath = "./db/quarantine_metadata.db"); // DB 파일 경로 (임의 작성)
 
     // 소멸자(QuarantineManager 객체가 사라질 때 호출됨)
     ~QuarantineManager();
