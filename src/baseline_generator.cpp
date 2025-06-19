@@ -43,50 +43,65 @@ void BaselineGenerator::parse_ini_and_store() {
 
     std::string line;
     while (std::getline(ini_file, line)) {
-        // "Path = ..." 라인을 찾음
+        // "Path" 키가 있는 라인만 처리
         if (line.find("Path") != std::string::npos) {
             size_t eq_pos = line.find('=');
             if (eq_pos != std::string::npos) {
                 std::string path = line.substr(eq_pos + 1);
-
-                // 앞뒤 공백 제거
                 path.erase(0, path.find_first_not_of(" \t"));
                 path.erase(path.find_last_not_of(" \t") + 1);
 
                 std::cout << "[INI] 경로 파싱됨: " << path << std::endl;
 
                 try {
-                    //지정된 디렉토리 내 모든 파일을 재귀적으로 순회
-                    for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
-                        if (entry.is_regular_file()) {
-                            std::string file_path = entry.path().string();
-                            std::string hash = compute_md5(file_path);
+                    // (1) 단일 파일인 경우
+                    if (std::filesystem::is_regular_file(path)) {
+                        std::string hash = compute_md5(path);
+                        std::cout << "[단일 파일] 저장 중: " << path << " → " << hash << std::endl;
 
-                            std::cout << "[DB] 저장 중: " << file_path << " → " << hash << std::endl;
+                        sqlite3* db;
+                        sqlite3_open(db_path_.c_str(), &db);
+                        const char* create_sql = "CREATE TABLE IF NOT EXISTS baseline (path TEXT PRIMARY KEY, md5 TEXT);";
+                        sqlite3_exec(db, create_sql, nullptr, nullptr, nullptr);
 
-                            sqlite3* db;
-                            sqlite3_open(db_path_.c_str(), &db); 
-
-                            //테이블 없으면 생성
-                            const char* create_sql = "CREATE TABLE IF NOT EXISTS baseline (path TEXT PRIMARY KEY, md5 TEXT);";
-                            sqlite3_exec(db, create_sql, nullptr, nullptr, nullptr);
-
-                            //삽입 또는 갱신 쿼리 준비
-                            std::string insert_sql = "INSERT OR REPLACE INTO baseline (path, md5) VALUES (?, ?);";
-                            sqlite3_stmt* stmt;
-                            sqlite3_prepare_v2(db, insert_sql.c_str(), -1, &stmt, nullptr);
-
-                            //첫번째 ?에는 파일 경로, 두번째 ? 에는 해시값 바인딩
-                            sqlite3_bind_text(stmt, 1, file_path.c_str(), -1, SQLITE_STATIC);
-                            sqlite3_bind_text(stmt, 2, hash.c_str(), -1, SQLITE_STATIC);
-                            sqlite3_step(stmt);
-                            sqlite3_finalize(stmt);
-                            sqlite3_close(db);
-                        }
+                        std::string insert_sql = "INSERT OR REPLACE INTO baseline (path, md5) VALUES (?, ?);";
+                        sqlite3_stmt* stmt;
+                        sqlite3_prepare_v2(db, insert_sql.c_str(), -1, &stmt, nullptr);
+                        sqlite3_bind_text(stmt, 1, path.c_str(), -1, SQLITE_STATIC);
+                        sqlite3_bind_text(stmt, 2, hash.c_str(), -1, SQLITE_STATIC);
+                        sqlite3_step(stmt);
+                        sqlite3_finalize(stmt);
+                        sqlite3_close(db);
                     }
+                    // (2) 디렉토리인 경우
+                    else if (std::filesystem::is_directory(path)) {
+                        for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
+                            if (entry.is_regular_file()) {
+                                std::string file_path = entry.path().string();
+                                std::string hash = compute_md5(file_path);
+                                std::cout << "[디렉토리 파일] 저장 중: " << file_path << " → " << hash << std::endl;
+
+                                sqlite3* db;
+                                sqlite3_open(db_path_.c_str(), &db);
+                                const char* create_sql = "CREATE TABLE IF NOT EXISTS baseline (path TEXT PRIMARY KEY, md5 TEXT);";
+                                sqlite3_exec(db, create_sql, nullptr, nullptr, nullptr);
+
+                                std::string insert_sql = "INSERT OR REPLACE INTO baseline (path, md5) VALUES (?, ?);";
+                                sqlite3_stmt* stmt;
+                                sqlite3_prepare_v2(db, insert_sql.c_str(), -1, &stmt, nullptr);
+                                sqlite3_bind_text(stmt, 1, file_path.c_str(), -1, SQLITE_STATIC);
+                                sqlite3_bind_text(stmt, 2, hash.c_str(), -1, SQLITE_STATIC);
+                                sqlite3_step(stmt);
+                                sqlite3_finalize(stmt);
+                                sqlite3_close(db);
+                            }
+                        }
+                    } else {
+                        std::cerr << "[ERROR] 유효하지 않은 경로입니다: " << path << std::endl;
+                    }
+
                 } catch (const std::filesystem::filesystem_error& e) {
-                    //디렉토리 접근 중 예외 발생 시 메시지 출력
-                    std::cerr << "[ERROR] 디렉토리 접근 실패: " << e.what() << std::endl;
+                    std::cerr << "[ERROR] 파일/디렉토리 접근 실패: " << e.what() << std::endl;
                 }
             }
         }
