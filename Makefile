@@ -6,7 +6,8 @@ BUILD_DIR = build
 TARGET = Manlab
 
 SRCS = $(SRC_DIR)/Manlab.cpp \
-       $(SRC_DIR)/DBManager.cpp
+       $(SRC_DIR)/DBManager.cpp \
+	   $(SRC_DIR)/command_handler.cpp \
 
 OBJS = $(SRCS:.cpp=.o)
 
