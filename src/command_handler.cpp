@@ -1,6 +1,6 @@
 #include "command_handler.h"
-#include "command_classifier.h"
-#include "config_manager.h"
+#include "fim_command_handler.h"
+#include "sig_command_handler.h"
 #include <iostream>
 #include <sstream>   
 #include <unistd.h>
@@ -12,9 +12,6 @@ CommandHandler::CommandHandler(int argc, char** argv)
     : argc(argc), argv(argv) {
     try {
         parse_options(); // 옵션을 파싱하고 멤버변수에 저장
-        // 파싱된 args를 기반으로 객체 생성
-        classifier = std::make_unique<CommandClassifier>(args);
-        config_manager = std::make_unique<ConfigurationManager>(args);
     } catch (const std::exception& e) {
         std::cerr << "Initialization Error: " << e.what() << std::endl;
         std::exit(EXIT_FAILURE);
@@ -26,29 +23,17 @@ void CommandHandler::parse_options() {
     int option_index = 0;
 
     static struct option long_options[] = {
-        {"fim",     no_argument,       0,  'F' },
-        {"sig",     no_argument,       0,  'S' },
-        {"log",     no_argument,       0,  'L' },
-        {"config",  required_argument, 0,  'c' },
-        {"enable",  no_argument,       0,  'e' },
-        {"disable", no_argument,       0,  'd' },
-        {"start",   required_argument, 0,  's' },
-        {"stop",    no_argument,       0,  'p' },
+        {"enable",  required_argument,       0,  'e' },
+        {"disable", required_argument,       0,  'd' },
         {0,         0,                 0,  0 }
     };
 
-    const char* optstring = "FSLc:eds:p";
+    const char* optstring = "e:d:";
 
     while ((c = getopt_long(argc, argv, optstring, long_options, &option_index)) != -1) {
         switch (c) {
-            case 'F': args.emplace_back("--fim"); break;
-            case 'S': args.emplace_back("--sig"); break;
-            case 'L': args.emplace_back("--log"); break;
-            case 'c': args.emplace_back("-config"); args.emplace_back(optarg); break;
-            case 'e': args.emplace_back("-enable"); break;
-            case 'd': args.emplace_back("-disable"); break;
-            case 's': args.emplace_back("-start"); args.emplace_back(optarg); break;
-            case 'p': args.emplace_back("-stop"); break;
+            case 'e': args.emplace_back("--enable"); args.emplace_back(optarg); break;
+            case 'd': args.emplace_back("--disable"); args.emplace_back(optarg); break;
             case '?': throw std::invalid_argument("Unknown or malformed command-line option");
             default: throw std::invalid_argument("Unexpected option encountered");
         }
@@ -65,26 +50,24 @@ void CommandHandler::parse_options() {
 }
 
 void CommandHandler::run() {
-    classifier->run();
-
-    if (!classifier->get_valid()) {
-        report_error_to_user();
-        return;
-    }
-
-    command_type = classifier->get_command_type();
-
-    if (command_type == "Config") {
-        config_manager->run();
-    } else if (command_type == "SigScan") {
+    if (args[1] == "malscan") {
         exec_sig_scan();
-    } else if (command_type == "SigRestore") {
-        exec_sig_restore();
-    } else if (command_type == "FimScan") {
+    } else if (args[1] == "restore") {
+        if (args.size() < 2) {
+            std::cerr << "Missing filename for restore command." << std::endl;
+            report_error_to_user();
+        }
+        exec_sig_restore(args[2]);
+    } else if (args[1] == "integscan") {
         exec_fim_scan();
+    } else if (args[1] == "--enable" && args.size() >= 2 && args[2] == "realtime_monitor") {
+        std::cout << "Enabling realtime monitor..." << std::endl;
+        // TODO: enable realtime monitor logic
+    } else if (args[1] == "--disable" && args.size() >= 2 && args[2] == "realtime_monitor") {
+        std::cout << "Disabling realtime monitor..." << std::endl;
+        // TODO: disable realtime monitor logic
     } else {
-        std::cerr << "Unknown command type: " << command_type << std::endl;
-        std::exit(EXIT_FAILURE);
+        report_error_to_user();
     }
 }
 
