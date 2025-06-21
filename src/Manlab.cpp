@@ -3,16 +3,13 @@
 
 #include <iostream>
 #include <string>
-#include "command_handler.h"
+#include "CommandHandler"
 
 // 각 기능별 헤더 포함. 커맨드핸들러를 통해 다룬다면 커맨드핸들러에 포함
 // #include "DaemonRunner.h"
-// #include "ManualScan.h"
-// #include "Scheduler.h"
 
 void print_usage() {
     std::cout << "Usage:\n"
-              << "  ./Manlab daemon                  # Run as background daemon\n"
               << "  ./Manlab malscan                # Run malware manual scan\n"
               << "  ./Manlab restore <filename>    # Restore file\n"
               << "  ./Manlab integscan            # Run integrity scan\n"

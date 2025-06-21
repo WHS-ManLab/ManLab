@@ -16,14 +16,6 @@ private :
 
     std::vector<std::string> args;
 
-    
-    // 명령어 실행 함수
-    void exec_fim_scan();  
-    void exec_sig_scan();
-    void exec_sig_restore(const std::string& sig_name);
-    void enable_realtime_monitor();
-    void disable_realtime_monitor();
-
     // 옵션 파싱 함수
     void parse_options();
     
