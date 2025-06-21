@@ -7,7 +7,8 @@ TARGET = Manlab
 
 SRCS = $(SRC_DIR)/Manlab.cpp \
        $(SRC_DIR)/DBManager.cpp \
-	   $(SRC_DIR)/command_handler.cpp \
+	   $(SRC_DIR)/CommandHandler.cpp \
+	   $(SRC_DIR)/TxtReport.cpp \
 
 OBJS = $(SRCS:.cpp=.o)
 

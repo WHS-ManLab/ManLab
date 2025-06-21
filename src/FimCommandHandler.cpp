@@ -1,7 +1,7 @@
-#include "command_handler.h"
+#include "CommandHandler.h"
 #include <iostream>
 
-void CommandHandler::exec_fim_scan() {
+void CommandHandler::execFimScan() {
     std::cout << "Executing FIM scan...\n" << std::endl;
     
     // TODO

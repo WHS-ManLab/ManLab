@@ -11,14 +11,22 @@ namespace fs = std::filesystem;
 // 실행 바이너리 경로를 기준으로 db 경로를 반환하는 내부 함수
 // 각 팀에서도 바이너리 경로 기준 상대 경로 반환 함수가 필요하다면 utils에 넣는 것 검토
 static std::string GetDatabasePath() {
-    char path[1024];
+    char path[4096];
     ssize_t count = readlink("/proc/self/exe", path, sizeof(path));
     if (count == -1) {
+        //TODO
         //로그 남기고 종료하는 로직 필요
         //로그 관련 CPP파일 생성 시 연동
+        return ""
     }
-
-    fs::path exePath(path, path + count);                        // /Manlab/src/
+    if (count >= 4096) {
+        //TODO
+        //로그 남기고 종료하는 로직 필요
+        //로그 관련 CPP파일 생성 시 연동
+        return ""; 
+    }
+    path[count] = '\0';
+    fs::path exePath(path);                                      // /Manlab/src/
     fs::path exeDir = exePath.parent_path();                     // /Manlab/
     fs::path dbPath = exeDir.parent_path() / "db" / "manlab.db"; // /Manlab/db/
 
@@ -44,6 +52,7 @@ DBManager::Storage DBManager::CreateStorage() {
 }
 
 // 전역 Storage 인스턴스를 반환하는 싱글톤 디자인 패턴
+// race condition 방지 필요
 DBManager::Storage& DBManager::GetStorage() {
     static auto storage = CreateStorage();
     static bool initialized = false;

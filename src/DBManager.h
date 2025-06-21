@@ -22,6 +22,7 @@ public:
 
 private:
     static Storage CreateStorage();
+    string GetDatabasePath();
 };
 
 }  // namespace manlab
