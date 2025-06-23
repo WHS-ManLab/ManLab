@@ -1,3 +1,7 @@
 #pragma once
 
-void CommandHandler::execFimScan();
+namespace fim {
+
+void IntScan();
+
+} // namespace fim

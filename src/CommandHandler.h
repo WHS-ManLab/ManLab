@@ -1,25 +1,20 @@
-#ifndef COMMAND_HANDLER_H
-#define COMMAND_HANDLER_H
+#pragma once
 
 #include <vector>
 #include <string>
-#include <memory> 
 
 class CommandHandler {
-public :
+public:
+    /// argc/argv를 받아 명령어 실행 준비
     CommandHandler(int argc, char** argv);
+
     void run();
 
-private :
-    int argc;   
-    char** argv;
+private:
+    int mArgc;
+    char** mArgv;
+    std::vector<std::string> mArgs;
 
-    std::vector<std::string> args;
-
-    // 옵션 파싱 함수
-    void parse_options();
-    
-    // 에러 처리 함수
-    void report_error_to_user();
+    // getopt 기반 옵션 및 인자 파싱
+    void parseOptions();
 };
-#endif

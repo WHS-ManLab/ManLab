@@ -1,9 +1,9 @@
-#include "CommandHandler.h"
+#pragma once
+#include <string>
 
-void CommandHandler::execScan() {
-    // TODO 
-}
+namespace sig {
 
-void CommandHandler::execSigRestore() {
-    // TODO
-}
+void MalScan();
+void Restore(const std::string& filename);
+
+} // namespace sig

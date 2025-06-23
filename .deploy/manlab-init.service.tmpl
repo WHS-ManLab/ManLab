@@ -1,0 +1,10 @@
+[Unit]
+Description=Manlab Daemon Boot Checker
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=__MANLAB_BIN__ boot_check
+
+[Install]
+WantedBy=multi-user.target
