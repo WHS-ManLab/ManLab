@@ -1,28 +1,75 @@
 #pragma once
-
+#include <sqlite_orm.h> 
 #include <string>
-#include <sqlite_orm/sqlite_orm.h>
 
-namespace manlab {
+/* 
+============================================
+자신의 팀 전용 테이블과 DB를 다음 순서로 정의하세요.
 
-struct MalwareHashDB {  
+순서:
+1. 팀에서 사용할 데이터 구조 정의 (DBManager.h)
+2. 각각의 DB 파일에 대한 storage 타입 정의(DBManager.h)
+3. GETTER와 Storege 타입 변수 정의(DBManager.h)
+4. 생성자 초기화 리스트에 make_storage() 추가 (DBManager.cpp)
+5. storage.sync_schema()호출 추가 (DBManager.cpp)
+============================================
+*/
+
+
+// 악성코드 해시 DB 테이블 구조
+struct MalwareHashDB {
     std::string hashAlgo;
     std::string malwareHash;
     std::string malwareName;
-}; // 악성코드 해시 값 데이터베이스 구조체 
+};
 
-    // 이곳에 각 팀별 데이터베이스 구조체 선언
-    // 구조체 이름 : XXXDB
+// 격리 메타데이터 DB 테이블 구조
+struct QuarantineMetadata {
+    std::string OriginalPath;
+    std::string QuarantinedFileName;
+    long long OriginalSize;
+    std::string QuarantineDate;
+    std::string QuarantineReason;
+    std::string MalwareNameOrRule;
+};
+
+// 악성코드 해시에 대한 stroage타입 정의
+using StorageHash = decltype(sqlite_orm::make_storage("",
+    sqlite_orm::make_table("MalwareHashDB",
+        sqlite_orm::make_column("hashAlgo", &MalwareHashDB::hashAlgo),
+        sqlite_orm::make_column("malwareHash", &MalwareHashDB::malwareHash),
+        sqlite_orm::make_column("malwareName", &MalwareHashDB::malwareName)
+    )
+));
+
+// 악성코드 격리 메타데이터에 대한 stroage타입 정의
+using StorageQuarantine = decltype(sqlite_orm::make_storage("",
+    sqlite_orm::make_table("QuarantineMetadata",
+        sqlite_orm::make_column("OriginalPath", &QuarantineMetadata::OriginalPath),
+        sqlite_orm::make_column("QuarantinedFileName", &QuarantineMetadata::QuarantinedFileName),
+        sqlite_orm::make_column("OriginalSize", &QuarantineMetadata::OriginalSize),
+        sqlite_orm::make_column("QuarantineDate", &QuarantineMetadata::QuarantineDate),
+        sqlite_orm::make_column("QuarantineReason", &QuarantineMetadata::QuarantineReason),
+        sqlite_orm::make_column("MalwareNameOrRule", &QuarantineMetadata::MalwareNameOrRule)
+    )
+));
 
 class DBManager {
 public:
-    using Storage = decltype(CreateStorage());
+    static DBManager& GetInstance();
+    void InitSchema();
+    DBManager(const DBManager&) = delete;
+    DBManager& operator=(const DBManager&) = delete;
 
-    static Storage& GetStorage();
+    //Getter
+    StorageHash& GetHashStorage();
+    StorageQuarantine& GetQuarantineStorage();
+
 
 private:
-    static Storage CreateStorage();
-    string GetDatabasePath();
-};
+    DBManager();
 
-}  // namespace manlab
+    // storage
+    StorageHash mHashStorage;
+    StorageQuarantine mQuarantineStorage;
+};
