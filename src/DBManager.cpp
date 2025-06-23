@@ -1,57 +1,43 @@
 #include "DBManager.h"
-#include <unistd.h>
-#include <filesystem>
-#include <stdexcept>
+#include <iostream> //디버그용
 
-namespace manlab {
-
-using namespace sqlite_orm;
-namespace fs = std::filesystem;
-
-// 실행 바이너리 경로를 기준으로 db 경로를 반환하는 내부 함수
-// 각 팀에서도 바이너리 경로 기준 상대 경로 반환 함수가 필요하다면 utils에 넣는 것 검토
-static std::string GetDatabasePath() {
-    char path[1024];
-    ssize_t count = readlink("/proc/self/exe", path, sizeof(path));
-    if (count == -1) {
-        //로그 남기고 종료하는 로직 필요
-        //로그 관련 CPP파일 생성 시 연동
-    }
-
-    fs::path exePath(path, path + count);                        // /Manlab/src/
-    fs::path exeDir = exePath.parent_path();                     // /Manlab/
-    fs::path dbPath = exeDir.parent_path() / "db" / "manlab.db"; // /Manlab/db/
-
-    return dbPath.string(); // 경로 문자열 반환
+DBManager& DBManager::GetInstance() {
+    static DBManager instance;
+    return instance;
 }
 
-// 내부 저장소 생성 함수
-DBManager::Storage DBManager::CreateStorage() {
-    const std::string dbFilePath = GetDatabasePath();
-
-    return make_storage(dbFilePath,
-        make_table("malware_hashes",
-            make_column("hash_algo", &MalwareHashDB::hashAlgo),
-            make_column("malware_hash", &MalwareHashDB::malwareHash),
-            make_column("malware_name", &MalwareHashDB::malwareName)
+DBManager::DBManager()
+    : mHashStorage(sqlite_orm::make_storage(
+        "/ManLab/db/hash.db",
+        sqlite_orm::make_table("MalwareHashDB",
+            sqlite_orm::make_column("hashAlgo", &MalwareHashDB::hashAlgo),
+            sqlite_orm::make_column("malwareHash", &MalwareHashDB::malwareHash),
+            sqlite_orm::make_column("malwareName", &MalwareHashDB::malwareName)
         )
+    )),
 
-        // 다른 팀 테이블 이 자리에 추가
-        // 헤더파일에 구조체 선언, 이 자리에 make_table과 make_column으로 쓸 테이블 선언
-        // manlab.db 데이터베이스 하나에 여러 테이블이 들어가는 방식(변경 가능)
+      mQuarantineStorage(sqlite_orm::make_storage(
+        "/ManLab/db/quarantine.db",
+        sqlite_orm::make_table("QuarantineMetadata",
+            sqlite_orm::make_column("OriginalPath", &QuarantineMetadata::OriginalPath),
+            sqlite_orm::make_column("QuarantinedFileName", &QuarantineMetadata::QuarantinedFileName),
+            sqlite_orm::make_column("OriginalSize", &QuarantineMetadata::OriginalSize),
+            sqlite_orm::make_column("QuarantineDate", &QuarantineMetadata::QuarantineDate),
+            sqlite_orm::make_column("QuarantineReason", &QuarantineMetadata::QuarantineReason),
+            sqlite_orm::make_column("MalwareNameOrRule", &QuarantineMetadata::MalwareNameOrRule)
+        )
+    ))
+{}
 
-    );
+void DBManager::InitSchema() {
+    mHashStorage.sync_schema();
+    mQuarantineStorage.sync_schema();
 }
 
-// 전역 Storage 인스턴스를 반환하는 싱글톤 디자인 패턴
-DBManager::Storage& DBManager::GetStorage() {
-    static auto storage = CreateStorage();
-    static bool initialized = false;
-    if (!initialized) {
-        storage.sync_schema();  // 테이블이 없으면 생성
-        initialized = true;
-    }
-    return storage;
+StorageHash& DBManager::GetHashStorage() {
+    return mHashStorage;
 }
 
-} // namespace manlab
+StorageQuarantine& DBManager::GetQuarantineStorage() {
+    return mQuarantineStorage;
+}
