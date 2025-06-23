@@ -4,11 +4,11 @@
 
 void print_usage() {
     std::cout << "Usage:\n"
-              << "  ./Manlab malscan                # Run malware manual scan\n"
-              << "  ./Manlab restore <filename>    # Restore file\n"
-              << "  ./Manlab integscan            # Run integrity scan\n"
-              << "  ./Manlab --enable realtime_monitor      # Enable realtime monitoring\n"
-              << "  ./Manlab --disable realtime_monitor     # Disable realtime monitoring\n";
+              << "  ./ManLab malscan                # Run malware manual scan\n"
+              << "  ./ManLab restore <filename>    # Restore file\n"
+              << "  ./ManLab integscan            # Run integrity scan\n"
+              << "  ./ManLab --enable realtime_monitor      # Enable realtime monitoring\n"
+              << "  ./ManLab --disable realtime_monitor     # Disable realtime monitoring\n";
 }
 
 int main(int argc, char* argv[]) {
