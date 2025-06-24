@@ -1,6 +1,4 @@
-#ifndef BASELINE_GENERATOR_H
-#define BASELINE_GENERATOR_H
-
+#pragma once
 #include <string>
 
 class BaselineGenerator {
@@ -18,4 +16,4 @@ private:
     void parse_ini_and_store();
 };
 
-#endif // BASELINE_GENERATOR_H
+
