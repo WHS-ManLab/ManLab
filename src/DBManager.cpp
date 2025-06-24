@@ -1,7 +1,7 @@
 #include "DBManager.h"
 #include <iostream> //디버그용
 
-DBManager &DBManager::GetInstance()
+DBManager& DBManager::GetInstance()
 {
     static DBManager sInstance;
     return sInstance;
@@ -28,7 +28,7 @@ DBManager::DBManager()
       mLogAnalysisResultStorage(sqlite_orm::make_storage(
           "/ManLab/db/logAnalysisResult.db",
           sqlite_orm::make_table("LogAnalysisResult",
-                                 sqlite_orm::make_column("ID", &LogAnalysisResult::id, primary_key().autoincrement()),
+                                 sqlite_orm::make_column("ID", &LogAnalysisResult::id, sqlite_orm::primary_key().autoincrement()),
                                  sqlite_orm::make_column("Type", &LogAnalysisResult::type),
                                  sqlite_orm::make_column("Description", &LogAnalysisResult::description),
                                  sqlite_orm::make_column("Timestamp", &LogAnalysisResult::timestamp),
@@ -46,17 +46,17 @@ void DBManager::InitSchema()
     mLogAnalysisResultStorage.sync_schema();
 }
 
-StorageHash &DBManager::GetHashStorage()
+StorageHash& DBManager::GetHashStorage()
 {
     return mHashStorage;
 }
 
-StorageQuarantine &DBManager::GetQuarantineStorage()
+StorageQuarantine& DBManager::GetQuarantineStorage()
 {
     return mQuarantineStorage;
 }
 
-StorageLogAnalysisResult &DBManager::GetLogAnalysisResultStorage()
+StorageLogAnalysisResult& DBManager::GetLogAnalysisResultStorage()
 {
     return mLogAnalysisResultStorage;
 }

@@ -12,6 +12,7 @@
 3. GETTER와 Storage 타입 변수 정의(DBManager.h)
 4. 생성자 초기화 리스트에 make_storage() 추가 (DBManager.cpp)
 5. storage.sync_schema()호출 추가 (DBManager.cpp)
+6. Makefile에 db 추가
 ============================================
 */
 
@@ -67,7 +68,7 @@ using StorageQuarantine = decltype(sqlite_orm::make_storage("",
 // 로그 분석 결과에 대한 storage 타입 정의
 using StorageLogAnalysisResult = decltype(sqlite_orm::make_storage("",
                                                                    sqlite_orm::make_table("LogAnalysisResult",
-                                                                                          sqlite_orm::make_column("ID", &LogAnalysisResult::id, primary_key().autoincrement()),
+                                                                                          sqlite_orm::make_column("ID", &LogAnalysisResult::id, sqlite_orm::primary_key().autoincrement()),
                                                                                           sqlite_orm::make_column("Type", &LogAnalysisResult::type),
                                                                                           sqlite_orm::make_column("Description", &LogAnalysisResult::description),
                                                                                           sqlite_orm::make_column("Timestamp", &LogAnalysisResult::timestamp),
