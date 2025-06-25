@@ -1,5 +1,5 @@
-# Created by https://www.toptal.com/developers/gitignore/api/vs,c++,linux,cmake
-# Edit at https://www.toptal.com/developers/gitignore?templates=vs,c++,linux,cmake
+# Created by https://www.toptal.com/developers/gitignore/api/vs,c++,linux,cmake,visualstudiocode
+# Edit at https://www.toptal.com/developers/gitignore?templates=vs,c++,linux,cmake,visualstudiocode
 
 ### C++ ###
 # Prerequisites
@@ -41,7 +41,6 @@ CMakeCache.txt
 CMakeFiles
 CMakeScripts
 Testing
-Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
@@ -421,4 +420,26 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 
-# End of https://www.toptal.com/developers/gitignore/api/vs,c++,linux,cmake
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+### VisualStudioCode Patch ###
+# Ignore all local history of files
+.history
+.ionide
+
+# 바이너리 파일 무시
+baseline
+compare_main
+# End of https://www.toptal.com/developers/gitignore/api/vs,c++,linux,cmake,visualstudiocode

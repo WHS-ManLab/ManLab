@@ -4,13 +4,21 @@
 #include <sstream>
 #include <iomanip>
 #include <openssl/md5.h>
+<<<<<<< HEAD
 #include <sqlite3.h>
 #include <filesystem>
+=======
+#include <filesystem>
+#include "DBManager.h"
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f
 
 BaselineGenerator::BaselineGenerator(const std::string& ini_path, const std::string& db_path)
     : ini_path_(ini_path), db_path_(db_path) {}
 
+<<<<<<< HEAD
 // 특정 파일의 MD5 해시 값을 계산하는 함수
+=======
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f
 std::string BaselineGenerator::compute_md5(const std::string& filepath) {
     std::ifstream file(filepath, std::ios::binary);
     if (!file) return "";
@@ -33,7 +41,10 @@ std::string BaselineGenerator::compute_md5(const std::string& filepath) {
     return oss.str();
 }
 
+<<<<<<< HEAD
 //ini 파일을 읽고 해당 경로 내 파일들의 MD5 해시를 계산해 DB에 저장하는 함수
+=======
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f
 void BaselineGenerator::parse_ini_and_store() {
     std::ifstream ini_file(ini_path_);
     if (!ini_file) {
@@ -41,9 +52,16 @@ void BaselineGenerator::parse_ini_and_store() {
         return;
     }
 
+<<<<<<< HEAD
     std::string line;
     while (std::getline(ini_file, line)) {
         // "Path" 키가 있는 라인만 처리
+=======
+    auto& storage = DBManager::GetInstance().GetBaselineStorage();
+
+    std::string line;
+    while (std::getline(ini_file, line)) {
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f
         if (line.find("Path") != std::string::npos) {
             size_t eq_pos = line.find('=');
             if (eq_pos != std::string::npos) {
@@ -54,6 +72,7 @@ void BaselineGenerator::parse_ini_and_store() {
                 std::cout << "[INI] 경로 파싱됨: " << path << std::endl;
 
                 try {
+<<<<<<< HEAD
                     // (1) 단일 파일인 경우
                     if (std::filesystem::is_regular_file(path)) {
                         std::string hash = compute_md5(path);
@@ -74,12 +93,20 @@ void BaselineGenerator::parse_ini_and_store() {
                         sqlite3_close(db);
                     }
                     // (2) 디렉토리인 경우
+=======
+                    if (std::filesystem::is_regular_file(path)) {
+                        std::string hash = compute_md5(path);
+                        std::cout << "[단일 파일] 저장 중: " << path << " → " << hash << std::endl;
+                        storage.replace(BaselineEntry{path, hash});
+                    }
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f
                     else if (std::filesystem::is_directory(path)) {
                         for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
                             if (entry.is_regular_file()) {
                                 std::string file_path = entry.path().string();
                                 std::string hash = compute_md5(file_path);
                                 std::cout << "[디렉토리 파일] 저장 중: " << file_path << " → " << hash << std::endl;
+<<<<<<< HEAD
 
                                 sqlite3* db;
                                 sqlite3_open(db_path_.c_str(), &db);
@@ -100,6 +127,15 @@ void BaselineGenerator::parse_ini_and_store() {
                         std::cerr << "[ERROR] 유효하지 않은 경로입니다: " << path << std::endl;
                     }
 
+=======
+                                storage.replace(BaselineEntry{file_path, hash});
+                            }
+                        }
+                    }
+                    else {
+                        std::cerr << "[ERROR] 유효하지 않은 경로입니다: " << path << std::endl;
+                    }
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f
                 } catch (const std::filesystem::filesystem_error& e) {
                     std::cerr << "[ERROR] 파일/디렉토리 접근 실패: " << e.what() << std::endl;
                 }
@@ -108,7 +144,13 @@ void BaselineGenerator::parse_ini_and_store() {
     }
 }
 
+<<<<<<< HEAD
 
 void BaselineGenerator::generate_and_store() {
     parse_ini_and_store();
 }
+=======
+void BaselineGenerator::generate_and_store() {
+    parse_ini_and_store();
+}
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f
