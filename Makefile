@@ -34,6 +34,8 @@ CONF_SRC_DIR = conf
 CONF_DST_DIR = $(INSTALL_DIR)/conf
 RULE_SRC_DIR = rules
 RULE_DST_DIR = $(INSTALL_DIR)/rules
+RSYSLOG_CONF = /etc/rsyslog.d/50-manlab.conf
+RSYSLOG_SRC = ./.deploy/50-manlab.conf
 
 SERVICE_NAME   = manlab-init
 SERVICE_UNIT   = $(SERVICE_NAME).service
@@ -53,23 +55,31 @@ SRCS = $(SRC_DIR)/main.cpp \
        $(SRC_DIR)/MalwareScan.cpp \
        $(SRC_DIR)/QuarantineManager.cpp \
 	   $(SRC_DIR)/baseline_generator.cpp \
+	   $(SRC_DIR)/RsyslogManager.cpp \
+	   $(SRC_DIR)/RsyslogRule.cpp \
        $(LIB_DIR)/INIReader.cpp \
 	   $(LIB_DIR)/ini.c
 
 # 빌드 대상
-.PHONY: all init install initialize_db copy_conf copy_rules install_service clean 
+.PHONY: all init install initialize_db copy_conf copy_rules install_service install_rsyslog deps clean
 
-all: $(TARGET) install initialize_db copy_conf copy_rules install_service
+all: deps install_rsyslog $(TARGET) install initialize_db copy_conf copy_rules install_service 
 	@$(MAKE) init
 	rm -f $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS) -lsqlite3 -lyara -lssl -lcrypto
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS) -lyaml-cpp -lyara -lsqlite3 -lssl -lcrypto -lpthread
 
 install:
 	@echo "[INFO] /ManLab/bin 경로를 생성 중..."
 	sudo mkdir -p $(BIN_DIR)
 	sudo cp $(TARGET) $(BIN_DIR)/$(TARGET)
+
+install_rsyslog:
+	@echo "[INFO] rsyslog 설치 및 설정 적용 중..."
+	sudo apt install -y rsyslog
+	sudo cp -v $(RSYSLOG_SRC) $(RSYSLOG_CONF)
+	sudo systemctl restart rsyslog
 
 initialize_db:
 	@echo "[INFO] /ManLab/db 초기화 중..."
@@ -79,6 +89,7 @@ copy_conf:
 	@echo "[INFO] 설정 파일을 복사합니다..."
 	sudo mkdir -p $(CONF_DST_DIR)
 	sudo cp -v $(CONF_SRC_DIR)/*.ini $(CONF_DST_DIR)/
+	sudo cp -v $(CONF_SRC_DIR)/*.yaml $(CONF_DST_DIR)/
 
 copy_rules:
 	@echo "[INFO] 룰 파일을 복사합니다..."
@@ -103,3 +114,7 @@ clean:
 	sudo systemctl disable $(SERVICE_NAME).service || true
 	sudo rm -f /etc/systemd/system/$(SERVICE_NAME).service
 	sudo systemctl daemon-reload
+
+deps:
+	@echo "[INFO] 필수 라이브러리를 설치합니다..."
+	sudo apt-get install -y libyaml-cpp-dev libsqlite3-dev libssl-dev libyara-dev
