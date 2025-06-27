@@ -1,14 +1,15 @@
 #include "FimCommandHandler.h"
 #include "baseline_generator.h"
+#include "compare_with_baseline.h"
 #include "DBManager.h"
 #include <iostream>
 
 namespace fim {
 
 void IntScan() {
-    std::cout << "Executing FIM scan...\n" << std::endl;
+    std::cout << "해시값 무결성 검사 실행중...\n" << std::endl;
     
-    // TODO 수동검사 로직 실행
+    compare_with_baseline(true);
 }
 
 void BaselineGen() {
