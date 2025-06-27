@@ -64,7 +64,7 @@ all: $(TARGET) install initialize_db copy_conf copy_rules install_service
 	rm -f $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS) -lsqlite3 -lyara -lssl -lcrypto
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS) -lsqlite3 -lyara -lssl -lcrypto -lpthread
 
 install:
 	@echo "[INFO] /ManLab/bin 경로를 생성 중..."
