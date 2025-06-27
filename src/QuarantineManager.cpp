@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #include <chrono>       // 시간 관련 기능
 #include <fstream>      // 파일 입출력 기능
 #include <iomanip>      // 시간 및 날짜 포맷팅
@@ -220,6 +221,53 @@ bool QuarantineManager::processQuarantine(const DetectionResultRecord& item, con
 // 현재 시간 가져오기 구현
 std::string QuarantineManager::getCurrentDateTime() const
 {
+=======
+#include "QuarantineManager.h"
+#include <chrono>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
+// static 멤버 초기화
+unsigned char QuarantineManager::mEncryptionKey = 0xA5;
+
+// 생성자
+QuarantineManager::QuarantineManager(const std::vector<ScanInfo>& infos)
+    : mScanInfo(infos),
+      mStorage(&DBManager::GetInstance().GetQuarantineStorage())
+{
+    mIsQuarantineSuccess.resize(mScanInfo.size(), false);
+
+    if (!fs::exists("/ManLab/quarantine")) {
+        try {
+            fs::create_directories("/ManLab/quarantine");
+        } catch (const fs::filesystem_error& e) {
+            std::cerr << "ERROR: " << e.what() << '\n';
+        }
+    }
+}
+
+// XOR 암호화
+bool QuarantineManager::applySimpleXOREncryption(const std::string& filePath) {
+    std::fstream file(filePath, std::ios::in | std::ios::out | std::ios::binary);
+    if (!file) return false;
+    char byte;
+    while (file.get(byte)) {
+        byte ^= mEncryptionKey;
+        file.seekp(-1, std::ios::cur);
+        file.put(byte);
+    }
+    file.close();
+    return true;
+}
+
+// 현재 시간 반환
+std::string QuarantineManager::getCurrentDateTime() const {
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f
     auto now = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
 
@@ -228,6 +276,7 @@ std::string QuarantineManager::getCurrentDateTime() const
     return ss.str();
 }
 
+<<<<<<< HEAD
 // 격리 작업 실행(격리 대상 파일 목록, 격리 디렉토리, DB 경로를 인자로 받음)
 void QuarantineManager::Run(const std::vector<DetectionResultRecord>& itemsToQuarantine,
                             const std::string& quarantineDirectory,
@@ -267,3 +316,40 @@ const std::vector<bool>& QuarantineManager::GetIsQuarantineSuccess() const // pu
 {
     return mbIsQuarantineSuccess;
 }
+=======
+// 격리 실행
+void QuarantineManager::run() {
+    for (size_t i = 0; i < mScanInfo.size(); ++i) {
+        const auto& info = mScanInfo[i];
+
+        fs::path original = info.path;
+        std::string qName = original.filename().string() + "_" + getCurrentDateTime();
+        fs::path quarantined = fs::path("/ManLab/quarantine") / qName;
+
+        QuarantineMetadata meta{
+            info.path,
+            qName,
+            info.size,
+            getCurrentDateTime(),
+            info.cause,
+            info.name,
+        };
+
+        bool success = false;
+        try {
+            fs::rename(original, quarantined);
+            success = applySimpleXOREncryption(quarantined.string());
+        } catch (const fs::filesystem_error& e) {
+            std::cerr << "ERROR: " << e.what() << '\n';
+        }
+
+        mIsQuarantineSuccess[i] = success;
+        mStorage->insert(meta);
+    }
+}
+
+// 성공 여부 반환
+const std::vector<bool>& QuarantineManager::GetIsQuarantineSuccess() const {
+    return mIsQuarantineSuccess;
+}
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f

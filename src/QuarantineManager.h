@@ -1,4 +1,5 @@
 #pragma once
+<<<<<<< HEAD
 
 #include <filesystem>
 #include <sqlite3.h>    // SQLite 연결을 위해 사용
@@ -19,10 +20,18 @@ struct QuarantineMetadata
     std::string QuarantineReason; // 격리된 원인("hash" 또는 "YARA")
     std::string MalwareNameOrRule; // 악성코드명 또는 탐지 룰 이름
 };
+=======
+#include <filesystem>
+#include <string>
+#include <vector>
+#include "DBManager.h"
+#include "MalwareScan.h"
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f
 
 class QuarantineManager
 {
 private:
+<<<<<<< HEAD
     std::vector<bool> mbIsQuarantineSuccess;  // 격리 성공 여부 (Run 메서드에서 채워짐)
 
     sqlite3* mDb; // SQLite DB 연결 상태를 저장하는 포인터
@@ -52,3 +61,24 @@ public:
     // 악성코드 파일의 격리 성공 여부 목록을 반환하는 함수
     const std::vector<bool>& GetIsQuarantineSuccess() const;
 };
+=======
+    std::vector<ScanInfo> mScanInfo;               // 격리 대상 정보 목록
+    std::vector<bool> mIsQuarantineSuccess;        // 격리 성공 여부
+
+    StorageQuarantine* mStorage = nullptr;         // DBManager 싱글톤에서 획득
+
+    static unsigned char mEncryptionKey;
+
+    bool applySimpleXOREncryption(const std::string& filePath); // 악성코드 파일 암호화 함수
+    std::string getCurrentDateTime() const; // 현재 시간 문자열로 가져오는 함수
+
+public:
+    QuarantineManager(const std::vector<ScanInfo>& infos);
+
+    // 격리 실행
+    void run();
+
+    // 성공 여부 목록 반환
+    const std::vector<bool>& GetIsQuarantineSuccess() const;
+};
+>>>>>>> 8c5fb367890b21c1a6d2ad1fb2677f2a8cbca03f
