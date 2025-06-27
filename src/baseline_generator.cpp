@@ -78,7 +78,6 @@ void BaselineGenerator::parse_ini_and_store() {
         }
     }
 }
-
 void BaselineGenerator::generate_and_store() {
     parse_ini_and_store();
 }

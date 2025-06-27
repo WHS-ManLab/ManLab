@@ -15,5 +15,3 @@ private:
     //std::string compute_md5(const std::string& filepath);
     void parse_ini_and_store();
 };
-
-
