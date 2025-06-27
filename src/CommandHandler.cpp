@@ -190,6 +190,12 @@ void CommandHandler::run()
     else if (command == "integscan") {
         fim::IntScan();
     }
+    else if (command == "baseline") {
+        fim::BaselineGen();
+    }
+    else if (command == "check_baseline"){
+        fim::PrintBaseline();
+    }
     else if (command == "man") {
         //TODO
         //사용자에게 매뉴얼을 보여주는 함수

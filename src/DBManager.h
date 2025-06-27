@@ -54,6 +54,20 @@ using StorageQuarantine = decltype(sqlite_orm::make_storage("",
     )
 ));
 
+//FIM Baseline 테이블 구조
+struct BaselineEntry {
+    std::string path;
+    std::string md5;
+};
+
+//FIM Baseline 테이블에 대한 storage 타입 정의
+using StorageBaseline = decltype(sqlite_orm::make_storage("",
+    sqlite_orm::make_table("baseline",
+        sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
+        sqlite_orm::make_column("md5",  &BaselineEntry::md5)
+    )
+));
+
 class DBManager {
 public:
     static DBManager& GetInstance();
@@ -64,6 +78,7 @@ public:
     //Getter
     StorageHash& GetHashStorage();
     StorageQuarantine& GetQuarantineStorage();
+    StorageBaseline& GetBaselineStorage();
 
 
 private:
@@ -72,4 +87,5 @@ private:
     // storage
     StorageHash mHashStorage;
     StorageQuarantine mQuarantineStorage;
+    StorageBaseline mBaselineStorage;
 };
