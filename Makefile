@@ -69,6 +69,7 @@ install:
 	@echo "[INFO] /ManLab/bin 경로를 생성 중..."
 	sudo mkdir -p $(BIN_DIR)
 	sudo cp $(TARGET) $(BIN_DIR)/$(TARGET)
+	sudo ln -sf $(BIN_DIR)/$(TARGET) /usr/local/bin/$(TARGET)
 
 initialize_db:
 	@echo "[INFO] /ManLab/db 초기화 중..."
