@@ -12,12 +12,12 @@
 
 RsyslogManager::RsyslogManager(const std::string& logPath, const std::string& ruleSetPath)
     : mLogPath(logPath)
-    , mRsyslogRuleSet(LoadRsyslogRuleSet(ruleSetPath))
+    , mRsyslogRuleSet(loadRsyslogRuleSet(ruleSetPath))
 {
 }
 
 // RsyslogRuleSet 파싱
-std::unordered_set<std::string> RsyslogManager::LoadRsyslogRuleSet(const std::string& filename)
+std::unordered_set<std::string> RsyslogManager::loadRsyslogRuleSet(const std::string& filename)
 {
     std::unordered_set<std::string> result;
 
@@ -45,7 +45,7 @@ std::unordered_set<std::string> RsyslogManager::LoadRsyslogRuleSet(const std::st
 }
 
 // 로그 한 줄을 파싱하여 LogEntry 구조로 반환
-std::optional<LogEntry> RsyslogManager::ParseLogLine(const std::string& line)
+std::optional<LogEntry> RsyslogManager::parseLogLine(const std::string& line)
 {
     std::regex oldFmt(R"((\w{3}\s+\d+\s[\d:]+)\s(\S+)\s([\w\-]+):\s(.+))");
     std::regex newFmt(R"((\d{4}-\d{2}-\d{2}T[\d:.+-]+)\s(\S+)\s(\S+):\s(.+))");
@@ -79,7 +79,7 @@ void RsyslogManager::RsyslogRun()
     {
         if (std::getline(file, line))
         {
-            auto entry = ParseLogLine(line);
+            auto entry = parseLogLine(line);
             if (entry)
             {
                 auto result = AnalyzeSudoLog(*entry, mRsyslogRuleSet);

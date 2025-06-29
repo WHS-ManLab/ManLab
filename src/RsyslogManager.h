@@ -33,6 +33,6 @@ private:
     std::string mLogPath;
     std::unordered_set<std::string> mRsyslogRuleSet;
 
-    std::unordered_set<std::string> LoadRsyslogRuleSet(const std::string& filename);
-    std::optional<LogEntry> ParseLogLine(const std::string& line);
+    std::unordered_set<std::string> loadRsyslogRuleSet(const std::string& filename);
+    std::optional<LogEntry> parseLogLine(const std::string& line);
 };
