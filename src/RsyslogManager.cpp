@@ -1,6 +1,7 @@
 #include "RsyslogManager.h"
 #include "RsyslogRule.h"
 #include "LogStorageManager.h"
+#include "DaemonBase.h"
 
 #include <iostream>
 #include <fstream>
@@ -75,7 +76,7 @@ void RsyslogManager::RsyslogRun()
 
     std::string line;
 
-    while (true)
+    while (DaemonBase::running)
     {
         if (std::getline(file, line))
         {
