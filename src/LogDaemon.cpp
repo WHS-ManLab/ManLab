@@ -10,7 +10,7 @@ void LogCollectorDaemon::run()
     handleSignals();
 
     std::string logPath = "/var/log/manlab.log";
-    std::string ruleSetPath = "../lib/RsyslogRuleSet.yaml";
+    std::string ruleSetPath = "Manlab/conf/RsyslogRuleSet.yaml";
 
     RsyslogManager rsyslog(logPath, ruleSetPath);
 
@@ -26,6 +26,6 @@ void LogCollectorDaemon::run()
 
     if (rsyslogThread.joinable())
     {
-        rsyslogThread.detach();
+        rsyslogThread.join();
     }
 }
