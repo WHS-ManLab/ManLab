@@ -6,12 +6,15 @@
 #include <filesystem>
 #include <vector>
 
+//기준선 DB와 현재 파일 상태를 비교하여 변조 여부 확인
+//verbose가 true일 경우 상세 로그를 출력
 void compare_with_baseline(bool verbose) {
-    auto& storage = DBManager::GetInstance().GetBaselineStorage();
+    auto& baseline_storage = DBManager::GetInstance().GetBaselineStorage();  // 기준선 DB 접근
+    auto& modified_storage = DBManager::GetInstance().GetModifiedStorage();  // 수정된 DB 접근
 
     std::vector<BaselineEntry> entries;
     try {
-        entries = storage.get_all<BaselineEntry>();
+        entries = baseline_storage.get_all<BaselineEntry>(); // DB에서 모든 기준선 항목 불러오기
     } catch (const std::exception& e) {
         if (verbose)
             std::cerr << "[ERROR] 기준선 DB 조회 실패: " << e.what() << std::endl;
@@ -34,6 +37,7 @@ void compare_with_baseline(bool verbose) {
             continue;
         }
 
+        //현재 파일의 MD5 해시값 계산
         std::string current_hash = BaselineGenerator::compute_md5(path);
         if (current_hash.empty()) {
             if (verbose)
@@ -48,6 +52,12 @@ void compare_with_baseline(bool verbose) {
             std::cout << "[ALERT] 변조 감지: " << path << std::endl;
             std::cout << "  - 기준선: " << stored_hash << std::endl;
             std::cout << "  - 현재값: " << current_hash << std::endl;
+
+            try {
+                modified_storage.replace(ModifiedEntry{path, current_hash});  // 변조된 항목 저장
+            } catch (const std::exception& e) {
+                std::cerr << "[ERROR] 변조 항목 저장 실패: " << e.what() << std::endl;
+            }
         }
     }
 
