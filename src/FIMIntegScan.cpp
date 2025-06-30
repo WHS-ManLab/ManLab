@@ -1,6 +1,6 @@
-#include "compare_with_baseline.h"
+#include "FIMIntegScan.h"
 #include "DBManager.h"
-#include "baseline_generator.h"
+#include "FIMBaselineGenerator.h"
 
 #include <iostream>
 #include <filesystem>
@@ -63,5 +63,5 @@ void compare_with_baseline(bool verbose) {
 
     if (verbose)
         std::cout << "\n[SUCCESS] 무결성 검사 완료\n";
-}
+} 
 

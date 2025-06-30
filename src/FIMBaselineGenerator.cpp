@@ -1,4 +1,4 @@
-#include "baseline_generator.h"
+#include "FIMBaselineGenerator.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
