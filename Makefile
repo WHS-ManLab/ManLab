@@ -52,8 +52,8 @@ SRCS = $(SRC_DIR)/main.cpp \
        $(SRC_DIR)/ScheduledScanDaemon.cpp \
        $(SRC_DIR)/MalwareScan.cpp \
        $(SRC_DIR)/QuarantineManager.cpp \
-	   $(SRC_DIR)/baseline_generator.cpp \
-	   $(SRC_DIR)/compare_with_baseline.cpp \
+	   $(SRC_DIR)/FIMBaselineGenerator.cpp \
+	   $(SRC_DIR)/FIMIntegScan.cpp \
        $(LIB_DIR)/INIReader.cpp \
 	   $(LIB_DIR)/ini.c
 

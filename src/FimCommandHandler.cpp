@@ -1,6 +1,6 @@
 #include "FimCommandHandler.h"
-#include "baseline_generator.h"
-#include "compare_with_baseline.h"
+#include "FIMBaselineGenerator.h"
+#include "FIMIntegScan.h"
 #include "DBManager.h"
 #include <iostream>
 
