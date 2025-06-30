@@ -27,11 +27,20 @@ DBManager::DBManager()
             sqlite_orm::make_column("MalwareNameOrRule", &QuarantineMetadata::MalwareNameOrRule)
         )
     )),
+
         mBaselineStorage(sqlite_orm::make_storage(
         "/ManLab/db/baseline.db",
         sqlite_orm::make_table("baseline",
             sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
             sqlite_orm::make_column("md5",  &BaselineEntry::md5)
+        )
+    )),
+
+        mModifiedStorage(sqlite_orm::make_storage(
+            "/ManLab/db/modifiedhash.db",
+            sqlite_orm::make_table("modifiedhash",
+                sqlite_orm::make_column("path", &ModifiedEntry::path, sqlite_orm::primary_key()),
+                sqlite_orm::make_column("current_md5", &ModifiedEntry::current_md5)
         )
     ))
 
@@ -41,6 +50,7 @@ void DBManager::InitSchema() {
     mHashStorage.sync_schema();
     mQuarantineStorage.sync_schema();
     mBaselineStorage.sync_schema();
+    mModifiedStorage.sync_schema();
 }
 
 StorageHash& DBManager::GetHashStorage() {
@@ -53,4 +63,8 @@ StorageQuarantine& DBManager::GetQuarantineStorage() {
 
 StorageBaseline& DBManager::GetBaselineStorage() {
     return mBaselineStorage;
+}
+
+StorageModified& DBManager::GetModifiedStorage() {
+    return mModifiedStorage;
 }

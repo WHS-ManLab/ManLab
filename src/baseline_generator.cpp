@@ -7,9 +7,11 @@
 #include <filesystem>
 #include "DBManager.h"
 
+//ini 경로와 DB 경로를 멤버 변수로 저장
 BaselineGenerator::BaselineGenerator(const std::string& ini_path, const std::string& db_path)
     : ini_path_(ini_path), db_path_(db_path) {}
 
+//파일 경로를 받아 해당 파일의 MD5 해시값을 변환
 std::string BaselineGenerator::compute_md5(const std::string& filepath) {
     std::ifstream file(filepath, std::ios::binary);
     if (!file) return "";
@@ -18,6 +20,7 @@ std::string BaselineGenerator::compute_md5(const std::string& filepath) {
     MD5_Init(&ctx);
 
     char buffer[4096];
+    //파일 끝까지 읽으면서 해시 업데이트
     while (file.read(buffer, sizeof(buffer)) || file.gcount()) {
         MD5_Update(&ctx, buffer, file.gcount());
     }
@@ -32,6 +35,7 @@ std::string BaselineGenerator::compute_md5(const std::string& filepath) {
     return oss.str();
 }
 
+//INI 파일에서 경로를 파싱하고 해당 경로와 파일/디랙토리 해시를 DB에 저장
 void BaselineGenerator::parse_ini_and_store() {
     std::ifstream ini_file(ini_path_);
     if (!ini_file) {
@@ -54,11 +58,13 @@ void BaselineGenerator::parse_ini_and_store() {
 
                 try {
                     if (std::filesystem::is_regular_file(path)) {
+                        //단일 파일인 경우 해시 계산 후 DB에 저장
                         std::string hash = compute_md5(path);
                         std::cout << "[단일 파일] 저장 중: " << path << " → " << hash << std::endl;
                         storage.replace(BaselineEntry{path, hash});
                     }
                     else if (std::filesystem::is_directory(path)) {
+                        //디렉토리인 경우 재귀적으로 내부 파일들 모두 처리
                         for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
                             if (entry.is_regular_file()) {
                                 std::string file_path = entry.path().string();
