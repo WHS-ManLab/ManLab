@@ -35,38 +35,19 @@ DBManager::DBManager()
                                  sqlite_orm::make_column("UID", &LogAnalysisResult::uid),
                                  sqlite_orm::make_column("IsSuccess", &LogAnalysisResult::bIsSuccess),
                                  sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
-                                 sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine))))
-{
-}
-
-void DBManager::InitSchema()
-{
-    mHashStorage.sync_schema();
-    mQuarantineStorage.sync_schema();
-    mLogAnalysisResultStorage.sync_schema();
-        "/ManLab/db/quarantine.db",
-        sqlite_orm::make_table("QuarantineMetadata",
-            sqlite_orm::make_column("OriginalPath", &QuarantineMetadata::OriginalPath),
-            sqlite_orm::make_column("QuarantinedFileName", &QuarantineMetadata::QuarantinedFileName),
-            sqlite_orm::make_column("OriginalSize", &QuarantineMetadata::OriginalSize),
-            sqlite_orm::make_column("QuarantineDate", &QuarantineMetadata::QuarantineDate),
-            sqlite_orm::make_column("QuarantineReason", &QuarantineMetadata::QuarantineReason),
-            sqlite_orm::make_column("MalwareNameOrRule", &QuarantineMetadata::MalwareNameOrRule)
-        )
-    )),
-        mBaselineStorage(sqlite_orm::make_storage(
+                                 sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine)))),
+                                 
+     mBaselineStorage(sqlite_orm::make_storage(
         "/ManLab/db/baseline.db",
         sqlite_orm::make_table("baseline",
             sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
-            sqlite_orm::make_column("md5",  &BaselineEntry::md5)
-        )
-    ))
-
+            sqlite_orm::make_column("md5",  &BaselineEntry::md5))))
 {}
 
 void DBManager::InitSchema() {
     mHashStorage.sync_schema();
     mQuarantineStorage.sync_schema();
+    mLogAnalysisResultStorage.sync_schema();
     mBaselineStorage.sync_schema();
 }
 
@@ -85,6 +66,7 @@ StorageLogAnalysisResult& DBManager::GetLogAnalysisResultStorage()
     return mLogAnalysisResultStorage;
 }
   
-StorageBaseline& DBManager::GetBaselineStorage() {
+StorageBaseline& DBManager::GetBaselineStorage() 
+{
     return mBaselineStorage;
 }
