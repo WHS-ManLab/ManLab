@@ -53,9 +53,10 @@ SRCS = $(SRC_DIR)/main.cpp \
        $(SRC_DIR)/ScheduledScanDaemon.cpp \
        $(SRC_DIR)/MalwareScan.cpp \
        $(SRC_DIR)/QuarantineManager.cpp \
-	   $(SRC_DIR)/LogStorageManager.cpp \
+	     $(SRC_DIR)/LogStorageManager.cpp \
+	     $(SRC_DIR)/baseline_generator.cpp \
        $(LIB_DIR)/INIReader.cpp \
-	   $(LIB_DIR)/ini.c
+	     $(LIB_DIR)/ini.c
 
 # 빌드 대상
 .PHONY: all init install initialize_db copy_conf copy_rules install_service clean 
@@ -71,6 +72,7 @@ install:
 	@echo "[INFO] /ManLab/bin 경로를 생성 중..."
 	sudo mkdir -p $(BIN_DIR)
 	sudo cp $(TARGET) $(BIN_DIR)/$(TARGET)
+	sudo ln -sf $(BIN_DIR)/$(TARGET) /usr/local/bin/$(TARGET)
 
 initialize_db:
 	@echo "[INFO] /ManLab/db 초기화 중..."
