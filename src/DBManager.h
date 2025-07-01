@@ -48,6 +48,13 @@ struct LogAnalysisResult
     std::string rawLine;
 };
 
+// FIM Baseline 테이블 구조
+struct BaselineEntry
+{
+    std::string path;
+    std::string md5;
+};
+
 // 악성코드 해시에 대한 storage 타입 정의
 using StorageHash = decltype(sqlite_orm::make_storage("",
                                                       sqlite_orm::make_table("MalwareHashDB",
@@ -77,23 +84,14 @@ using StorageLogAnalysisResult = decltype(sqlite_orm::make_storage("",
                                                                                           sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
                                                                                           sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine))));
 
+// FIM Baseline 테이블에 대한 storage 타입 정의
+using StorageBaseline = decltype(sqlite_orm::make_storage("",
+                                                          sqlite_orm::make_table("baseline",
+                                                                                 sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
+                                                                                 sqlite_orm::make_column("md5", &BaselineEntry::md5))));
+
 class DBManager
 {
-//FIM Baseline 테이블 구조
-struct BaselineEntry {
-    std::string path;
-    std::string md5;
-};
-
-//FIM Baseline 테이블에 대한 storage 타입 정의
-using StorageBaseline = decltype(sqlite_orm::make_storage("",
-    sqlite_orm::make_table("baseline",
-        sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
-        sqlite_orm::make_column("md5",  &BaselineEntry::md5)
-    )
-));
-
-class DBManager {
 public:
     static DBManager& GetInstance();
     void InitSchema();
