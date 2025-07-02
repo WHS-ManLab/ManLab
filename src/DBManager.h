@@ -13,9 +13,9 @@
 4. 생성자 초기화 리스트에 make_storage() 추가 (DBManager.cpp)
 5. storage.sync_schema()호출 추가 (DBManager.cpp)
 6. Makefile에 db 추가
+6. Makefile에 db 추가
 ============================================
 */
-
 
 // 악성코드 해시 DB 테이블 구조
 struct MalwareHashDB
@@ -57,7 +57,26 @@ struct BaselineEntry {
     std::string md5;
 };
 
-// 악성코드 해시에 대한 stroage타입 정의
+// 로그 분석 결과 DB 테이블 구조
+struct LogAnalysisResult
+{
+    int id;
+    std::string type;
+    std::string description;
+    std::string timestamp;
+    std::string uid;
+    bool bIsSuccess;
+    std::string originalLogPath;
+    std::string rawLine;
+};
+
+//FIM Baseline 테이블 구조
+struct BaselineEntry {
+    std::string path;
+    std::string md5;
+};
+
+// 악성코드 해시에 대한 storage 타입 정의
 using StorageHash = decltype(sqlite_orm::make_storage("",
     sqlite_orm::make_table("MalwareHashDB",
         sqlite_orm::make_column("Hash", &MalwareHashDB::Hash),
@@ -68,6 +87,7 @@ using StorageHash = decltype(sqlite_orm::make_storage("",
     )
 ));
 
+// 악성코드 격리 메타데이터에 대한 storage 타입 정의
 // 악성코드 격리 메타데이터에 대한 storage 타입 정의
 using StorageQuarantine = decltype(sqlite_orm::make_storage("",
     sqlite_orm::make_table("QuarantineMetadata",

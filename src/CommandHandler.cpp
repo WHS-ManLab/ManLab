@@ -12,6 +12,8 @@
 #include "DBManager.h"
 #include "INIReader.h" 
 #include "DaemonUtils.h"
+#include "INIReader.h" 
+#include "DaemonUtils.h"
 
 namespace fs = std::filesystem;
 
@@ -123,6 +125,7 @@ void CommandHandler::run()
     
     // 명령어 유형 결정
     // 새 명령어 추가 시 else if와 command를 이용해 알맞은 함수 호출
+    // 데몬 관련 명령어 -> 추후 PID파일을 이용하는 방식으로 수정해야 함
     // 데몬 관련 명령어 -> 추후 PID파일을 이용하는 방식으로 수정해야 함
     if (command == "init") {
         

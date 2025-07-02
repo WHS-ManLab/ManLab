@@ -8,6 +8,10 @@ DBManager& DBManager::GetInstance()
 {
     static DBManager sInstance;
     return sInstance;
+DBManager& DBManager::GetInstance()
+{
+    static DBManager sInstance;
+    return sInstance;
 }
 
 DBManager::DBManager()
