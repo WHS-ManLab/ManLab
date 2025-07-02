@@ -31,6 +31,7 @@ DB_DIR = $(INSTALL_DIR)/db
 HASH_DB = $(DB_DIR)/hash.db
 QUARANTINE_DB = $(DB_DIR)/quarantine.db
 LOG_ANALYSIS_RESULT_DB = $(DB_DIR)/logAnalysisResult.db
+BASELINE_DB = $(DB_DIR)/baseline.db
 CONF_SRC_DIR = conf
 CONF_DST_DIR = $(INSTALL_DIR)/conf
 RULE_SRC_DIR = rules
@@ -53,10 +54,10 @@ SRCS = $(SRC_DIR)/main.cpp \
        $(SRC_DIR)/ScheduledScanDaemon.cpp \
        $(SRC_DIR)/MalwareScan.cpp \
        $(SRC_DIR)/QuarantineManager.cpp \
-	     $(SRC_DIR)/LogStorageManager.cpp \
-	     $(SRC_DIR)/baseline_generator.cpp \
+	   $(SRC_DIR)/LogStorageManager.cpp \
+	   $(SRC_DIR)/baseline_generator.cpp \
        $(LIB_DIR)/INIReader.cpp \
-	     $(LIB_DIR)/ini.c
+	   $(LIB_DIR)/ini.c
 
 # 빌드 대상
 .PHONY: all init install initialize_db copy_conf copy_rules install_service clean 
