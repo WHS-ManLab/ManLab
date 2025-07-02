@@ -10,6 +10,8 @@
 #include "LogDaemon.h"
 #include "ScheduledScanDaemon.h"
 #include "DBManager.h"
+#include "INIReader.h" 
+#include "DaemonUtils.h"
 
 namespace fs = std::filesystem;
 
@@ -121,59 +123,42 @@ void CommandHandler::run()
     
     // 명령어 유형 결정
     // 새 명령어 추가 시 else if와 command를 이용해 알맞은 함수 호출
-    // 데몬 관련 명령어
+    // 데몬 관련 명령어 -> 추후 PID파일을 이용하는 방식으로 수정해야 함
     if (command == "init") {
         
         // DB 테이블 생성(DBManager의 InitSchema() 호출)
-        // 악성코드 팀에서는 만들어진 DB에 데이터 삽입 과정도 필요(해시)
         DBManager::GetInstance().InitSchema();
+        // 악성코드 해시 DB 초기화
+        DBManager::InitHashDB("/ManLab/rules/malware_hashes.txt");
         
-        // TODO
-        // 세 개의 데몬 LogDaemon, RealtimeMonitorDaemon, ScheduledScanDaemon 호출
-        // 이미 데몬 프로세스가 돌아가고 있을 경우 중복 방지 필요
-        // 아래는 임시방편 코드(if ~ return)
-        if (fork() == 0) {
-            RealtimeMonitorDaemon().run(); 
-            exit(0);
+        // RealtimeMonitorDaemon 실행 (중복 방지)
+        launchDaemonIfNotRunning("RealtimeMonitorDaemon", []() {
+            RealtimeMonitorDaemon().run();
+        });
+
+        return;
+    }
+    else if (command == "reload") {
+        INIReader reader("/ManLab/conf/realtimeControl.ini");
+        bool monitorEnabled = reader.GetBoolean("RealtimeControl", "realtimeMonitorEnabled", false);
+
+        // RealtimeMonitorDaemon은 항상 실행
+        launchDaemonIfNotRunning("RealtimeMonitorDaemon", []() {
+            RealtimeMonitorDaemon().run();
+        });
+
+        if (monitorEnabled) {
+            launchDaemonIfNotRunning("LogCollectorDaemon", []() {
+                LogCollectorDaemon().run();
+            });
+            launchDaemonIfNotRunning("ScheduledScanDaemon", []() {
+                ScheduledScanDaemon().run();
+            });
+        } else {
+            stopDaemon("LogCollectorDaemon");
+            stopDaemon("ScheduledScanDaemon");
         }
 
-        if (fork() == 0) {
-            LogCollectorDaemon().run();
-            exit(0);
-        }
-        
-        if (fork() == 0) {
-            ScheduledScanDaemon().run();
-            exit(0);
-        }
-
-        std::cout << "[INIT] 백그라운드 데몬 실행\n";
-        return;
-    }
-    else if (command == "boot_check") {
-        // TODO
-        // 부팅 시 데몬 프로세스 돌리기
-        // ScheduledScanDaemon은 이전 상태 관계없이 계속 실행
-        // LogDaemon, RealtimeMonitorDaemon은 이전에 enable 상태였는지 disable상태였는지에 따라 구분
-        // 현재 Makefile에 부팅 시 운영체제가 boot_check를 실행하도록 설정함
-        return;
-    }
-    else if (command == "--enable" && mArgs.size() >= 2 &&
-             mArgs[1] == "realtime_monitor")
-    {
-        // TODO
-        // 데몬 enable 설정
-        // LogDaemon, RealtimeMonitorDaemon을 실행
-        // 해당 정보는 부팅 시에도 계속 남아 있어야 함
-        // 이미 데몬 프로세스가 돌아가고 있을 경우 중복 방지 필요
-        return;
-    }
-    else if (command == "--disable" && mArgs.size() >= 2 &&
-             mArgs[1] == "realtime_monitor")
-    {
-        // 데몬 disable 설정
-        // LogDaemon, RealtimeMonitorDaemon 실행 해제 
-        // 해당 정보는 부팅 시에도 계속 남아 있어야 함    
         return;
     }
 
