@@ -53,6 +53,7 @@ SRCS = $(SRC_DIR)/main.cpp \
        $(SRC_DIR)/SigCommandHandler.cpp \
        $(SRC_DIR)/LogDaemon.cpp \
        $(SRC_DIR)/RealtimeMonitorDaemon.cpp \
+	   $(SRC_DIR)/RealTimeMonitor.cpp \
        $(SRC_DIR)/ScheduledScanDaemon.cpp \
        $(SRC_DIR)/MalwareScan.cpp \
        $(SRC_DIR)/QuarantineManager.cpp \

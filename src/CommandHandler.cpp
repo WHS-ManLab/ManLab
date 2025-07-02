@@ -161,20 +161,18 @@ void CommandHandler::run()
     else if (command == "--enable" && mArgs.size() >= 2 &&
              mArgs[1] == "realtime_monitor")
     {
-        // TODO
-        // 데몬 enable 설정
-        // LogDaemon, RealtimeMonitorDaemon을 실행
-        // 해당 정보는 부팅 시에도 계속 남아 있어야 함
-        // 이미 데몬 프로세스가 돌아가고 있을 경우 중복 방지 필요
+        std::cout << "***sudo 권한으로 실행해주세요***" << std::endl;
+        fim::RealTimeMonitorEnable();
+       
         return;
     }
     else if (command == "--disable" && mArgs.size() >= 2 &&
              mArgs[1] == "realtime_monitor")
     {
-        // 데몬 disable 설정
-        // LogDaemon, RealtimeMonitorDaemon 실행 해제 
-        // 해당 정보는 부팅 시에도 계속 남아 있어야 함    
+        fim::RealTimeMonitorDisable();
+
         return;
+
     }
 
     // 기능 관련 명령어
