@@ -88,7 +88,6 @@ using StorageHash = decltype(sqlite_orm::make_storage("",
 ));
 
 // 악성코드 격리 메타데이터에 대한 storage 타입 정의
-// 악성코드 격리 메타데이터에 대한 storage 타입 정의
 using StorageQuarantine = decltype(sqlite_orm::make_storage("",
     sqlite_orm::make_table("QuarantineMetadata",
         sqlite_orm::make_column("OriginalPath", &QuarantineMetadata::OriginalPath),

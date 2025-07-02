@@ -4,10 +4,8 @@
 #include <filesystem> // 파일 경로 확인용
 #include <iostream> //디버그용
 
-DBManager& DBManager::GetInstance()
-{
-    static DBManager sInstance;
-    return sInstance;
+namespace fs = std::filesystem;
+
 DBManager& DBManager::GetInstance()
 {
     static DBManager sInstance;
@@ -58,6 +56,46 @@ void DBManager::InitSchema() {
     mQuarantineStorage.sync_schema();
     mLogAnalysisResultStorage.sync_schema();
     mBaselineStorage.sync_schema();
+}
+
+// malware_hashes.txt 파일에서 해시 데이터를 읽어 DB에 삽입하는 함수
+void DBManager::InitHashDB(const std::string& dataFilePath) {
+    StorageHash& storage = DBManager::GetInstance().GetHashStorage();
+
+    // 파일이 존재하지 않으면 함수 종료
+    if (!fs::exists(dataFilePath)) {
+        return;
+    }
+
+    std::ifstream dataFile(dataFilePath);
+    if (!dataFile.is_open()) {
+        return;
+    }
+
+    std::string line;
+    // 헤더 줄 건너뛰기
+    std::getline(dataFile, line); 
+
+    while (std::getline(dataFile, line)) {
+        if (line.empty()) {
+            continue; // 빈 줄 건너뛰기
+        }
+        std::istringstream iss(line);
+        MalwareHashDB entry;
+
+        // 탭으로 구분된 값을 읽어 MalwareHashDB 구조체에 저장
+        if (std::getline(iss, entry.Hash, '\t') &&
+            std::getline(iss, entry.Algorithm, '\t') &&
+            std::getline(iss, entry.MalwareName, '\t') &&
+            std::getline(iss, entry.SecurityVendors, '\t') &&
+            std::getline(iss, entry.HashLicense, '\t'))
+        {
+            try {
+                // 이미 존재하는 해시는 무시
+                storage.insert(entry);
+            } catch (const std::exception& e) {}
+        } else {}
+    }
 }
 
 StorageHash& DBManager::GetHashStorage()
