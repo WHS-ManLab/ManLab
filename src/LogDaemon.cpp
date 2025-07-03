@@ -3,11 +3,12 @@
 
 #include <thread>
 #include <chrono>
+std::atomic<bool> LogCollectorDaemon::running(true);
 
 void LogCollectorDaemon::run()
 {
     daemonize();
-    handleSignals();
+    setupSignalHandlers();
 
     std::string logPath = "/var/log/manlab.log";
     std::string ruleSetPath = "Manlab/conf/RsyslogRuleSet.yaml";
