@@ -4,14 +4,14 @@
 #include <chrono>
 #include <vector>
 #include <syslog.h>
-
+std::atomic<bool> RealtimeMonitorDaemon::running(true);
 
 
 
 void RealtimeMonitorDaemon::run()
 {
-    //daemonize();      // 백그라운드 데몬화
-    //handleSignals();  // SIGTERM 등 처리
+    //daemonize();            // 백그라운드 데몬화
+    //setupSignalHandlers();  // SIGTERM 등 처리
 
 
     // 1. INI 파일에서 경로, 마스크 파싱
