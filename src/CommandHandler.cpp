@@ -20,96 +20,72 @@ namespace fs = std::filesystem;
 CommandHandler::CommandHandler(int argc, char** argv)
     : mArgc(argc), mArgv(argv)
 {
-    parseOptions(); // 옵션 파싱 시 예외 throw
+    parseOptions(); 
 }
 
 
-// getopt_long()를 이용해 CLI 옵션을 분리-저장하는 함수
-// * 새 옵션을 추가하려는 분은 **① longOptions[], ② optString,
-//   ③ switch-case**—세 군데만 수정하시면 됩니다.
+// ------------------------------------------------------------
+// CommandHandler::parseOptions()
+// CLI 옵션을 getopt_long()으로 파싱하여 mArgs 벡터에 저장합니다.
+//
+// [사용법 및 확장 규칙]
+// • 새 옵션을 추가하려면 아래 3개만 수정하면 됩니다:
+//   ① longOptions[] : "이름", 인자유형, nullptr, '단문자'
+//   ② optString     : 단문자를 나열, 인자 필요 시 ':' 추가
+//   ③ switch-case   : 각 옵션에 대한 처리 로직 추가
+//
+// 예시:
+//   longOptions[] = { {"scan", required_argument, nullptr, 's'}, ... };
+//   optString = "s:"
+//   case 's': mArgs.emplace_back("--scan"); mArgs.emplace_back(optarg); break;
+//
+// 현재는 별도의 CLI 옵션 없이 위치 인자만 처리합니다.
+// ------------------------------------------------------------
 void CommandHandler::parseOptions()
 {
     optind = 0;
-    int  optionChar;          // getopt_long()이 반환하는 문자(또는 0/-1)
-    int  optionIndex = 0;     // longOptions[]에서 몇 번째 항목인지
+    int  optionChar;
+    int  optionIndex = 0;
 
-    //-----------------------------------------------------------
-    // ① longOptions[] : “--long-name” ↔ ‘-s’ 매핑 테이블
-    //    • { "옵션이름", 인자유형, flag, '단문자' }
-    //      - 인자유형  : no_argument / required_argument / optional_argument
-    //      - flag     : nullptr → switch-case에서 직접 처리
-    //      - '단문자'  : optString 에도 반드시 등록
-    //-----------------------------------------------------------
     static struct option longOptions[] = {
-        {"enable",  required_argument, nullptr, 'e'},
-        {"disable", required_argument, nullptr, 'd'},
-        // 예시) {"scan",   no_argument,       nullptr, 's'},  // 새 옵션 추가 시
-        {nullptr,   0,                nullptr,  0 }
+        // 예시: {"scan", required_argument, nullptr, 's'},
+        {nullptr, 0, nullptr, 0}
     };
 
-    //-----------------------------------------------------------
-    // ② optString : 단문자 집합
-    //    • 인자가 필요하면 뒤에 ':' 를 붙이기
-    //    • longOptions[]와 반드시 일치할 것
-    //-----------------------------------------------------------
-    const char* optString = "e:d:";          // 예) "e:d:s:" ← -s <arg> 추가 시
+    const char* optString = "";  // 예시: "s:"
 
-    //-----------------------------------------------------------
-    // getopt_long() 루프
-    //    • optionChar : 단문자('e', 'd', …) 또는 0 / '?' / -1
-    //    • optarg     : 인자가 있는 옵션의 값(char*)
-    //-----------------------------------------------------------
     while ((optionChar = getopt_long(mArgc,
                                      mArgv,
                                      optString,
                                      longOptions,
                                      &optionIndex)) != -1)
     {
-        //-------------------------------------------------------
-        // ③ switch-case : 각 옵션별 동작 정의
-        //    • 새 옵션을 추가했다면 여기에 case 문을 넣으세요.
-        //-------------------------------------------------------
         switch (optionChar) {
-        case 'e':                           // --enable <arg>
-            mArgs.emplace_back("--enable");
-            mArgs.emplace_back(optarg);
-            break;
-
-        case 'd':                           // --disable <arg>
-            mArgs.emplace_back("--disable");
-            mArgs.emplace_back(optarg);
-            break;
-
-        /* ---------- 새 옵션 예시 ----------
-        case 's':                           // --scan <arg>
+        /* ---------- 옵션 처리 예시 ----------
+        case 's':
             mArgs.emplace_back("--scan");
             mArgs.emplace_back(optarg);
             break;
-        -----------------------------------*/
-
-        // getopt_long()이 '?'(알 수 없는 옵션)일 때는
-        // default 로 떨어지므로 예외 처리로 통일
+        -------------------------------------*/
         default:
-            throw std::invalid_argument(
-                "Unknown or malformed command-line option");
+            // main.cpp의 catch문으로 전송
+            throw std::invalid_argument("Unknown or malformed command-line option");
         }
     }
 
-    //-----------------------------------------------------------
-    // 옵션 뒤에 남은 “위치 인자”들을 그대로 mArgs에 저장
-    //-----------------------------------------------------------
+    // 옵션 뒤에 남은 위치 인자를 저장
     if (optind < mArgc) {
         for (int i = optind; i < mArgc; ++i) {
             mArgs.emplace_back(mArgv[i]);
         }
-    } 
-    else {
+    } else {
         for (int i = 0; i < mArgc; ++i) {
             mArgs.emplace_back(mArgv[i]);
         }
     }
 
     if (mArgs.empty()) {
+        // main.cpp의 catch문으로 전송
         throw std::invalid_argument("No command arguments provided");
     }
 }
@@ -117,6 +93,7 @@ void CommandHandler::parseOptions()
 void CommandHandler::run()
 {
     if (mArgs.size() < 1) {
+        // main.cpp의 catch문으로 전송
         throw std::invalid_argument("No command provided");
     }
 
@@ -124,39 +101,37 @@ void CommandHandler::run()
 
     
     // 명령어 유형 결정
-    // 새 명령어 추가 시 else if와 command를 이용해 알맞은 함수 호출
-    // 데몬 관련 명령어 -> 추후 PID파일을 이용하는 방식으로 수정해야 함
-    // 데몬 관련 명령어 -> 추후 PID파일을 이용하는 방식으로 수정해야 함
-    if (command == "init") {
+    // [init] 시스템 초기화
+    if (command == "init") { // 사용자가 Make이후 ManLab init 호출
         
         // DB 테이블 생성(DBManager의 InitSchema() 호출)
         DBManager::GetInstance().InitSchema();
-        // 악성코드 해시 DB 초기화
-        DBManager::InitHashDB("/ManLab/rules/malware_hashes.txt");
-        
-        // RealtimeMonitorDaemon 실행 (중복 방지)
-        launchDaemonIfNotRunning("RealtimeMonitorDaemon", []() {
-            RealtimeMonitorDaemon().run();
-        });
 
+        // 악성코드 해시 DB 초기화
+        // 초기화 단계에서는 clone이후 Make를 실행시키므로 Makefile이 있는 디렉토리 기준 상대경로 지정
+        DBManager::InitHashDB("../malhash/malware_hashes.txt");
+        
+        // RealtimeMonitorDaemon 실행
+        // 데몬 중복 살행 방지를 위한 실행 보조 함수
+        // PID 파일 이름과 함수 포인터를 인자로 전달
+        launchDaemonIfNotRunning("RealtimeMonitorDaemon", [](){RealtimeMonitorDaemon().run();});
         return;
     }
+
+    // [reload] 설정 재적용 및 PC재부팅
     else if (command == "reload") {
         INIReader reader("/ManLab/conf/realtimeControl.ini");
         bool monitorEnabled = reader.GetBoolean("RealtimeControl", "realtimeMonitorEnabled", false);
 
-        // RealtimeMonitorDaemon은 항상 실행
-        launchDaemonIfNotRunning("RealtimeMonitorDaemon", []() {
-            RealtimeMonitorDaemon().run();
-        });
+        // RealtimeMonitorDaemon : PC 재부팅 시 항상 실행
+        // 설정 재적용 시에는 중복 실행 방지 적용
+        launchDaemonIfNotRunning("RealtimeMonitorDaemon", [](){RealtimeMonitorDaemon().run();});
 
+        // PC 재부팅 시 설정 파일을 읽고 실행
+        // 설정 재적용 시에도 동일한 동작
         if (monitorEnabled) {
-            launchDaemonIfNotRunning("LogCollectorDaemon", []() {
-                LogCollectorDaemon().run();
-            });
-            launchDaemonIfNotRunning("ScheduledScanDaemon", []() {
-                ScheduledScanDaemon().run();
-            });
+            launchDaemonIfNotRunning("LogCollectorDaemon", []() {LogCollectorDaemon().run();});
+            launchDaemonIfNotRunning("ScheduledScanDaemon", []() {ScheduledScanDaemon().run();});
         } else {
             stopDaemon("LogCollectorDaemon");
             stopDaemon("ScheduledScanDaemon");
@@ -165,36 +140,52 @@ void CommandHandler::run()
         return;
     }
 
-    // 기능 관련 명령어
+    // [malscan] 악성코드 수동검사 명령어
     else if (command == "malscan") {
         sig::MalScan();
     }
+
+    // [restore] 격리된 파일 복구 명령어
     else if (command == "restore") {
         if (mArgs.size() < 2) {
+            // main.cpp의 catch문으로 전송 
             throw std::invalid_argument("Missing filename for restore command");
         }
         sig::Restore(mArgs[1]);
     }
+
+    // [integscan] 무결성 수동검사 명령어
     else if (command == "integscan") {
         fim::IntScan();
     }
+
+    // [baseline] 
     else if (command == "baseline") {
         fim::BaselineGen();
     }
+
+    // [check_baseline]
     else if (command == "check_baseline"){
         fim::PrintBaseline();
     }
+
+    // [man] 매뉴얼 디스플레이 명령어
     else if (command == "man") {
         //TODO
         //사용자에게 매뉴얼을 보여주는 함수
         //공통
     }
+
+    // [malreport] 지금까지의 검사 내역 보여주는 명령어
     else if (command == "malreport") {
         //TODO
         //사용자에게 데이터베이스에 저장된 악성코드 스캔 결과를 보여주는 함수
         //시그니처 팀 담당
     }
+
+    // 명령어 집합에 존재하지 않는 경우
     else {
+        // main.cpp의 catch문으로 전송
         throw std::invalid_argument("Unknown command: " + command);
     }
     return ;

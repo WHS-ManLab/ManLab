@@ -12,10 +12,14 @@ DBManager& DBManager::GetInstance()
     return sInstance;
 }
 
+// 생성자
+// SQLite DB 파일을 열고 ORM 매핑 정보를 담은 객체를 생성
+// SQLite 파일 열기 + 테이블 명과 컬럼 정의를 메모리에 등록
+// 싱글톤 구조이기에 각 프로세스마다 오직 한 번만 생성
 DBManager::DBManager()
     : mHashStorage(sqlite_orm::make_storage(
           "/ManLab/db/hash.db",
-          sqlite_orm::make_table("MalwareHashDB",
+            sqlite_orm::make_table("MalwareHashDB",
             sqlite_orm::make_column("Hash", &MalwareHashDB::Hash),
             sqlite_orm::make_column("Algorithm", &MalwareHashDB::Algorithm),
             sqlite_orm::make_column("MalwareName", &MalwareHashDB::MalwareName),
@@ -24,33 +28,35 @@ DBManager::DBManager()
 
       mQuarantineStorage(sqlite_orm::make_storage(
           "/ManLab/db/quarantine.db",
-          sqlite_orm::make_table("QuarantineMetadata",
-                                 sqlite_orm::make_column("OriginalPath", &QuarantineMetadata::OriginalPath),
-                                 sqlite_orm::make_column("QuarantinedFileName", &QuarantineMetadata::QuarantinedFileName),
-                                 sqlite_orm::make_column("OriginalSize", &QuarantineMetadata::OriginalSize),
-                                 sqlite_orm::make_column("QuarantineDate", &QuarantineMetadata::QuarantineDate),
-                                 sqlite_orm::make_column("QuarantineReason", &QuarantineMetadata::QuarantineReason),
-                                 sqlite_orm::make_column("MalwareNameOrRule", &QuarantineMetadata::MalwareNameOrRule)))),
+            sqlite_orm::make_table("QuarantineMetadata",
+            sqlite_orm::make_column("OriginalPath", &QuarantineMetadata::OriginalPath),
+            sqlite_orm::make_column("QuarantinedFileName", &QuarantineMetadata::QuarantinedFileName),
+            sqlite_orm::make_column("OriginalSize", &QuarantineMetadata::OriginalSize),
+            sqlite_orm::make_column("QuarantineDate", &QuarantineMetadata::QuarantineDate),
+            sqlite_orm::make_column("QuarantineReason", &QuarantineMetadata::QuarantineReason),
+            sqlite_orm::make_column("MalwareNameOrRule", &QuarantineMetadata::MalwareNameOrRule)))),
 
       mLogAnalysisResultStorage(sqlite_orm::make_storage(
           "/ManLab/db/logAnalysisResult.db",
-          sqlite_orm::make_table("LogAnalysisResult",
-                                 sqlite_orm::make_column("ID", &LogAnalysisResult::id, sqlite_orm::primary_key().autoincrement()),
-                                 sqlite_orm::make_column("Type", &LogAnalysisResult::type),
-                                 sqlite_orm::make_column("Description", &LogAnalysisResult::description),
-                                 sqlite_orm::make_column("Timestamp", &LogAnalysisResult::timestamp),
-                                 sqlite_orm::make_column("UID", &LogAnalysisResult::uid),
-                                 sqlite_orm::make_column("IsSuccess", &LogAnalysisResult::bIsSuccess),
-                                 sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
-                                 sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine)))),
+            sqlite_orm::make_table("LogAnalysisResult",
+            sqlite_orm::make_column("ID", &LogAnalysisResult::id, sqlite_orm::primary_key().autoincrement()),
+            sqlite_orm::make_column("Type", &LogAnalysisResult::type),
+            sqlite_orm::make_column("Description", &LogAnalysisResult::description),
+            sqlite_orm::make_column("Timestamp", &LogAnalysisResult::timestamp),
+            sqlite_orm::make_column("UID", &LogAnalysisResult::uid),
+            sqlite_orm::make_column("IsSuccess", &LogAnalysisResult::bIsSuccess),
+            sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
+            sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine)))),
                                  
      mBaselineStorage(sqlite_orm::make_storage(
         "/ManLab/db/baseline.db",
-        sqlite_orm::make_table("baseline",
+            sqlite_orm::make_table("baseline",
             sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
             sqlite_orm::make_column("md5",  &BaselineEntry::md5))))
 {}
 
+// 데이터베이스를 생성하는 로직
+// init시 오직 한 번만 호출
 void DBManager::InitSchema() {
     mHashStorage.sync_schema();
     mQuarantineStorage.sync_schema();
@@ -59,11 +65,13 @@ void DBManager::InitSchema() {
 }
 
 // malware_hashes.txt 파일에서 해시 데이터를 읽어 DB에 삽입하는 함수
+// 처음 ManLab init 실행 시 단 한 번 호출
 void DBManager::InitHashDB(const std::string& dataFilePath) {
     StorageHash& storage = DBManager::GetInstance().GetHashStorage();
 
     // 파일이 존재하지 않으면 함수 종료
     if (!fs::exists(dataFilePath)) {
+        //TODO : 에러 로그 입력
         return;
     }
 
@@ -93,8 +101,11 @@ void DBManager::InitHashDB(const std::string& dataFilePath) {
             try {
                 // 이미 존재하는 해시는 무시
                 storage.insert(entry);
-            } catch (const std::exception& e) {}
-        } else {}
+            } catch (const std::exception& e) 
+            {
+                //TODO : 에러 로그 입력
+            }
+        } 
     }
 }
 
