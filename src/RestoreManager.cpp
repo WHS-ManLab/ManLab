@@ -41,7 +41,7 @@ void RestoreManager::run() {
     }
 
     if (!found) {
-        std::cerr << "Restore failed: metadata not found for " << mQuarantinedFileName << '\n';
+        // TODO : 에러 리포트
         return;
     }
 
@@ -52,10 +52,10 @@ void RestoreManager::run() {
         fs::rename(src, dst);
         mSuccess = applySimpleXORDecryption(dst.string());
         if (!mSuccess) {
-            std::cerr << "Restore failed: decryption failed\n";
+            // TODO : 에러 리포트
         }
     } catch (const fs::filesystem_error& e) {
-        std::cerr << "Restore ERROR: " << e.what() << '\n';
+        // TODO : 에러 리포트
         mSuccess = false;
     }
 }

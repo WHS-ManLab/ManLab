@@ -12,13 +12,11 @@
 # 8. Manlab systemd 서비스 유닛 파일을 생성‧설치
 #    해당 서비스 파일의 내용은 git 기준 ManLab/.deploy 하위에 존재
 #	 PC를 부팅한 후 운영체제가 ManLab 바이너리에 boot_check 를 인자로 전달
-# TODO
-# ./ManLab이 아닌 ManLab을 입력해도 실행되도록 운영체제 환경 변경
 
 # 컴파일러 설정
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wno-unused-local-typedefs \
-           -I./src -I./lib -isystem ./include
+           -I./src -I./lib -I./utils -isystem ./include
 
 # 디렉토리 및 타겟
 SRC_DIR = src
@@ -89,7 +87,6 @@ copy_rules:
 	@echo "[INFO] /ManLab/rules 경로 생성 중..."
 	sudo mkdir -p $(RULE_DST_DIR)
 	sudo cp -v $(RULE_SRC_DIR)/*.yar $(RULE_DST_DIR)/
-	sudo cp -v $(RULE_SRC_DIR)/malware_hashes.txt $(RULE_DST_DIR)/
 
 install_service: $(SERVICE_TMPL)
 	@echo "[INFO] systemd 서비스 유닛 설치..."

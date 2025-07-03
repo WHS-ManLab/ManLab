@@ -13,7 +13,6 @@
 4. 생성자 초기화 리스트에 make_storage() 추가 (DBManager.cpp)
 5. storage.sync_schema()호출 추가 (DBManager.cpp)
 6. Makefile에 db 추가
-6. Makefile에 db 추가
 ============================================
 */
 
@@ -36,25 +35,6 @@ struct QuarantineMetadata
     std::string QuarantineDate;
     std::string QuarantineReason;
     std::string MalwareNameOrRule;
-};
-
-// 로그 분석 결과 DB 테이블 구조
-struct LogAnalysisResult
-{
-    int id;
-    std::string type;
-    std::string description;
-    std::string timestamp;
-    std::string uid;
-    bool bIsSuccess;
-    std::string originalLogPath;
-    std::string rawLine;
-};
-
-//FIM Baseline 테이블 구조
-struct BaselineEntry {
-    std::string path;
-    std::string md5;
 };
 
 // 로그 분석 결과 DB 테이블 구조
@@ -124,6 +104,9 @@ public:
     void InitSchema();
     DBManager(const DBManager&) = delete;
     DBManager &operator=(const DBManager&) = delete;
+
+    // initDB
+    static void InitHashDB(const std::string& dataFilePath);
 
     // Getter
     StorageHash& GetHashStorage();
