@@ -111,10 +111,10 @@ void CommandHandler::run()
         // 초기화 단계에서는 clone이후 Make를 실행시키므로 Makefile이 있는 디렉토리 기준 상대경로 지정
         DBManager::InitHashDB("../malhash/malware_hashes.txt");
         
-        // RealtimeMonitorDaemon 실행
+        // ScheduledScanDaemon 실행
         // 데몬 중복 살행 방지를 위한 실행 보조 함수
         // PID 파일 이름과 함수 포인터를 인자로 전달
-        launchDaemonIfNotRunning("RealtimeMonitorDaemon", [](){RealtimeMonitorDaemon().run();});
+        launchDaemonIfNotRunning("ScheduledScanDaemon", []() {ScheduledScanDaemon().run();});
         return;
     }
 
@@ -123,21 +123,23 @@ void CommandHandler::run()
         INIReader reader("/ManLab/conf/realtimeControl.ini");
         bool monitorEnabled = reader.GetBoolean("RealtimeControl", "realtimeMonitorEnabled", false);
 
-        // RealtimeMonitorDaemon : PC 재부팅 시 항상 실행
+        // ScheduledScanDaemon : PC 재부팅 시 항상 실행
         // 설정 재적용 시에는 중복 실행 방지 적용
-        launchDaemonIfNotRunning("RealtimeMonitorDaemon", [](){RealtimeMonitorDaemon().run();});
+        launchDaemonIfNotRunning("ScheduledScanDaemon", []() {ScheduledScanDaemon().run();});
+        
 
         // PC 재부팅 시 설정 파일을 읽고 실행
         // 설정 재적용 시에도 동일한 동작
         if (monitorEnabled) {
             launchDaemonIfNotRunning("LogCollectorDaemon", []() {LogCollectorDaemon().run();});
-            launchDaemonIfNotRunning("ScheduledScanDaemon", []() {ScheduledScanDaemon().run();});
+            launchDaemonIfNotRunning("RealtimeMonitorDaemon", [](){RealtimeMonitorDaemon().run();});
         } else {
             stopDaemon("LogCollectorDaemon");
-            stopDaemon("ScheduledScanDaemon");
+            stopDaemon("RealtimeMonitorDaemon");
         }
 
         return;
+
     }
 
     // [malscan] 악성코드 수동검사 명령어

@@ -6,13 +6,15 @@
 #include <sstream>
 #include <iostream>
 #include <unordered_map>
+std::atomic<bool> ScheduledScanDaemon::running(true);
+
 
 using namespace std;
 
 void ScheduledScanDaemon::run()
 {
     daemonize();
-    handleSignals();
+    setupSignalHandlers();
 
     while (running) {
         auto now = chrono::system_clock::now();
