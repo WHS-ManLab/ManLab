@@ -4,6 +4,8 @@
 #include <vector>
 #include <chrono>
 #include <string>
+#include <csignal>
+#include <atomic>
 
 enum class eScheduleType
 {
@@ -25,7 +27,19 @@ class ScheduledScanDaemon : public DaemonBase {
 public:
     void run() override;
 
+protected:
+    void setupSignalHandlers() override {
+        signal(SIGTERM, [](int){ running = false; });
+        signal(SIGINT,  [](int){ running = false; });
+    }
+
+    static bool isRunning() {
+        return running;
+    }
+
 private:
+    static std::atomic<bool> running;
+
     std::vector<ScanSchedule> mScanSchedules;
 
     void loadScheduleFromIni();
