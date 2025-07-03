@@ -442,4 +442,4 @@ MigrationBackup/
 # 바이너리 파일 무시
 baseline
 compare_main
-# End of https://www.toptal.com/developers/gitignore/api/vs,c++,linux,cmake,visualstudiocode
+# End of https://www.toptal.com/developers/gitignore/api/vs,c++,linux,cmake,visualstudiocode.vscode/
