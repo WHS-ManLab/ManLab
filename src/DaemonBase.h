@@ -6,7 +6,9 @@ public:
     virtual ~DaemonBase() = default;
 
 protected:
-    void daemonize();  // 자식 fork 및 세션 전환
-    static void handleSignals(); // SIGTERM 등 처리
-    static volatile bool running; // while(running)에서 사용. SIGTERM등 신호 시 종료
+    // 세션 전환, 표준 입출력 차단
+    void daemonize();
+
+    // 시그널 핸들러 등록 
+    virtual void setupSignalHandlers() = 0;
 };

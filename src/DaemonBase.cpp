@@ -6,21 +6,14 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-volatile bool DaemonBase::running = true;
+// 데몬화 절차
+void DaemonBase::daemonize() {
+    if (setsid() < 0) exit(1);          // 세션 분리
+    chdir("/");                         // 루트 디렉토리 이동  
+    umask(0);                           // 파일 생성 마스크 제거
 
-void DaemonBase::handleSignals()
-{
-    signal(SIGTERM, [](int){ running = false; });
-    signal(SIGINT,  [](int){ running = false; });
-}
-
-void DaemonBase::daemonize()
-{
-    if (setsid() < 0) exit(1);
-    chdir("/");
-    umask(0);
-
-    freopen("/dev/null", "r", stdin);
+    // 표준 입출력 차단
+    freopen("/dev/null", "r", stdin);    
     freopen("/dev/null", "w", stdout);
     freopen("/dev/null", "w", stderr);
 }
