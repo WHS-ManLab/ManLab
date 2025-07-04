@@ -36,7 +36,6 @@ void LaunchDaemonIfNotRunning(const std::string& daemonName, std::function<void(
     if (IsDaemonRunning(daemonName))
     {
         // 이미 데몬이 실행 중이라면 return 
-        std::cout << "[INFO] " << daemonName << " already running.\n";
         return;
     }
 
@@ -71,7 +70,6 @@ void StopDaemon(const std::string& daemonName)
 
     if (kill(pid, SIGTERM) == 0)
     {
-        std::cout << "[INFO] " << daemonName << " stopped.\n";
         fs::remove(path);
     }
 }

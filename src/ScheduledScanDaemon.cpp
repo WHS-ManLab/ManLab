@@ -3,6 +3,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <sys/prctl.h>
 
 std::atomic<bool> ScheduledScanDaemon::sbRunning(true);
 
@@ -12,6 +13,7 @@ void ScheduledScanDaemon::Run()
 {
     daemonize();
     setupSignalHandlers();
+    prctl(PR_SET_NAME, "ManLab Schedule", 0, 0, 0);
 
     ScheduledScan scanner;
 
