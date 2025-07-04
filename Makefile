@@ -62,14 +62,15 @@ SRCS = $(SRC_DIR)/main.cpp \
 	   $(SRC_DIR)/DaemonUtils.cpp \
 	   $(SRC_DIR)/RsyslogManager.cpp \
 	   $(SRC_DIR)/RsyslogRule.cpp \
+	   $(SRC_DIR)/AuditLogManager.cpp \
 	   $(UTILS_DIR)/StringUtils.cpp \
        $(LIB_DIR)/INIReader.cpp \
 	   $(LIB_DIR)/ini.c
 
 # 빌드 대상
-.PHONY: all install initialize_db copy_conf copy_rules install_service install_rsyslog deps clean 
+.PHONY: all install initialize_db copy_conf copy_rules install_service install_rsyslog install_auditd deps clean 
 
-all: deps install_rsyslog $(TARGET) install initialize_db copy_conf copy_rules install_service
+all: deps install_rsyslog install_auditd $(TARGET) install initialize_db copy_conf copy_rules install_service
 	rm -f $(TARGET)
 	@echo "[INFO] ManLab 설치가 완료되었습니다. 데이터베이스 초기화를 위해 수동으로 아래 명령어를 실행하세요:"
 	@echo "       sudo ManLab init"
@@ -88,6 +89,12 @@ install_rsyslog:
 	sudo apt install -y rsyslog
 	sudo cp -v $(RSYSLOG_SRC) $(RSYSLOG_CONF)
 	sudo systemctl restart rsyslog
+
+install_auditd:
+	@echo "[INFO] auditd 설치 중..."
+	sudo apt install -y auditd
+	sudo systemctl enable auditd
+	sudo systemctl start auditd
 
 initialize_db:
 	@echo "[INFO] /ManLab/db 경로 생성 중..."
