@@ -28,19 +28,21 @@ public:
     std::map<std::string, std::string> Fields;
     bool bHasExecve = false;
     bool bHasSyscall = false;
+    std::string RawLine;
 };
 
 class AuditLogManager
 {
 public:
     void LoadRules();
-    std::string ExtractMsgId(const std::string& line) const;
-    bool LogMonitor(std::ifstream& infile);
+    std::string ExtractMsgId(const std::string &line) const;
+    bool LogMonitor(std::ifstream &infile);
     void Run();
+
 private:
     std::vector<AuditLogRule> mRules;
     std::map<std::string, AuditLogRecord> mRecords;
 
-    bool parseLogLine(const std::string& line, AuditLogRecord& record);
-    bool Matches(const AuditLogRecord& record, const AuditLogRule& rule) const;
+    bool parseLogLine(const std::string &line, AuditLogRecord &record);
+    bool Matches(const AuditLogRecord &record, const AuditLogRule &rule) const;
 };
