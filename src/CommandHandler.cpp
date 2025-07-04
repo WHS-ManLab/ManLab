@@ -172,6 +172,9 @@ void CommandHandler::run()
     }
 
     // [man] 매뉴얼 디스플레이 명령어
+    else if (command == "check_integscan"){
+        fim::PrintIntegscan();
+    }
     else if (command == "man") {
         //TODO
         //사용자에게 매뉴얼을 보여주는 함수

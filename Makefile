@@ -57,12 +57,13 @@ SRCS = $(SRC_DIR)/main.cpp \
        $(SRC_DIR)/MalwareScan.cpp \
        $(SRC_DIR)/QuarantineManager.cpp \
 	   $(SRC_DIR)/LogStorageManager.cpp \
-	   $(SRC_DIR)/baseline_generator.cpp \
 	   $(SRC_DIR)/RestoreManager.cpp \
 	   $(SRC_DIR)/DaemonUtils.cpp \
 	   $(SRC_DIR)/RsyslogManager.cpp \
 	   $(SRC_DIR)/RsyslogRule.cpp \
 	   $(UTILS_DIR)/StringUtils.cpp \
+	   $(SRC_DIR)/FIMBaselineGenerator.cpp \
+	   $(SRC_DIR)/FIMIntegScan.cpp \
        $(LIB_DIR)/INIReader.cpp \
 	   $(LIB_DIR)/ini.c
 

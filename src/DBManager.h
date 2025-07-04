@@ -93,12 +93,27 @@ using StorageLogAnalysisResult = decltype(sqlite_orm::make_storage("",
 
 //FIM Baseline 테이블에 대한 storage 타입 정의
 using StorageBaseline = decltype(sqlite_orm::make_storage("",
-                                                          sqlite_orm::make_table("baseline",
-                                                                                 sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
-                                                                                 sqlite_orm::make_column("md5", &BaselineEntry::md5))));
+    sqlite_orm::make_table("baseline",
+        sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
+        sqlite_orm::make_column("md5",  &BaselineEntry::md5)
+    )
+));
 
-class DBManager
-{
+//FIM 해시값 변조 탐지 완료된 파일만 따로 모아놓는 테이블 구조
+struct ModifiedEntry {
+    std::string path;
+    std::string current_md5;
+};
+
+//FIM 해시값 변조 탐지 테이블에 대한 storage 타입 정의
+using StorageModified = decltype(sqlite_orm::make_storage("",
+    sqlite_orm::make_table("modifiedhash",
+        sqlite_orm::make_column("path", &ModifiedEntry::path, sqlite_orm::primary_key()),
+        sqlite_orm::make_column("current_md5", &ModifiedEntry::current_md5)    
+    )
+));
+
+class DBManager {
 public:
     static DBManager& GetInstance();
     void InitSchema();
@@ -113,6 +128,7 @@ public:
     StorageQuarantine& GetQuarantineStorage();
     StorageLogAnalysisResult& GetLogAnalysisResultStorage();
     StorageBaseline& GetBaselineStorage();
+    StorageModified& GetModifiedStorage();
 
 private:
     DBManager();
@@ -122,4 +138,5 @@ private:
     StorageQuarantine mQuarantineStorage;
     StorageLogAnalysisResult mLogAnalysisResultStorage;
     StorageBaseline mBaselineStorage;
+    StorageModified mModifiedStorage;
 };
