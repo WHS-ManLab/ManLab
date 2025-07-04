@@ -4,6 +4,7 @@
 #include <chrono>
 #include <vector>
 #include <syslog.h>
+#include <sys/prctl.h>
 
 std::atomic<bool> RealtimeMonitorDaemon::sbRunning(true);
 
@@ -13,6 +14,8 @@ void RealtimeMonitorDaemon::Run()
 {
     daemonize();            // 백그라운드 데몬화
     setupSignalHandlers();  // SIGTERM 등 처리
+    prctl(PR_SET_NAME, "ManLab Realtime", 0, 0, 0);
+
 
     // 1. INI 파일에서 경로, 마스크 파싱
     auto pathMaskList = parsePathsFromIni("/ManLab/conf/FIMConfig.ini");

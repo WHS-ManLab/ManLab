@@ -3,6 +3,7 @@
 
 #include <thread>
 #include <chrono>
+#include <sys/prctl.h>
 
 std::atomic<bool> LogCollectorDaemon::sbRunning(true);
 
@@ -10,6 +11,7 @@ void LogCollectorDaemon::Run()
 {
     daemonize();
     setupSignalHandlers();
+    prctl(PR_SET_NAME, "ManLab Log", 0, 0, 0);
 
     std::string logPath = "/var/log/manlab.log";
     std::string ruleSetPath = "Manlab/conf/RsyslogRuleSet.yaml";
