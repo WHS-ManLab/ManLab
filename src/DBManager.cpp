@@ -48,11 +48,22 @@ DBManager::DBManager()
             sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
             sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine)))),
                                  
-     mBaselineStorage(sqlite_orm::make_storage(
+      mBaselineStorage(sqlite_orm::make_storage(
         "/ManLab/db/baseline.db",
             sqlite_orm::make_table("baseline",
             sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
-            sqlite_orm::make_column("md5",  &BaselineEntry::md5))))
+            sqlite_orm::make_column("md5",  &BaselineEntry::md5)
+        )
+    )),
+
+      mModifiedStorage(sqlite_orm::make_storage(
+        "/ManLab/db/modifiedhash.db",
+            sqlite_orm::make_table("modifiedhash",
+            sqlite_orm::make_column("path", &ModifiedEntry::path, sqlite_orm::primary_key()),
+            sqlite_orm::make_column("current_md5", &ModifiedEntry::current_md5)
+        )
+    ))
+
 {}
 
 // 데이터베이스를 생성하는 로직
@@ -127,4 +138,8 @@ StorageLogAnalysisResult& DBManager::GetLogAnalysisResultStorage()
 StorageBaseline& DBManager::GetBaselineStorage() 
 {
     return mBaselineStorage;
+}
+
+StorageModified& DBManager::GetModifiedStorage() {
+    return mModifiedStorage;
 }
