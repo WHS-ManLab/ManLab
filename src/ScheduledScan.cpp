@@ -10,6 +10,8 @@
 #include <chrono>
 #include <map>
 
+#include <iostream>
+
 using manlab::utils::trim;
 
 //객체 생성 시 INI파일 스캔 정보 읽기
@@ -145,8 +147,8 @@ std::chrono::system_clock::time_point ScheduledScan::GetNextTriggerTime()
 // nearest time을 받아 해당 시간만큼 sleep
 void ScheduledScan::WaitUntil(const std::chrono::system_clock::time_point& time)
 {
+    
     std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-
     if (time > now)
     {
         std::chrono::duration<double> duration = time - now;
@@ -156,20 +158,9 @@ void ScheduledScan::WaitUntil(const std::chrono::system_clock::time_point& time)
 
 void ScheduledScan::RunScan()
 {
-    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-
-    for (size_t i = 0; i < mSchedules.size(); ++i)
-    {
-        std::chrono::system_clock::time_point candidate = calculateNextTime(mSchedules[i]);
-
-        if (candidate <= now && now - candidate < std::chrono::minutes(1))
-        {
-            MalwareScan scan;
-            scan.Run();
-
-            // TODO: 로그 파일에 scan 결과 기록
-        }
-    }
+    MalwareScan scan;
+    scan.Run();
+    // TODO: 데이터베이스에 결과 기록
 }
 
 // 다음 실행 시각을 std::chrono::system_clock::time_point로 계산해 반환
