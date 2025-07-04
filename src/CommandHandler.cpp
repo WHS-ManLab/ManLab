@@ -120,8 +120,8 @@ void CommandHandler::run()
 
     // [reload] 설정 재적용 및 PC재부팅
     else if (command == "reload") {
-        INIReader reader("/ManLab/conf/realtimeControl.ini");
-        bool monitorEnabled = reader.GetBoolean("RealtimeControl", "realtimeMonitorEnabled", false);
+        INIReader reader("/ManLab/conf/RealtimeControl.ini");
+        bool monitorEnabled = reader.GetBoolean("RealtimeControl", "RealtimeMonitorEnabled", false);
 
         // ScheduledScanDaemon : PC 재부팅 시 항상 실행
         // 설정 재적용 시에는 중복 실행 방지 적용
