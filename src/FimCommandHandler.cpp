@@ -1,11 +1,7 @@
 #include "FimCommandHandler.h"
-<<<<<<< HEAD
+#include "RealtimeMonitorDaemon.h"
 #include "FIMBaselineGenerator.h"
 #include "FIMIntegScan.h"
-=======
-#include "RealtimeMonitorDaemon.h"
-#include "baseline_generator.h"
->>>>>>> origin/develop
 #include "DBManager.h"
 #include <iostream>
 

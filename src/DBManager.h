@@ -128,6 +128,7 @@ public:
     StorageQuarantine& GetQuarantineStorage();
     StorageLogAnalysisResult& GetLogAnalysisResultStorage();
     StorageBaseline& GetBaselineStorage();
+    StorageModified& GetModifiedStorage();
 
 private:
     DBManager();
