@@ -14,8 +14,7 @@
 RsyslogManager::RsyslogManager(const std::string& logPath, const std::string& ruleSetPath)
     : mLogPath(logPath)
     , mRsyslogRuleSet(loadRsyslogRuleSet(ruleSetPath))
-{
-}
+{}
 
 // RsyslogRuleSet 파싱
 std::unordered_set<std::string> RsyslogManager::loadRsyslogRuleSet(const std::string& filename)

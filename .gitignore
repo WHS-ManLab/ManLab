@@ -443,3 +443,5 @@ MigrationBackup/
 baseline
 compare_main
 # End of https://www.toptal.com/developers/gitignore/api/vs,c++,linux,cmake,visualstudiocode.vscode/
+
+.vscode/

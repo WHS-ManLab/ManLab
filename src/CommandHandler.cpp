@@ -114,6 +114,7 @@ void CommandHandler::run()
         // ScheduledScanDaemon 실행
         // 데몬 중복 살행 방지를 위한 실행 보조 함수
         // PID 파일 이름과 함수 포인터를 인자로 전달
+        stopDaemon("ScheduledScanDaemon"); 
         launchDaemonIfNotRunning("ScheduledScanDaemon", []() {ScheduledScanDaemon().run();});
         return;
     }
@@ -125,6 +126,7 @@ void CommandHandler::run()
 
         // ScheduledScanDaemon : PC 재부팅 시 항상 실행
         // 설정 재적용 시에는 중복 실행 방지 적용
+        stopDaemon("ScheduledScanDaemon");
         launchDaemonIfNotRunning("ScheduledScanDaemon", []() {ScheduledScanDaemon().run();});
         
 
