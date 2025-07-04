@@ -1,4 +1,5 @@
 #include "DaemonBase.h"
+
 #include <csignal>
 #include <unistd.h>
 #include <cstdlib>
@@ -7,7 +8,8 @@
 #include <sys/stat.h>
 
 // 데몬화 절차
-void DaemonBase::daemonize() {
+void DaemonBase::daemonize()
+{
     if (setsid() < 0) exit(1);          // 세션 분리
     chdir("/");                         // 루트 디렉토리 이동  
     umask(0);                           // 파일 생성 마스크 제거

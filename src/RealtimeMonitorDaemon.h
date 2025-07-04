@@ -7,16 +7,19 @@
 
 class RealtimeMonitorDaemon : public DaemonBase {
 public:
-    void run() override;
+    void Run() override;
 
 protected:
     void setupSignalHandlers() override {
-        signal(SIGTERM, [](int){ running = false; });
-        signal(SIGINT,  [](int){ running = false; });
+        signal(SIGTERM, [](int){ sbRunning = false; });
+        signal(SIGINT,  [](int){ sbRunning = false; });
     }
 
-    static bool isRunning() { return running; }
+    static bool isRunning() 
+    { 
+        return sbRunning; 
+    }
 
 private:
-    static std::atomic<bool> running;
+    static std::atomic<bool> sbRunning;
 };

@@ -1,7 +1,9 @@
 #pragma once
+
 #include <filesystem>
 #include <string>
 #include <vector>
+
 #include "DBManager.h"
 #include "MalwareScan.h"
 
@@ -13,7 +15,7 @@ private:
 
     StorageQuarantine* mStorage = nullptr;         // DBManager 싱글톤에서 획득
 
-    static unsigned char mEncryptionKey;
+    static unsigned char sEncryptionKey;
 
     bool applySimpleXOREncryption(const std::string& filePath); // 악성코드 파일 암호화 함수
     std::string getCurrentDateTime() const; // 현재 시간 문자열로 가져오는 함수
@@ -22,7 +24,7 @@ public:
     QuarantineManager(const std::vector<ScanInfo>& infos);
 
     // 격리 실행
-    void run();
+    void Run();
 
     // 성공 여부 목록 반환
     const std::vector<bool>& GetIsQuarantineSuccess() const;
