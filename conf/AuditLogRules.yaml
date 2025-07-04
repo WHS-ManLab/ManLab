@@ -1,0 +1,108 @@
+- key: useradd_cmd
+  description: "시스템 계정 생성"
+  conditions:
+    - field: comm
+      value: useradd
+      match_type: equals
+    - field: "*"
+      value: -r
+      match_type: contains
+- key: sudoers_change
+  description: "sudoers 설정 변경"
+  conditions:
+    - field: comm
+      value: visudo
+      match_type: equals
+- key: apt_exec
+  description: proxychains 패키지 설치
+  conditions:
+    - field: exe
+      value: "/usr/bin/apt"
+      match_type: equals
+    - field: "*"
+      value: "install"
+      match_type: contains
+    - field: "*"
+      value: "proxychains"
+      match_type: contains
+- key: apt_exec
+  description: netcat 패키지 설치
+  conditions:
+    - field: exe
+      value: "/usr/bin/apt"
+      match_type: equals
+    - field: "*"
+      value: "install"
+      match_type: contains
+    - field: "*"
+      value: "netcat"
+      match_type: contains
+- key: apt_exec
+  description: nmap 패키지 설치
+  conditions:
+    - field: exe
+      value: "/usr/bin/apt"
+      match_type: equals
+    - field: "*"
+      value: "install"
+      match_type: contains
+    - field: "*"
+      value: "nmap"
+      match_type: contains
+- key: apt_exec
+  description: tshark 패키지 설치
+  conditions:
+    - field: exe
+      value: "/usr/bin/apt"
+      match_type: equals
+    - field: "*"
+      value: "install"
+      match_type: contains
+    - field: "*"
+      value: "tshark"
+      match_type: contains
+- key: apt_exec
+  description: wireshark 패키지 설치
+  conditions:
+    - field: exe
+      value: "/usr/bin/apt"
+      match_type: equals
+    - field: "*"
+      value: "install"
+      match_type: contains
+    - field: "*"
+      value: "wireshark"
+      match_type: contains
+- key: apt_exec
+  description: openconnect 패키지 설치
+  conditions:
+    - field: exe
+      value: "/usr/bin/apt"
+      match_type: equals
+    - field: "*"
+      value: "install"
+      match_type: contains
+    - field: "*"
+      value: "openconnect"
+      match_type: contains
+- key: cron_exec
+  description: "crontab 명령어 실행"
+  conditions:
+    - field: exe
+      value: /usr/bin/crontab
+      match_type: equals
+- key: cron_exec
+  description: "crontab 삭제 명령어 실행  "
+  conditions:
+    - field: exe
+      value: /usr/bin/crontab
+      match_type: equals
+    - field: "*"
+      value: "-r"
+      match_type: contains
+- key: cron_daemon
+  description: "cron 데몬 실행"
+  conditions:
+    - field: exe
+      value: /usr/sbin/cron
+      match_type: equals
