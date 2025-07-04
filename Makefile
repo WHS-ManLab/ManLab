@@ -61,9 +61,10 @@ SRCS = $(SRC_DIR)/main.cpp \
 	   $(SRC_DIR)/DaemonUtils.cpp \
 	   $(SRC_DIR)/RsyslogManager.cpp \
 	   $(SRC_DIR)/RsyslogRule.cpp \
-	   $(UTILS_DIR)/StringUtils.cpp \
+	   $(SRC_DIR)/ScheduledScan.cpp \
 	   $(SRC_DIR)/FIMBaselineGenerator.cpp \
 	   $(SRC_DIR)/FIMIntegScan.cpp \
+	   $(UTILS_DIR)/StringUtils.cpp \
        $(LIB_DIR)/INIReader.cpp \
 	   $(LIB_DIR)/ini.c
 
@@ -93,6 +94,10 @@ install_rsyslog:
 initialize_db:
 	@echo "[INFO] /ManLab/db 경로 생성 중..."
 	sudo mkdir -p $(DB_DIR)
+	
+	@echo "[INFO] /ManLab/quarantine 경로 생성 중..."
+	sudo mkdir -p $(INSTALL_DIR)/quarantine
+	sudo chown $(USER):$(USER) $(INSTALL_DIR)/quarantine
 
 copy_conf:
 	@echo "[INFO] /ManLab/conf 경로 생성 중..."

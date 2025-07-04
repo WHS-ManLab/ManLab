@@ -2,7 +2,7 @@
 
 class DaemonBase {
 public:
-    virtual void run() = 0;
+    virtual void Run() = 0;
     virtual ~DaemonBase() = default;
 
 protected:

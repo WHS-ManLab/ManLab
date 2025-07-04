@@ -1,4 +1,4 @@
-#pragma once
+#pragma once 
 
 #include <vector>
 #include <string>
@@ -8,7 +8,7 @@ public:
     /// argc/argv를 받아 명령어 실행 준비
     CommandHandler(int argc, char** argv);
 
-    void run();
+    void Run();
 
 private:
     int mArgc;

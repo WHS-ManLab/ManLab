@@ -14,8 +14,7 @@
 RsyslogManager::RsyslogManager(const std::string& logPath, const std::string& ruleSetPath)
     : mLogPath(logPath)
     , mRsyslogRuleSet(loadRsyslogRuleSet(ruleSetPath))
-{
-}
+{}
 
 // RsyslogRuleSet 파싱
 std::unordered_set<std::string> RsyslogManager::loadRsyslogRuleSet(const std::string& filename)
@@ -76,7 +75,7 @@ void RsyslogManager::RsyslogRun()
 
     std::string line;
 
-    while (LogCollectorDaemon::isRunning())
+    while (LogCollectorDaemon::IsRunning())
     {
         if (std::getline(file, line))
         {

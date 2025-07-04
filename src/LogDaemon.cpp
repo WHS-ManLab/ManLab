@@ -3,9 +3,10 @@
 
 #include <thread>
 #include <chrono>
-std::atomic<bool> LogCollectorDaemon::running(true);
 
-void LogCollectorDaemon::run()
+std::atomic<bool> LogCollectorDaemon::sbRunning(true);
+
+void LogCollectorDaemon::Run()
 {
     daemonize();
     setupSignalHandlers();
@@ -19,7 +20,7 @@ void LogCollectorDaemon::run()
         rsyslog.RsyslogRun();
     });
 
-    while (running)
+    while (sbRunning)
     {
         // TODO: 로그 파일 감시 및 분석
         std::this_thread::sleep_for(std::chrono::seconds(1));
