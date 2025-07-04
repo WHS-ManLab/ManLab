@@ -4,27 +4,27 @@
 #include <chrono>
 #include <iostream>
 
-std::atomic<bool> ScheduledScanDaemon::running(true);
+std::atomic<bool> ScheduledScanDaemon::sbRunning(true);
 
 using namespace std;
 
-void ScheduledScanDaemon::run()
+void ScheduledScanDaemon::Run()
 {
     daemonize();
     setupSignalHandlers();
 
     ScheduledScan scanner;
 
-    while (running) {
-        // 예약된 다음 시간 확인
-        std::chrono::system_clock::time_point nextTrigger = scanner.getNextTriggerTime();
+    while (sbRunning) {
+        std::chrono::system_clock::time_point nextTrigger = scanner.GetNextTriggerTime();
+        scanner.WaitUntil(nextTrigger);
 
-        // 다음 실행 시각까지 대기
-        scanner.waitUntil(nextTrigger);
+        if (!sbRunning) break;
 
-        if (!running) break;
+        scanner.RunScan();
 
-        // 스캔 수행
-        scanner.runScan();  
+        // 1분간 쉬기 — 중복 실행 방지
+        // 너무 짧은 간격(1분 내외) 예약은 지원하지 않는다 알림
+        std::this_thread::sleep_for(std::chrono::minutes(1));
     }
 }

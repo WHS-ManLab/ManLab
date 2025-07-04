@@ -4,11 +4,12 @@
 #include <chrono>
 #include <vector>
 #include <syslog.h>
-std::atomic<bool> RealtimeMonitorDaemon::running(true);
+
+std::atomic<bool> RealtimeMonitorDaemon::sbRunning(true);
 
 
 
-void RealtimeMonitorDaemon::run()
+void RealtimeMonitorDaemon::Run()
 {
     //daemonize();            // 백그라운드 데몬화
     //setupSignalHandlers();  // SIGTERM 등 처리
@@ -40,7 +41,7 @@ void RealtimeMonitorDaemon::run()
 
 
     // 4. 감지 루프
-    while (running) 
+    while (sbRunning) 
     {
         watcher.pollOnce();  //
 

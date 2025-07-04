@@ -75,7 +75,7 @@ void RsyslogManager::RsyslogRun()
 
     std::string line;
 
-    while (LogCollectorDaemon::isRunning())
+    while (LogCollectorDaemon::IsRunning())
     {
         if (std::getline(file, line))
         {
