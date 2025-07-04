@@ -41,7 +41,6 @@ CMakeCache.txt
 CMakeFiles
 CMakeScripts
 Testing
-Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
@@ -440,4 +439,7 @@ MigrationBackup/
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/vs,c++,linux,cmake,visualstudiocode
+# 바이너리 파일 무시
+baseline
+compare_main
+# End of https://www.toptal.com/developers/gitignore/api/vs,c++,linux,cmake,visualstudiocode.vscode/
