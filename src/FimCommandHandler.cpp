@@ -1,30 +1,10 @@
 #include "FimCommandHandler.h"
-#include "RealtimeMonitorDaemon.h"
 #include "FIMBaselineGenerator.h"
 #include "FIMIntegScan.h"
 #include "DBManager.h"
 #include <iostream>
 
 namespace fim {
-
-void RealTimeMonitorEnable() 
-{
-        // TODO
-        // 데몬 enable 설정
-        // LogDaemon, RealtimeMonitorDaemon을 실행
-        // 해당 정보는 부팅 시에도 계속 남아 있어야 함
-        // 이미 데몬 프로세스가 돌아가고 있을 경우 중복 방지 필요
-
-}
-
-void RealTimeMonitorDisable() 
-{
-
-        // 데몬 disable 설정
-        // LogDaemon, RealtimeMonitorDaemon 실행 해제 
-        // 해당 정보는 부팅 시에도 계속 남아 있어야 함   
-    
-}
 
 
 void IntScan() {
