@@ -11,12 +11,11 @@ std::atomic<bool> RealtimeMonitorDaemon::sbRunning(true);
 
 void RealtimeMonitorDaemon::Run()
 {
-    //daemonize();            // 백그라운드 데몬화
-    //setupSignalHandlers();  // SIGTERM 등 처리
-
+    daemonize();            // 백그라운드 데몬화
+    setupSignalHandlers();  // SIGTERM 등 처리
 
     // 1. INI 파일에서 경로, 마스크 파싱
-    auto pathMaskList = parsePathsFromIni("/home/rlacofla/Manlab/ManLab/conf/FIMConfig.ini");
+    auto pathMaskList = parsePathsFromIni("/ManLab/conf/FIMConfig.ini");
 
     // 2. 경로 목록 생성
     std::vector<std::string> watchDirs;
