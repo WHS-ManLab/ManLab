@@ -1,5 +1,6 @@
 #include "LogDaemon.h"
 #include "RsyslogManager.h"
+#include "AuditLogManager.h"
 
 #include <thread>
 #include <chrono>
@@ -14,10 +15,13 @@ void LogCollectorDaemon::run()
     std::string ruleSetPath = "Manlab/conf/RsyslogRuleSet.yaml";
 
     RsyslogManager rsyslog(logPath, ruleSetPath);
+    AuditLogManager auditlog;
 
-    std::thread rsyslogThread([&rsyslog]() {
-        rsyslog.RsyslogRun();
-    });
+    std::thread rsyslogThread([&rsyslog]()
+                              { rsyslog.RsyslogRun(); });
+
+    std::thread auditlogThread([&auditlog]()
+                               { auditlog.Run(); });
 
     while (running)
     {
@@ -28,5 +32,9 @@ void LogCollectorDaemon::run()
     if (rsyslogThread.joinable())
     {
         rsyslogThread.join();
+    }
+    if (auditlogThread.joinable())
+    {
+        auditlogThread.join();
     }
 }
