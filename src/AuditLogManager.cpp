@@ -1,4 +1,5 @@
 #include "AuditLogManager.h"
+#include "LogStorageManager.h"
 
 #include <iostream>
 #include <sstream>
@@ -9,7 +10,7 @@
 using namespace std;
 
 // 로그 라인에서 msg=audit(...) 내부 숫자 추출 (msgId)
-string AuditLogManager::ExtractMsgId(const string& line) const
+string AuditLogManager::ExtractMsgId(const string &line) const
 {
     size_t pos = line.find("msg=audit(");
 
@@ -29,12 +30,13 @@ string AuditLogManager::ExtractMsgId(const string& line) const
     return line.substr(start, end - start);
 }
 
-//로그 한 줄 파싱해서 AuditLogRecord에 필요한 정보 저장
-bool AuditLogManager::parseLogLine(const string& line, AuditLogRecord& record)
+// 로그 한 줄 파싱해서 AuditLogRecord에 필요한 정보 저장
+bool AuditLogManager::parseLogLine(const string &line, AuditLogRecord &record)
 {
     if (line.find("type=SYSCALL") != string::npos)
     {
         record.bHasSyscall = true;
+        record.RawLine = line;
     }
     else if (line.find("type=EXECVE") != string::npos)
     {
@@ -71,16 +73,16 @@ bool AuditLogManager::parseLogLine(const string& line, AuditLogRecord& record)
     return true;
 }
 
-//로그 레코드가 룰 조건에 부합하는지 확인
-bool AuditLogManager::Matches(const AuditLogRecord& record, const AuditLogRule& rule) const
+// 로그 레코드가 룰 조건에 부합하는지 확인
+bool AuditLogManager::Matches(const AuditLogRecord &record, const AuditLogRule &rule) const
 {
-    for (const Condition& cond : rule.Conditions)
+    for (const Condition &cond : rule.Conditions)
     {
-        if (cond.Field == "*") //모든 필드 대상 조건 검사
+        if (cond.Field == "*") // 모든 필드 대상 조건 검사
         {
             bool bFound = false;
 
-            for (const pair<const string, string>& field : record.Fields)
+            for (const pair<const string, string> &field : record.Fields)
             {
                 if (cond.MatchType == "contains" && field.second.find(cond.Value) != string::npos)
                 {
@@ -109,9 +111,9 @@ bool AuditLogManager::Matches(const AuditLogRecord& record, const AuditLogRule& 
                 return false;
             }
 
-            const string& actual = it->second;
-            const string& expected = cond.Value;
-            const string& mt = cond.MatchType;
+            const string &actual = it->second;
+            const string &expected = cond.Value;
+            const string &mt = cond.MatchType;
 
             if (mt == "equals" && actual != expected)
             {
@@ -138,20 +140,20 @@ bool AuditLogManager::Matches(const AuditLogRecord& record, const AuditLogRule& 
     return true;
 }
 
-//룰 불러오기
+// 룰 불러오기
 void AuditLogManager::LoadRules()
 {
-    const string ruleFile = "rules.yaml";
+    const string ruleFile = "/ManLab/conf/AuditLogRules.yaml";
     YAML::Node yaml = YAML::LoadFile(ruleFile);
 
-    for (const YAML::Node& ruleNode : yaml)
+    for (const YAML::Node &ruleNode : yaml)
     {
         AuditLogRule rule;
 
         rule.Key = ruleNode["key"].as<string>();
         rule.Description = ruleNode["description"].as<string>();
 
-        for (const YAML::Node& condNode : ruleNode["conditions"])
+        for (const YAML::Node &condNode : ruleNode["conditions"])
         {
             Condition cond;
 
@@ -167,7 +169,7 @@ void AuditLogManager::LoadRules()
 }
 
 // 로그 파일에서 한 줄 읽어 레코드에 저장
-bool AuditLogManager::LogMonitor(ifstream& infile)
+bool AuditLogManager::LogMonitor(ifstream &infile)
 {
     string line;
     streampos lastPos = infile.tellg();
@@ -188,7 +190,7 @@ bool AuditLogManager::LogMonitor(ifstream& infile)
         return true;
     }
 
-    AuditLogRecord& record = mRecords[msgId];
+    AuditLogRecord &record = mRecords[msgId];
     record.MsgId = msgId;
 
     parseLogLine(line, record);
@@ -198,6 +200,7 @@ bool AuditLogManager::LogMonitor(ifstream& infile)
 
 void AuditLogManager::Run()
 {
+    LogStorageManager manager;
     const string auditLogPath = "/var/log/audit/audit.log";
 
     LoadRules();
@@ -217,15 +220,31 @@ void AuditLogManager::Run()
 
         for (map<string, AuditLogRecord>::iterator it = mRecords.begin(); it != mRecords.end();)
         {
-            AuditLogRecord& record = it->second;
+            AuditLogRecord &record = it->second;
 
             if (record.bHasExecve && record.bHasSyscall)
             {
-                for (const AuditLogRule& rule : mRules)
+                for (const AuditLogRule &rule : mRules)
                 {
                     if (Matches(record, rule))
                     {
-                        //알림 및 저장
+                        LogAnalysisResult lar;
+
+                        lar.type = rule.Key;
+                        lar.description = rule.Description;
+
+                        size_t colonPos = record.MsgId.find(':');
+                        if (colonPos != std::string::npos)
+                            lar.timestamp = record.MsgId.substr(0, colonPos);
+                        else
+                            lar.timestamp = record.MsgId;
+
+                        lar.uid = record.Fields.count("uid") > 0 ? record.Fields.at("uid") : "";
+                        lar.bIsSuccess = true;
+                        lar.originalLogPath = "/var/log/audit/audit.log";
+                        lar.rawLine = "";
+
+                        manager.Run(lar, true);
                     }
                 }
 
