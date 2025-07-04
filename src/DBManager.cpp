@@ -48,7 +48,7 @@ DBManager::DBManager()
             sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
             sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine)))),
                                  
-     mBaselineStorage(sqlite_orm::make_storage(
+      mBaselineStorage(sqlite_orm::make_storage(
         "/ManLab/db/baseline.db",
             sqlite_orm::make_table("baseline",
             sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
@@ -56,8 +56,8 @@ DBManager::DBManager()
         )
     )),
 
-        mModifiedStorage(sqlite_orm::make_storage(
-            "/ManLab/db/modifiedhash.db",
+      mModifiedStorage(sqlite_orm::make_storage(
+        "/ManLab/db/modifiedhash.db",
             sqlite_orm::make_table("modifiedhash",
             sqlite_orm::make_column("path", &ModifiedEntry::path, sqlite_orm::primary_key()),
             sqlite_orm::make_column("current_md5", &ModifiedEntry::current_md5)
