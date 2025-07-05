@@ -73,6 +73,7 @@ void DBManager::InitSchema() {
     mQuarantineStorage.sync_schema();
     mLogAnalysisResultStorage.sync_schema();
     mBaselineStorage.sync_schema();
+    mModifiedStorage.sync_schema();
 }
 
 // malware_hashes.txt 파일에서 해시 데이터를 읽어 DB에 삽입하는 함수
