@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <set>
 
 class BaselineGenerator {
 public:
@@ -13,4 +14,5 @@ private:
     std::string db_path_;
 
     void parse_ini_and_store();
+    bool is_excluded(const std::string& path, const std::set<std::string>& excludes);
 };
