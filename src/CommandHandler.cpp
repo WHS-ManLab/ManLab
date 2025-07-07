@@ -118,7 +118,7 @@ void CommandHandler::Run()
 
         // 악성코드 해시 DB 초기화
         // 초기화 단계에서는 clone이후 Make를 실행시키므로 Makefile이 있는 디렉토리 기준 상대경로 지정
-        DBManager::InitHashDB("../malhash/malware_hashes.txt");
+        DBManager::InitHashDB("./malhash/malware_hashes.txt");
         
         // ScheduledScanDaemon 실행
         // 데몬 중복 살행 방지를 위한 실행 보조 함수
