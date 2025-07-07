@@ -14,7 +14,7 @@ void LogCollectorDaemon::Run()
     prctl(PR_SET_NAME, "ManLab Log", 0, 0, 0);
 
     std::string logPath = "/var/log/manlab.log";
-    std::string ruleSetPath = "Manlab/conf/RsyslogRuleSet.yaml";
+    std::string ruleSetPath = "/Manlab/conf/RsyslogRuleSet.yaml";
 
     RsyslogManager rsyslog(logPath, ruleSetPath);
 
