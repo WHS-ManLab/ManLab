@@ -33,10 +33,9 @@ std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::strin
     
     std::vector<std::string> sections = reader.Sections(); // vector로 섹션 리스트 받아오기
 
-    for (const auto& section : sections) {
-
-
-        std::string path = reader.Get(section, "Path", "NOT_FOUND");
+    for (const auto& section : sections) 
+    {
+        std::string path = reader.Get(section, "Path", "NOT_FOUND"); //경로 및 이벤트유형 파싱
         std::string events = reader.Get(section, "Events", "NOT_FOUND");
 
 
@@ -45,8 +44,8 @@ std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::strin
             continue;
         }
 
-        uint64_t mask = parseCustomEventMask(events);
-        pathAndMaskList.emplace_back(path, mask);
+        uint64_t mask = parseCustomEventMask(events); //이벤트유형 custommask로 변경 
+        pathAndMaskList.emplace_back(path, mask); 
 
     }
 
@@ -61,7 +60,8 @@ uint64_t parseCustomEventMask(const std::string& eventsStr)
         {"CREATE",  CustomEvent::CREATE},
         {"DELETE",  CustomEvent::DELETE},
         {"MODIFY",  CustomEvent::MODIFY},
-        {"ATTRIB",  CustomEvent::ATTRIB}
+        {"ATTRIB",  CustomEvent::ATTRIB},
+        {"RENAME",  CustomEvent::RENAME} // 추가
     };
 
     std::istringstream ss(eventsStr);
@@ -73,12 +73,15 @@ uint64_t parseCustomEventMask(const std::string& eventsStr)
         token.erase(0, token.find_first_not_of(" \t"));// 공백 제거
         token.erase(token.find_last_not_of(" \t") + 1);
 
-        std::transform(token.begin(), token.end(), token.begin(), ::toupper); // 대문자로 통일 (필요하면)
+        std::transform(token.begin(), token.end(), token.begin(), ::toupper); // 대문자로 통일
 
         auto it = eventMap.find(token);
-        if (it != eventMap.end()) {
+        if (it != eventMap.end()) 
+        {
             mask |= it->second;
-        } else {
+        } 
+        else 
+        {
             std::cerr << " 알 수 없는 이벤트: '" << token << "'\n";
         }
     }
@@ -92,10 +95,26 @@ uint64_t mapActualMaskToCustomMask(uint64_t actualMask)
 {
     uint64_t result = 0;
 
-    if (actualMask & IN_CREATE)   result |= CREATE;
-    if (actualMask & IN_DELETE)   result |= DELETE;
-    if (actualMask & FAN_MODIFY)  result |= MODIFY;
-    if (actualMask & FAN_ATTRIB)  result |= ATTRIB;
+    if (actualMask & IN_CREATE)   
+    {
+        result |= CREATE;
+    }
+    if (actualMask & IN_DELETE)   
+    {
+        result |= DELETE;
+    }
+    if (actualMask & FAN_MODIFY)  
+    {
+        result |= MODIFY;
+    }
+    if (actualMask & FAN_ATTRIB)  
+    {
+        result |= ATTRIB;
+    }
+    if ((actualMask & IN_MOVED_FROM) || (actualMask & IN_MOVED_TO)) 
+    {
+        result |= RENAME;
+    }
 
     return result;
 }
@@ -118,7 +137,9 @@ bool RealTimeMonitor::ShouldDisplayEvent(const std::string& path, uint64_t actua
     uint64_t matched = mapActualMaskToCustomMask(actualMask);
     for (const auto& [dir, customMask] : mUserEventFilters)
     {
-        if (path.find(dir) == 0)
+        // 경로가 완전히 같거나,
+        // 경로가 dir로 시작하고 다음 문자가 '/'인 경우 (즉, 하위 경로)
+        if (path == dir || (path.find(dir) == 0 && path[dir.size()] == '/'))
         {
             if ((matched & customMask) != 0)
                 return true;
@@ -147,6 +168,38 @@ int RealTimeMonitor::findMountFdForFileHandle(const struct file_handle* fid)
     return -1;
 }
 
+//이벤트 중복 및 생성+메타데이터 중복 방지 함수
+bool RealTimeMonitor::isDuplicateEvent(const std::string& path, uint64_t eventType) 
+{
+    using namespace std::chrono;
+    auto now = steady_clock::now();
+
+    auto it = mRecentEvents.find(path);
+
+    if (it != mRecentEvents.end()) 
+    {
+        auto [lastType, lastTime] = it->second;
+
+        // 1) 완전 중복 이벤트 필터
+        if (lastType == eventType && duration_cast<milliseconds>(now - lastTime).count() < 50) 
+        {
+            return true;  // 바로 직전 같은 이벤트 중복
+        }
+
+        // 2) 생성(CREATE) 이벤트 직후 메타데이터 변경(ATTRIB) 이벤트 무시
+        if (lastType == CREATE && eventType == ATTRIB && duration_cast<milliseconds>(now - lastTime).count() < 100)
+        {
+            return true;  // 생성 후 바로 이어지는 메타데이터 변경 무시
+        }
+    }
+
+    // 중복이 아니면 기록 갱신
+    mRecentEvents[path] = std::make_pair(eventType, now);
+    return false;
+}
+
+
+
 //fanotify 이벤트 처리 및 로그 출력
 void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* metadata, ssize_t bufLen) 
 {
@@ -173,14 +226,14 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
             continue;
         }
 
-        int eventFd = open_by_handle_at(mountFd, fileHandle, O_RDONLY); //핸들로 찾은 mountfd 열기 
+        int eventFd = open_by_handle_at(mountFd, fileHandle, O_RDONLY); //핸들과 mountfd로 파일 열기
         if (eventFd == -1) 
         {
             metadata = FAN_EVENT_NEXT(metadata, bufLen);
             continue;
         }
 
-        ssize_t linkLen = readlink( ("/proc/self/fd/" + std::to_string(eventFd)).c_str(), mPath.data(), PATH_MAX ); //핸들을 통해 찾은 mountfd 얻기
+        ssize_t linkLen = readlink( ("/proc/self/fd/" + std::to_string(eventFd)).c_str(), mPath.data(), PATH_MAX ); //eventFd를 통해 찾은 경로 얻기
         if (linkLen == -1) 
         {
             close(eventFd);
@@ -189,13 +242,20 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
         }
         mPath[linkLen] = '\0';
 
-        if (ShouldDisplayEvent(mPath.data(), metadata->mask)) //필터링 후 출력
+     if (ShouldDisplayEvent(mPath.data(), metadata->mask)) 
+    {
+        if ((metadata->mask & FAN_MODIFY) && !isDuplicateEvent(mPath.data(), MODIFY))
         {
-            if (metadata->mask & FAN_MODIFY)
-                std::cout << "📁 파일 수정 : " << mPath.data() << std::endl;
-            if (metadata->mask & FAN_ATTRIB)
-                std::cout << "📁 메타데이터 변경 : " << mPath.data() << std::endl;
+            std::cout << "📁 파일 수정 : " << mPath.data() << std::endl;
         }
+
+        if ((metadata->mask & FAN_ATTRIB) && !isDuplicateEvent(mPath.data(), ATTRIB))
+        {
+            std::cout << "📁 메타데이터 변경 : " << mPath.data() << std::endl;
+        }
+        
+    }
+
 
         close(eventFd);
         close(metadata->fd);
@@ -206,26 +266,40 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
 //Inotify 이벤트 처리 및 로그 출력
 void RealTimeMonitor::processInotifyEvents() 
 {
-    char buffer[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
-    ssize_t length = read(mInotifyFd, buffer, sizeof(buffer));
+    char buffer[4096] __attribute__((aligned(__alignof__(struct inotify_event)))); //메모리 정렬
+    ssize_t length = read(mInotifyFd, buffer, sizeof(buffer)); //데이터 읽어오기
     if (length <= 0) return;
 
-    for (char* ptr = buffer; ptr < buffer + length;) //이벤트 순회
+    for (char* ptr = buffer; ptr < buffer + length;) // 이벤트 순회
+{
+    struct inotify_event* event = (struct inotify_event*)ptr;
+    std::string path = mInotifyWdToPath[event->wd] + "/" + event->name;
+
+    uint64_t mask = event->mask;
+
+    // 생성 이벤트
+    if ((mask & IN_CREATE) && ShouldDisplayEvent(path, IN_CREATE) && !isDuplicateEvent(path, CREATE))
     {
-        struct inotify_event* event = (struct inotify_event*)ptr;
-        std::string path = mInotifyWdToPath[event->wd] + "/" + event->name; //감시한 디렉토리 + 파일명 = 경로
-
-        if (ShouldDisplayEvent(path, event->mask)) //필터링 후 출력
-        {
-            if (event->mask & IN_CREATE)
-                std::cout << "📁 파일 생성 : " << path << std::endl;
-                //syslog(LOG_INFO, "📁 파일 생성");
-            if (event->mask & IN_DELETE)
-                std::cout << "📁 파일 삭제 : " << path << std::endl;
-        }
-
-        ptr += sizeof(struct inotify_event) + event->len;
+        std::cout << "📁 파일 생성 : " << path << std::endl;
     }
+    // 삭제 이벤트
+    if ((mask & IN_DELETE) && ShouldDisplayEvent(path, IN_DELETE) && !isDuplicateEvent(path, DELETE))
+    {
+        std::cout << "📁 파일 삭제 : " << path << std::endl;
+    }
+    // 리네임 이벤트 (추가한 경우)
+    if ((mask & IN_MOVED_FROM) && ShouldDisplayEvent(path, IN_MOVED_FROM) && !isDuplicateEvent(path, RENAME))
+    {
+        std::cout << "📁 이름 변경(From) : " << path << std::endl;
+    }
+    if ((mask & IN_MOVED_TO) && ShouldDisplayEvent(path, IN_MOVED_TO) && !isDuplicateEvent(path, RENAME))
+    {
+        std::cout << "📁 이름 변경(To) : " << path << std::endl;
+    }
+
+    ptr += sizeof(struct inotify_event) + event->len;
+}
+
 }
 
 //fanotify, inotify 초기화 설정
@@ -254,7 +328,7 @@ bool RealTimeMonitor::Init()
         if (ret == -1) printErrorAndExit("fanotify_mark");
 
        
-        int wd = inotify_add_watch(mInotifyFd, dir.c_str(), IN_CREATE | IN_DELETE);  // inotify 설정
+        int wd = inotify_add_watch(mInotifyFd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
         if (wd == -1) printErrorAndExit("inotify_add_watch");
         mInotifyWdToPath[wd] = dir; // inotify가 반환한 watch descriptor(wd)를 실제 경로 문자열에 매핑 저장
     }
