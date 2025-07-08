@@ -39,7 +39,15 @@ void PrintBaseline() {
         }
 
         for (const auto& entry : all_entries) {
-            std::cout << "Path: " << entry.path << "\nMD5:  " << entry.md5 << "\n---" << std::endl;
+             std::cout << "Path:       " << entry.path << "\n"
+                      << "MD5:        " << entry.md5 << "\n"
+                      << "Permission: " << entry.permission << "\n"
+                      << "UID:        " << entry.uid << "\n"
+                      << "GID:        " << entry.gid << "\n"
+                      << "CTime:      " << entry.ctime << "\n"
+                      << "MTime:      " << entry.mtime << "\n"
+                      << "Size:       " << entry.size << " bytes\n"
+                      << "-------------------------------------\n";
         }
     } catch (const std::exception& e) {
         std::cerr << "[ERROR] DB 조회 중 오류 발생: " << e.what() << std::endl;
