@@ -11,9 +11,11 @@
 #include "DBManager.h"
 #include "indicator.hpp"
 
+//ini 파일 경로와 db 경로를 변수에 저장
 BaselineGenerator::BaselineGenerator(const std::string& ini_path, const std::string& db_path)
     : ini_path_(ini_path), db_path_(db_path) {}
 
+    //MD5 해시 계산하여 문자열로 반환
 std::string BaselineGenerator::compute_md5(const std::string& filepath) {
     std::ifstream file(filepath, std::ios::binary);
     if (!file) return "";
@@ -36,6 +38,7 @@ std::string BaselineGenerator::compute_md5(const std::string& filepath) {
     return oss.str();
 }
 
+//퍼알 경로와 MD5 값을 받아 메타데이터를 수집하여 BaselineEntry 반환
 BaselineEntry BaselineGenerator::collect_metadata(const std::string& path, const std::string& md5) {
     struct stat stat_buf;
     if (stat(path.c_str(), &stat_buf) != 0) {
@@ -61,17 +64,18 @@ BaselineEntry BaselineGenerator::collect_metadata(const std::string& path, const
     };
 
     return BaselineEntry{
-        path,
-        md5,
-        perm_ss.str(),
-        static_cast<int>(stat_buf.st_uid),
-        static_cast<int>(stat_buf.st_gid),
-        format_time(stat_buf.st_ctime),
-        format_time(stat_buf.st_mtime),
-        static_cast<uintmax_t>(stat_buf.st_size)
+        path, //파일 경로
+        md5, // md5 해시
+        perm_ss.str(), //권한
+        static_cast<int>(stat_buf.st_uid), //파일 소유자 uid
+        static_cast<int>(stat_buf.st_gid), //파일 그룹 gid
+        format_time(stat_buf.st_ctime), // 생성 시간
+        format_time(stat_buf.st_mtime), //수정 시간
+        static_cast<uintmax_t>(stat_buf.st_size) // 파일 크기
     };
 }
 
+//파일 경로가 제외 목록에 해당하는지 확인
 bool BaselineGenerator::is_excluded(const std::string& path, const std::set<std::string>& excludes) {
     for (const auto& exclude : excludes) {
         if (path == exclude || path.rfind(exclude + "/", 0) == 0) {
@@ -81,6 +85,7 @@ bool BaselineGenerator::is_excluded(const std::string& path, const std::set<std:
     return false;
 }
 
+//ini 파일을 파싱하고 대상 파일의 해시 및 메타데이터를 db에 저장
 void BaselineGenerator::parse_ini_and_store() {
     std::ifstream ini_file(ini_path_);
     if (!ini_file) {
@@ -111,9 +116,9 @@ void BaselineGenerator::parse_ini_and_store() {
 
             if (key == "Path") {
                 if (current_section.rfind("EXCLUDE_", 0) == 0)
-                    exclude_paths.insert(value);
+                    exclude_paths.insert(value); //제외 경로로 등록
                 else if (current_section.rfind("TARGETS_", 0) == 0)
-                    target_paths.push_back(value);
+                    target_paths.push_back(value); //분석 대상 경로로 등록
             }
         }
     }
@@ -123,14 +128,14 @@ void BaselineGenerator::parse_ini_and_store() {
     for (const auto& path : target_paths) {
         if (std::filesystem::is_directory(path)) {
             for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
-                if (entry.is_regular_file()) ++total_files;
+                if (entry.is_regular_file()) ++total_files; //파일 개수 카운팅
             }
         } else if (std::filesystem::is_regular_file(path)) {
             ++total_files;
         }
     }
 
-    indicators::ProgressBar bar{
+    indicators::ProgressBar bar{ //콘솔 진행 바 설정
         indicators::option::BarWidth{50},
         indicators::option::Start{"["},
         indicators::option::Fill{"■"},
@@ -149,11 +154,11 @@ void BaselineGenerator::parse_ini_and_store() {
     for (const auto& path : target_paths) {
         try {
             if (std::filesystem::is_regular_file(path)) {
-                if (is_excluded(path, exclude_paths)) continue;
-                auto hash = compute_md5(path);
-                auto entry = collect_metadata(path, hash);
-                storage.replace(entry);
-                bar.set_progress(++current * 100.0f / total_files);
+                if (is_excluded(path, exclude_paths)) continue; //제외 대상이면 생략
+                auto hash = compute_md5(path); // md5 해시 계산
+                auto entry = collect_metadata(path, hash); // 메타데이터 수집
+                storage.replace(entry); // db에 저장
+                bar.set_progress(++current * 100.0f / total_files); //진행 바 갱신
             }
             else if (std::filesystem::is_directory(path)) {
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
@@ -171,7 +176,9 @@ void BaselineGenerator::parse_ini_and_store() {
         }
     }
 
+    bar.set_progress(100.0f);
     indicators::show_console_cursor(true);
+    
 }
 
 void BaselineGenerator::generate_and_store() {

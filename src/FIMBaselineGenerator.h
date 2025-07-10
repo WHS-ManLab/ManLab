@@ -9,6 +9,7 @@ public:
     void generate_and_store();
 
     static std::string compute_md5(const std::string& filepath);
+    static BaselineEntry collect_metadata(const std::string& path, const std::string& md5);
 
 private:
     std::string ini_path_;
@@ -16,5 +17,5 @@ private:
 
     void parse_ini_and_store();
     bool is_excluded(const std::string& path, const std::set<std::string>& excludes);
-    BaselineEntry collect_metadata(const std::string& path, const std::string& md5);
+
 };

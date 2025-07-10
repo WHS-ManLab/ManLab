@@ -21,8 +21,10 @@ void BaselineGen() {
     try {
         BaselineGenerator generator(ini_path, db_path);
         generator.generate_and_store();
+        std::cerr << std::endl;
         std::cout << "[SUCCESS] Baseline 생성 완료\n";
     } catch (const std::exception& e) {
+        std::cerr << std::endl;
         std::cerr << "[ERROR] Baseline 생성 실패: " << e.what() << '\n';
     }
 
