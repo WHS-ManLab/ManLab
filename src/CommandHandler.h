@@ -3,12 +3,13 @@
 #include <vector>
 #include <string>
 
-class CommandHandler {
+class CommandHandler 
+{
 public:
     /// argc/argv를 받아 명령어 실행 준비
     CommandHandler(int argc, char** argv);
-
-    void Run();
+    void Init();
+    std::string GetCommandString();
 
 private:
     int mArgc;

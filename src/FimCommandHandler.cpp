@@ -2,21 +2,23 @@
 #include "FIMBaselineGenerator.h"
 #include "FIMIntegScan.h"
 #include "DBManager.h"
+#include "Paths.h"
 #include <iostream>
+#include <ostream>
 
 namespace fim {
 
 
-void IntScan() {
+void IntScan(std::ostream& out) {
     std::cout << "해시값 무결성 검사 실행중...\n" << std::endl;
     
     compare_with_baseline(true);
 }
 
-void BaselineGen() {
+void BaselineGen(std::ostream& out) {
     std::cout << "baseline 해시값 생성중...\n" << std::endl;
-    const std::string ini_path = "/ManLab/conf/FIMConfig.ini";  // INI 파일 경로
-    const std::string db_path  = "/ManLab/db/baseline.db";      // DB 저장 경로
+    const std::string ini_path = PATH_FIM_CONFIG_INI;  // INI 파일 경로
+    const std::string db_path  = PATH_BASELINE_DB;      // DB 저장 경로
 
     try {
         BaselineGenerator generator(ini_path, db_path);
@@ -27,7 +29,7 @@ void BaselineGen() {
     }
 
 }
-void PrintBaseline() {
+void PrintBaseline(std::ostream& out) {
     std::cout << "\n[INFO] Baseline DB 내용 출력:\n" << std::endl;
     auto& storage = DBManager::GetInstance().GetBaselineStorage();
 
@@ -45,7 +47,7 @@ void PrintBaseline() {
         std::cerr << "[ERROR] DB 조회 중 오류 발생: " << e.what() << std::endl;
     }
 }
-void PrintIntegscan() {
+void PrintIntegscan(std::ostream& out) {
      std::cout << "[INFO] 무결성 검사 중...\n" << std::endl;
 
     // 변조된 항목 DB 불러오기

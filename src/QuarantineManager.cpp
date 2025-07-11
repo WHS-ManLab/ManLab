@@ -1,4 +1,5 @@
 #include "QuarantineManager.h"
+#include "Paths.h"
 
 #include <chrono>
 #include <fstream>
@@ -19,11 +20,11 @@ QuarantineManager::QuarantineManager(const std::vector<ScanInfo>& infos)
 {
     mIsQuarantineSuccess.resize(mScanInfo.size(), false);
 
-    if (!fs::exists("/ManLab/quarantine"))
+    if (!fs::exists(PATH_QUARANTINE))
     {
         try
         {
-            fs::create_directories("/ManLab/quarantine");
+            fs::create_directories(PATH_QUARANTINE);
         }
         catch (const fs::filesystem_error& e)
         {
@@ -71,17 +72,18 @@ void QuarantineManager::Run()
     {
         const auto& info = mScanInfo[i];
         fs::path original = info.path;
-        std::string qName = original.filename().string() + "_" + getCurrentDateTime();
-        fs::path quarantined = fs::path("/ManLab/quarantine") / qName;
+        std::string nowStr = getCurrentDateTime();
+        std::string qName = original.filename().string() + "_" + nowStr;
+        fs::path quarantined = fs::path(PATH_QUARANTINE) / qName;
         QuarantineMetadata meta{
             info.path,
             qName,
             info.size,
-            getCurrentDateTime(),
+            nowStr,
             info.cause,
             info.name,
         };
-        std::cout << "3" << std::endl;
+
         bool success = false;
         try
         {
@@ -90,7 +92,7 @@ void QuarantineManager::Run()
         }
         catch (const fs::filesystem_error& e)
         {
-            std::cerr << "ERROR: " << e.what() << '\n';
+            //TODO : 파일시스템 오류
         }
 
         mIsQuarantineSuccess[i] = success;
