@@ -1,25 +1,12 @@
 #pragma once
-#include "DaemonBase.h"
-#include <csignal>
 #include <atomic>
-#include <thread>
-#include <chrono>
 
-class RealtimeMonitorDaemon : public DaemonBase {
+class RealtimeMonitorDaemon 
+{
 public:
-    void Run() override;
-
-protected:
-    void setupSignalHandlers() override {
-        signal(SIGTERM, [](int){ sbRunning = false; });
-        signal(SIGINT,  [](int){ sbRunning = false; });
-    }
-
-    static bool isRunning() 
-    { 
-        return sbRunning; 
-    }
+    void Init(std::atomic<bool>& shouldRun);
+    void Run();
 
 private:
-    static std::atomic<bool> sbRunning;
+    std::atomic<bool>* mpShouldRun = nullptr;
 };

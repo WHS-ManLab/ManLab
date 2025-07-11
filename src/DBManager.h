@@ -57,6 +57,16 @@ struct BaselineEntry
     std::string md5;
 };
 
+// 검사 리포트 저장 테이블 구조
+struct ScanReport
+{
+    int64_t id; 
+    std::string type;
+    std::string date;
+    std::string report;
+    bool detected;
+};
+
 // 악성코드 해시에 대한 storage 타입 정의
 using StorageHash = decltype(sqlite_orm::make_storage("",
     sqlite_orm::make_table("MalwareHashDB",
@@ -113,6 +123,17 @@ using StorageModified = decltype(sqlite_orm::make_storage("",
     )
 ));
 
+// 검사 리포트에 대한 storage 타입 정의
+using StorageScanReport = decltype(sqlite_orm::make_storage("",
+    sqlite_orm::make_table("ScanReport",
+        sqlite_orm::make_column("id", &ScanReport::id, sqlite_orm::primary_key().autoincrement()),
+        sqlite_orm::make_column("Type", &ScanReport::type),
+        sqlite_orm::make_column("Date", &ScanReport::date),
+        sqlite_orm::make_column("Report", &ScanReport::report),
+        sqlite_orm::make_column("Detected", &ScanReport::detected)
+    )
+));
+
 class DBManager {
 public:
     static DBManager& GetInstance();
@@ -121,7 +142,7 @@ public:
     DBManager &operator=(const DBManager&) = delete;
 
     // initDB
-    static void InitHashDB(const std::string& dataFilePath);
+    static void InitHashDB();
 
     // Getter
     StorageHash& GetHashStorage();
@@ -129,6 +150,7 @@ public:
     StorageLogAnalysisResult& GetLogAnalysisResultStorage();
     StorageBaseline& GetBaselineStorage();
     StorageModified& GetModifiedStorage();
+    StorageScanReport& GetScanReportStorage();
 
 private:
     DBManager();
@@ -139,4 +161,5 @@ private:
     StorageLogAnalysisResult mLogAnalysisResultStorage;
     StorageBaseline mBaselineStorage;
     StorageModified mModifiedStorage;
+    StorageScanReport mScanReportStorage;
 };

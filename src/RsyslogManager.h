@@ -3,6 +3,7 @@
 #include <string>       // 문자열 클래스
 #include <optional>     // std::optional 사용
 #include <unordered_set>
+#include <atomic>
 
 // 파싱된 로그 항목을 담는 구조체
 struct LogEntry
@@ -25,9 +26,9 @@ struct AnalysisResult
 class RsyslogManager
 {
 public:
-    RsyslogManager(const std::string& logPath, const std::string& ruleSetPath);
-
+    RsyslogManager();
     void RsyslogRun();
+    void Init(std::atomic<bool>& shouldRun);
 
 private:
     std::string mLogPath;
@@ -35,4 +36,6 @@ private:
 
     std::unordered_set<std::string> loadRsyslogRuleSet(const std::string& filename);
     std::optional<LogEntry> parseLogLine(const std::string& line);
+
+    std::atomic<bool>* mpShouldRun = nullptr;
 };

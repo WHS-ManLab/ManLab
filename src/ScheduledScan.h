@@ -4,13 +4,15 @@
 #include <vector>
 #include <chrono>
 
-enum class eScheduleType {
+enum class eScheduleType 
+{
     Monthly,
     Weekly,
     SpecificDate
 };
 
-struct ScanSchedule {
+struct ScanSchedule 
+{
     eScheduleType type;
 
     // Monthly
@@ -30,14 +32,14 @@ struct ScanSchedule {
 class ScheduledScan {
 public:
     ScheduledScan();
-
-    std::chrono::system_clock::time_point GetNextTriggerTime();
-    void WaitUntil(const std::chrono::system_clock::time_point& time);
+    bool ShouldTriggerNow();
     void RunScan();
 
 private:
-    std::vector<ScanSchedule> mSchedules;
+    std::vector<ScanSchedule> mMonthlySchedules;
+    std::vector<ScanSchedule> mWeeklySchedules;
+    std::vector<ScanSchedule> mSpecificDateSchedules;
 
     void loadSchedules();
-    std::chrono::system_clock::time_point calculateNextTime(const ScanSchedule& schedule);
+    void parseTime(const std::string& timeStr, int& hour, int& minute);
 };

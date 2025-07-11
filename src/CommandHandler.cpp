@@ -1,28 +1,19 @@
 #include "CommandHandler.h"
-
 #include <getopt.h>
-#include <iostream>
 #include <stdexcept>
-#include <filesystem>
 #include <unistd.h>  // for getopt_long
-#include "FimCommandHandler.h"
-#include "SigCommandHandler.h"
-#include "RealtimeMonitorDaemon.h"
-#include "LogDaemon.h"
-#include "ScheduledScanDaemon.h"
-#include "DBManager.h"
 #include "INIReader.h" 
-#include "DaemonUtils.h"
 
-namespace fs = std::filesystem;
 
 CommandHandler::CommandHandler(int argc, char** argv)
     : mArgc(argc)
     , mArgv(argv)
+{}
+
+void CommandHandler::Init() 
 {
     parseOptions(); 
 }
-
 
 // ------------------------------------------------------------
 // CommandHandler::parseOptions()
@@ -98,67 +89,15 @@ void CommandHandler::parseOptions()
     }
 }
 
-void CommandHandler::Run()
+std::string CommandHandler::GetCommandString()
 {
-    if (mArgs.size() < 1)
-    {
-        // main.cpp의 catch문으로 전송
-        throw std::invalid_argument("No command provided");
-    }
-
     const std::string& command = mArgs[0];
 
-    
     // 명령어 유형 결정
-    // [init] 시스템 초기화
-    if (command == "init")
-    {
-        // DB 테이블 생성(DBManager의 InitSchema() 호출)
-        DBManager::GetInstance().InitSchema();
-
-        // 악성코드 해시 DB 초기화
-        // 초기화 단계에서는 clone이후 Make를 실행시키므로 Makefile이 있는 디렉토리 기준 상대경로 지정
-        DBManager::InitHashDB("./malhash/malware_hashes.txt");
-        
-        // ScheduledScanDaemon 실행
-        // 데몬 중복 살행 방지를 위한 실행 보조 함수
-        // PID 파일 이름과 함수 포인터를 인자로 전달
-        StopDaemon("ScheduledScanDaemon"); 
-        LaunchDaemonIfNotRunning("ScheduledScanDaemon", [](){ScheduledScanDaemon().Run();});
-        return;
-    }
-
-    // [reload] 설정 재적용 및 PC재부팅
-    else if (command == "reload")
-    {
-        INIReader reader("/ManLab/conf/RealtimeControl.ini");
-        bool bMonitorEnabled = reader.GetBoolean("RealtimeControl", "RealtimeMonitorEnabled", false);
-
-        // ScheduledScanDaemon : PC 재부팅 시 항상 실행
-        // 설정 재적용 시에는 중복 실행 방지 적용
-        StopDaemon("ScheduledScanDaemon");
-        LaunchDaemonIfNotRunning("ScheduledScanDaemon", [](){ScheduledScanDaemon().Run();});
-        
-        // PC 재부팅 시 설정 파일을 읽고 실행
-        // 설정 재적용 시에도 동일한 동작
-        if (bMonitorEnabled)
-        {
-            LaunchDaemonIfNotRunning("LogCollectorDaemon", [](){LogCollectorDaemon().Run();});
-            LaunchDaemonIfNotRunning("RealtimeMonitorDaemon", [](){RealtimeMonitorDaemon().Run();});
-        }
-        else
-        {
-            StopDaemon("LogCollectorDaemon");
-            StopDaemon("RealtimeMonitorDaemon");
-        }
-
-        return;
-    }
-
     // [malscan] 악성코드 수동검사 명령어
-    else if (command == "malscan")
+    if (command == "malscan")
     {
-        sig::MalScan();
+        return "malscan";
     }
 
     // [restore] 격리된 파일 복구 명령어
@@ -169,45 +108,67 @@ void CommandHandler::Run()
             // main.cpp의 catch문으로 전송 
             throw std::invalid_argument("Missing filename for restore command");
         }
-        sig::Restore(mArgs[1]);
+        return "restore " + mArgs[1];
     }
 
     // [integscan] 무결성 수동검사 명령어
     else if (command == "integscan")
     {
-        fim::IntScan();
+        return "integscan";
     }
 
     // [baseline] 
     else if (command == "baseline")
     {
-        fim::BaselineGen();
+        return "baseline";
     }
 
     // [check_baseline]
     else if (command == "check_baseline")
     {
-        fim::PrintBaseline();
+        return "check_baseline";
     }
 
     // [man] 매뉴얼 디스플레이 명령어
     else if (command == "check_integscan")
     {
-        fim::PrintIntegscan();
+        return "check_integscan";
     }
     else if (command == "man")
     {
-        //TODO
-        //사용자에게 매뉴얼을 보여주는 함수
-        //공통
+        return "man";
+    }
+    else if (command == "stop")
+    {
+        return "stop";
     }
 
     // [malreport] 지금까지의 검사 내역 보여주는 명령어
     else if (command == "malreport")
     {
-        //TODO
-        //사용자에게 데이터베이스에 저장된 악성코드 스캔 결과를 보여주는 함수
-        //시그니처 팀 담당
+        if (mArgs.size() < 2)
+        {
+            throw std::invalid_argument("Missing subcommand for malreport (expected 'list' or 'view <id>')");
+        }
+
+        const std::string& subcmd = mArgs[1];
+
+        if (subcmd == "list")
+        {
+            return "malreport list";
+        }
+        else if (subcmd == "view")
+        {
+            if (mArgs.size() < 3)
+            {
+                throw std::invalid_argument("Missing <id> for malreport view");
+            }
+            return "malreport view " + mArgs[2];
+        }
+        else
+        {
+            throw std::invalid_argument("Unknown malreport subcommand: " + subcmd);
+        }
     }
 
     // 명령어 집합에 존재하지 않는 경우
@@ -216,5 +177,4 @@ void CommandHandler::Run()
         // main.cpp의 catch문으로 전송
         throw std::invalid_argument("Unknown command: " + command);
     }
-    return;
 }
