@@ -1,21 +1,23 @@
 #pragma once
+
 #include <string>
 #include <set>
 #include "DBManager.h"
 
-class BaselineGenerator {
+class BaselineGenerator
+{
 public:
-    BaselineGenerator(const std::string& ini_path, const std::string& db_path);
-    void generate_and_store();
+    BaselineGenerator(const std::string& iniPath, const std::string& dbPath);
 
-    static std::string compute_md5(const std::string& filepath);
-    static BaselineEntry collect_metadata(const std::string& path, const std::string& md5);
+    void GenerateAndStore();
+
+    static std::string ComputeMd5(const std::string& filePath);
+    static BaselineEntry CollectMetadata(const std::string& path, const std::string& md5);
 
 private:
-    std::string ini_path_;
-    std::string db_path_;
+    std::string mIniPath;
+    std::string mDbPath;
 
-    void parse_ini_and_store();
-    bool is_excluded(const std::string& path, const std::set<std::string>& excludes);
-
+    void ParseIniAndStore();
+    bool IsExcluded(const std::string& path, const std::set<std::string>& excludes);
 };

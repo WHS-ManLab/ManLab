@@ -2,8 +2,8 @@
 
 namespace fim {
 
-void IntScan();
-void BaselineGen();
+void RunIntegScan();
+void GenerateBaseline();
 void PrintBaseline();
-void PrintIntegscan();
+void PrintIntegScan();
 } // namespace fim

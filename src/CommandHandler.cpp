@@ -175,13 +175,13 @@ void CommandHandler::Run()
     // [integscan] 무결성 수동검사 명령어
     else if (command == "integscan")
     {
-        fim::IntScan();
+        fim::RunIntegScan();
     }
 
     // [baseline] 
     else if (command == "baseline")
     {
-        fim::BaselineGen();
+        fim::GenerateBaseline();
     }
 
     // [check_baseline]
@@ -193,7 +193,7 @@ void CommandHandler::Run()
     // [man] 매뉴얼 디스플레이 명령어
     else if (command == "check_integscan")
     {
-        fim::PrintIntegscan();
+        fim::PrintIntegScan();
     }
     else if (command == "man")
     {
