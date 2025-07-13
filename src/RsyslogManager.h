@@ -1,8 +1,10 @@
 #pragma once
 
-#include <string>       // 문자열 클래스
-#include <optional>     // std::optional 사용
+#include <string>
+#include <optional>
+#include <deque>
 #include <unordered_set>
+#include <unordered_map>
 
 // 파싱된 로그 항목을 담는 구조체
 struct LogEntry
@@ -26,13 +28,17 @@ class RsyslogManager
 {
 public:
     RsyslogManager(const std::string& logPath, const std::string& ruleSetPath);
-
+    
+    static time_t ParseTime(const std::string& timestamp);
     void RsyslogRun();
 
 private:
-    std::string mLogPath;
-    std::unordered_set<std::string> mRsyslogRuleSet;
+    static constexpr size_t MAX_RECENT_LOGS = 10;
 
-    std::unordered_set<std::string> loadRsyslogRuleSet(const std::string& filename);
+    std::string mLogPath;
+    std::unordered_map<std::string, std::unordered_set<std::string>> mRsyslogRuleSet;
+
+    std::deque<LogEntry> mRecentLogs;
+    std::unordered_map<std::string, std::unordered_set<std::string>> loadRsyslogRuleSet(const std::string& filename);
     std::optional<LogEntry> parseLogLine(const std::string& line);
 };
