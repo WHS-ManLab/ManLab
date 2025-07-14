@@ -1,31 +1,28 @@
 #include "RealtimeMonitorDaemon.h"
 #include "RealTimeMonitor.h"
+#include "Paths.h"
+
 #include <thread>
 #include <chrono>
 #include <vector>
 #include <syslog.h>
 #include <sys/prctl.h>
 
-std::atomic<bool> RealtimeMonitorDaemon::sbRunning(true);
-
-
+void RealtimeMonitorDaemon::Init(std::atomic<bool>& shouldRun)
+{
+    mpShouldRun = &shouldRun;
+}
 
 void RealtimeMonitorDaemon::Run()
 {
-    daemonize();            // 백그라운드 데몬화
-    setupSignalHandlers();  // SIGTERM 등 처리
-    prctl(PR_SET_NAME, "ManLab Realtime", 0, 0, 0);
-
-
     // 1. INI 파일에서 경로, 마스크 파싱
-    auto pathMaskList = parsePathsFromIni("/ManLab/conf/FIMConfig.ini");
+    auto pathMaskList = parsePathsFromIni(PATH_FIM_CONFIG_INI);
 
     // 2. 경로 목록 생성
     std::vector<std::string> watchDirs;
     for (const auto& [path, _] : pathMaskList)
     {
         watchDirs.push_back(path);
-
     }
 
     // 3. 감시 객체 생성
@@ -35,18 +32,14 @@ void RealtimeMonitorDaemon::Run()
         watcher.AddWatchWithFilter(path, mask);
     }
 
-
     // 3. 초기화           
     watcher.Init();
- 
     watcher.Start();
 
-
     // 4. 감지 루프
-    while (sbRunning) 
+    while (*mpShouldRun) 
     {
-        watcher.pollOnce();  //
-
+        watcher.pollOnce();  
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
     }
 }
