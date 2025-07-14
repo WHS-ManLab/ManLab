@@ -8,7 +8,7 @@
 
 //기준선 DB와 현재 파일 상태를 비교하여 변조 여부 확인
 //verbose가 true일 경우 상세 로그를 출력
-void compare_with_baseline(bool verbose) {
+void compare_with_baseline(bool verbose, std::ostream& out) {
     auto& baseline_storage = DBManager::GetInstance().GetBaselineStorage();  // 기준선 DB 접근
     auto& modified_storage = DBManager::GetInstance().GetModifiedStorage();  // 수정된 DB 접근
 
@@ -17,7 +17,7 @@ void compare_with_baseline(bool verbose) {
         entries = baseline_storage.get_all<BaselineEntry>(); // DB에서 모든 기준선 항목 불러오기
     } catch (const std::exception& e) {
         if (verbose)
-            std::cerr << "[ERROR] 기준선 DB 조회 실패: " << e.what() << std::endl;
+            out << "[ERROR] 기준선 DB 조회 실패: " << e.what() << std::endl;
         return;
     }
 
@@ -47,21 +47,21 @@ void compare_with_baseline(bool verbose) {
 
         if (current_hash == stored_hash) {
             if (verbose)
-                std::cout << "[OK] 일치: " << path << std::endl;
+                out << "[OK] 일치: " << path << std::endl;
         } else {
-            std::cout << "[ALERT] 변조 감지: " << path << std::endl;
-            std::cout << "  - 기준선: " << stored_hash << std::endl;
-            std::cout << "  - 현재값: " << current_hash << std::endl;
+            out << "[ALERT] 변조 감지: " << path << std::endl;
+            out << "  - 기준선: " << stored_hash << std::endl;
+            out << "  - 현재값: " << current_hash << std::endl;
 
             try {
                 modified_storage.replace(ModifiedEntry{path, current_hash});  // 변조된 항목 저장
             } catch (const std::exception& e) {
-                std::cerr << "[ERROR] 변조 항목 저장 실패: " << e.what() << std::endl;
+                out << "[ERROR] 변조 항목 저장 실패: " << e.what() << std::endl;
             }
         }
     }
 
     if (verbose)
-        std::cout << "\n[SUCCESS] 무결성 검사 완료\n";
+        out << "\n[SUCCESS] 무결성 검사 완료\n";
 } 
 
