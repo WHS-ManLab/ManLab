@@ -1,7 +1,7 @@
 #include "RsyslogManager.h"
 #include "RsyslogRule.h"
 #include "LogStorageManager.h"
-#include "LogDaemon.h"
+#include "Paths.h"
 
 #include <iostream>
 #include <fstream>
@@ -11,10 +11,15 @@
 
 #include <yaml-cpp/yaml.h>
 
-RsyslogManager::RsyslogManager(const std::string& logPath, const std::string& ruleSetPath)
-    : mLogPath(logPath)
-    , mRsyslogRuleSet(loadRsyslogRuleSet(ruleSetPath))
+RsyslogManager::RsyslogManager()
+    : mLogPath(PATH_LOG)
+    , mRsyslogRuleSet(loadRsyslogRuleSet(PATH_RULESET))
 {}
+
+void RsyslogManager::Init(std::atomic<bool>& shouldRun)
+{
+    mpShouldRun = &shouldRun;
+}
 
 // RsyslogRuleSet 파싱
 std::unordered_set<std::string> RsyslogManager::loadRsyslogRuleSet(const std::string& filename)
@@ -75,7 +80,7 @@ void RsyslogManager::RsyslogRun()
 
     std::string line;
 
-    while (LogCollectorDaemon::IsRunning())
+    while (*mpShouldRun)
     {
         if (std::getline(file, line))
         {

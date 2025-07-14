@@ -1,5 +1,5 @@
 #include "RestoreManager.h"
-
+#include "Paths.h"
 #include <fstream>
 #include <iostream>
 #include <filesystem>
@@ -61,7 +61,7 @@ void RestoreManager::Run()
     }
 
     // 3. 경로 구성
-    fs::path src = fs::path("/ManLab/quarantine") / mQuarantinedFileName;
+    fs::path src = fs::path(PATH_QUARANTINE) / mQuarantinedFileName;
     fs::path dst = meta.OriginalPath;
 
     try
