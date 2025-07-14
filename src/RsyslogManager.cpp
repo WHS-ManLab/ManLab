@@ -8,7 +8,6 @@
 #include <regex>
 #include <thread>
 #include <chrono>
-#include <ctime>
 
 #include <yaml-cpp/yaml.h>
 
@@ -17,38 +16,24 @@ RsyslogManager::RsyslogManager(const std::string& logPath, const std::string& ru
     , mRsyslogRuleSet(loadRsyslogRuleSet(ruleSetPath))
 {}
 
-// 로그 분석을 위한 timestamp 변환
-time_t RsyslogManager::ParseTime(const std::string& timestamp) {
-    struct tm tm{};
-    strptime(timestamp.c_str(), "%b %d %H:%M:%S", &tm);
-    
-    // 연도, 월 기본값 보정 (옵션)
-    time_t now = time(nullptr);
-    struct tm* now_tm = localtime(&now);
-    tm.tm_year = now_tm->tm_year;
-    tm.tm_mon = now_tm->tm_mon;
-
-    return mktime(&tm);
-}
-
 // RsyslogRuleSet 파싱
-std::unordered_map<std::string, std::unordered_set<std::string>> RsyslogManager::loadRsyslogRuleSet(const std::string& filename)
+std::unordered_set<std::string> RsyslogManager::loadRsyslogRuleSet(const std::string& filename)
 {
-    std::unordered_map<std::string, std::unordered_set<std::string>> result;
+    std::unordered_set<std::string> result;
 
     try
     {
         YAML::Node config = YAML::LoadFile(filename);
 
-        for (auto it = config.begin(); it != config.end(); ++it) {
-            std::string ruleKey = it->first.as<std::string>();
-            const YAML::Node& ruleList = it->second;
+        if (!config["sudousers"] || !config["sudousers"].IsSequence())
+        {
+            std::cerr << "[ERROR] Invalid YAML RsyslogRuleSet format\n";
+            return result;
+        }
 
-            if (ruleList.IsSequence()) {
-                for (const auto& item : ruleList) {
-                    result[ruleKey].insert(item.as<std::string>());
-                }
-            }
+        for (const auto& user : config["sudousers"])
+        {
+            result.insert(user.as<std::string>());
         }
     }
     catch (const YAML::Exception& e)
@@ -62,7 +47,7 @@ std::unordered_map<std::string, std::unordered_set<std::string>> RsyslogManager:
 // 로그 한 줄을 파싱하여 LogEntry 구조로 반환
 std::optional<LogEntry> RsyslogManager::parseLogLine(const std::string& line)
 {
-    std::regex oldFmt(R"((\w{3}\s+\d+\s[\d:]+)\s(\S+)\s([^\s:]+):\s(.+))");
+    std::regex oldFmt(R"((\w{3}\s+\d+\s[\d:]+)\s(\S+)\s([\w\-]+):\s(.+))");
     std::regex newFmt(R"((\d{4}-\d{2}-\d{2}T[\d:.+-]+)\s(\S+)\s(\S+):\s(.+))");
 
     std::smatch match;
@@ -97,28 +82,7 @@ void RsyslogManager::RsyslogRun()
             auto entry = parseLogLine(line);
             if (entry)
             {
-                //추가해야됨
-                mRecentLogs.push_back(*entry);
-
-                //추가해야됨
-                // 개수 기준으로 오래된 로그 삭제 (10개 초과 시 제거)
-                if (mRecentLogs.size() > MAX_RECENT_LOGS) {
-                    mRecentLogs.pop_front();
-                }
-
-                AnalysisResult result{false, "", ""};
-
-                //수정 및 추가 해야됨
-                result = AnalyzePasswordFailureLog(*entry);
-
-                if (!result.isMalicious)
-                {
-                    result = AnalyzeSudoLog(*entry, mRsyslogRuleSet["sudousers"]);
-                }
-                if (!result.isMalicious)
-                {
-                    result = AnalyzePasswdChangeLog(*entry, mRecentLogs, mRsyslogRuleSet["passwdchangers"]);
-                }
+                auto result = AnalyzeSudoLog(*entry, mRsyslogRuleSet);
 
                 if (result.isMalicious)
                 {
