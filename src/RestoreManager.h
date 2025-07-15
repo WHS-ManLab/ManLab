@@ -10,10 +10,14 @@ public:
     bool IsSuccess() const;
 
 private:
-    bool applySimpleXORDecryption(const std::string& filePath);
+    // AES-256 암호화 키와 초기화 벡터(IV)
+    static const unsigned char sAesKey[33];
+    static const unsigned char sAesIv[17];
+
+    // AES 복호화 함수
+    bool aesDecryptFile(const std::string& inFilePath, const std::string& outFilePath);
 
     std::string mQuarantinedFileName;
     StorageQuarantine* mStorage;
     bool mbSuccess;
-    static unsigned char sEncryptionKey;
 };
