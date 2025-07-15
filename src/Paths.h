@@ -49,7 +49,7 @@
 #define PATH_LOG                  "/var/log/manlab.log"
 
 // ruleset 디렉토리
-#define PATH_RULESET              "/root/Manlab/conf/RsyslogRuleSet.yaml"
+#define PATH_RULESET              "/root/ManLab/conf/RsyslogRuleSet.yaml"
 
 // ManLab 전체 config 파일
 #define PATH_MANLAB_CONFIG_INI    "/root/ManLab/conf/ManLabconf.ini"
