@@ -1,5 +1,6 @@
 #include "QuarantineManager.h"
 #include "Paths.h"
+#include "DBManager.h"
 
 #include <chrono>
 #include <fstream>
@@ -121,6 +122,14 @@ void QuarantineManager::Run()
         fs::path quarantinedPath = fs::path(PATH_QUARANTINE) / qName;
         fs::path tempEncryptedPath = quarantinedPath.string() + ".enc";
 
+        // DB 저장을 위해, 원본 파일의 권한 획득
+        fs::perms original_perms = fs::perms::unknown;
+        try {
+            original_perms = fs::status(originalPath).permissions();
+        } catch (const fs::filesystem_error& e) {
+            // 권한 획득 실패
+        }
+
         QuarantineMetadata meta{
             info.path,
             qName,
@@ -128,6 +137,7 @@ void QuarantineManager::Run()
             getCurrentDateTime(),
             info.cause,
             info.name,
+            static_cast<long long>(original_perms) // 획득한 원본 권한 정보를 메타데이터에 저장
         };
 
         bool success = false;
@@ -138,6 +148,10 @@ void QuarantineManager::Run()
             // 원본 파일을 읽어서 암호화 후 암호화된 임시 파일 생성
             if (aesEncryptFile(quarantinedPath.string(), tempEncryptedPath.string()))
             {
+                // 격리된 파일의 권한을 읽기만 가능하도록 설정(모든 쓰기 및 실행 권한 제거)
+                fs::permissions(tempEncryptedPath,
+                                fs::perms::owner_read | fs::perms::group_read | fs::perms::others_read,
+                                fs::perm_options::replace);
                 fs::remove(quarantinedPath); // 원본 격리 파일 삭제
                 fs::rename(tempEncryptedPath, quarantinedPath); // 암호화된 파일을 최종 이름으로 변경
                 success = true;

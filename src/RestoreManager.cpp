@@ -1,5 +1,6 @@
 #include "RestoreManager.h"
 #include "Paths.h"
+#include "DBManager.h"
 #include <fstream>
 #include <iostream>
 #include <filesystem>
@@ -107,6 +108,12 @@ void RestoreManager::Run()
     {
         if (aesDecryptFile(srcPath.string(), tempDecryptedPath.string())) // 임시 파일로 복호화
         {
+            // 복호화된 임시 파일에 저장된 원본 권한을 적용
+            fs::perms restored_perms = static_cast<fs::perms>(meta.OriginalPermissions);
+            if (restored_perms != fs::perms::unknown) {
+                fs::permissions(tempDecryptedPath, restored_perms);
+            }
+
             fs::rename(tempDecryptedPath, dstPath); // 원본 경로로 이동(복원)
             fs::remove(srcPath); // 격리된 원본 파일 삭제
             mbSuccess = true;
