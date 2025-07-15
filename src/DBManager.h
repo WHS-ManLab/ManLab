@@ -1,6 +1,9 @@
 #pragma once
 #include <string>
 #include <sqlite_orm.h>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 /*
 ============================================
@@ -35,6 +38,7 @@ struct QuarantineMetadata
     std::string QuarantineDate;
     std::string QuarantineReason;
     std::string MalwareNameOrRule;
+    long long OriginalPermissions;
 };
 
 // 로그 분석 결과 DB 테이블 구조
@@ -86,7 +90,8 @@ using StorageQuarantine = decltype(sqlite_orm::make_storage("",
         sqlite_orm::make_column("OriginalSize", &QuarantineMetadata::OriginalSize),
         sqlite_orm::make_column("QuarantineDate", &QuarantineMetadata::QuarantineDate),
         sqlite_orm::make_column("QuarantineReason", &QuarantineMetadata::QuarantineReason),
-        sqlite_orm::make_column("MalwareNameOrRule", &QuarantineMetadata::MalwareNameOrRule))));
+        sqlite_orm::make_column("MalwareNameOrRule", &QuarantineMetadata::MalwareNameOrRule),
+        sqlite_orm::make_column("OriginalPermissionsValue", &QuarantineMetadata::OriginalPermissions))));
 
 // 로그 분석 결과에 대한 storage 타입 정의
 using StorageLogAnalysisResult = decltype(sqlite_orm::make_storage("",
