@@ -30,7 +30,7 @@ void ServerDaemon::startWorkerThreads()
     mThreads.emplace_back(&RealtimeMonitorDaemon::Run, &mRealtimeMonitorDaemon);
     mThreads.emplace_back(&ScheduledScanWatcher::Run, &mScheduledScanWatcher);
     mThreads.emplace_back(&ScheduledScanExecutor::Run, &mScheduledScanExecutor);
-    mThreads.emplace_back(&RsyslogManager::RsyslogRun, &mRsyslogManager);
+    mThreads.emplace_back(&RsyslogManager::Run, &mRsyslogManager);
     mThreads.emplace_back(&CommandReceiver::Run, &mCommandReceiver);
 
     joinWorkerThreads();
