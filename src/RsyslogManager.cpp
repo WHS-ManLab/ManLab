@@ -43,7 +43,7 @@ std::unordered_set<std::string> RsyslogManager::loadRsyslogRuleSet(const std::st
     }
     catch (const YAML::Exception& e)
     {
-        std::cerr << "[ERROR] YAML parsing error: " << e.what() << "\n";
+        //std::cerr << "[ERROR] YAML parsing error: " << e.what() << "\n";
     }
 
     return result;
