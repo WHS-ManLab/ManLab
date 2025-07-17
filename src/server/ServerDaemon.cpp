@@ -8,7 +8,7 @@ ServerDaemon::ServerDaemon()
       mbScanRequested(false)
 {}
 
-void ServerDaemon::Run(bool systemdMode)
+void ServerDaemon::Run()
 {
     // DB 초기화
     DBManager::GetInstance().InitSchema();
@@ -22,7 +22,7 @@ void ServerDaemon::Run(bool systemdMode)
     mCommandReceiver.Init(*this, mShouldRun);
 
     // 다른 인스턴스가 실행 중이 아니면 실행
-    LaunchDaemonIfNotRunning(systemdMode, "ManLabCommandDaemon", [this]() { this->startWorkerThreads(); });
+    LaunchDaemonIfNotRunning("ManLabCommandDaemon", [this]() { this->startWorkerThreads(); });
 }
 
 void ServerDaemon::startWorkerThreads()

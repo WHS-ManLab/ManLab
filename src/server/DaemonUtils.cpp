@@ -16,28 +16,9 @@ std::string GetPidFilePath(const std::string& daemonName)
     return std::string(PATH_PID) + "/" + daemonName + ".pid";
 }
 
-void Daemonize(bool systemdMode)
+void Daemonize()
 {
-    if (!systemdMode)
-    {
-        // 직접 실행된 경우 → fork()로 셸 해방(fork 없을 시 셸이 실행 안 되는 문제)
-        pid_t pid = fork();
-        if (pid < 0) 
-        {   
-            exit(1);
-        }
-        if (pid > 0) 
-        {
-            exit(0); // 부모는 종료
-        }
-        // 세션 분리
-        if (setsid() < 0)
-        {
-            std::cerr << "[ERROR] setsid() failed\n";
-            exit(1);
-        }
-    }
-
+    // systemd에 의해 실행된다고 가정 → fork(), setsid(), chdir("/") 불필요
     // 작업 디렉토리 변경
     if (chdir("/") < 0)
     {
@@ -52,7 +33,6 @@ void Daemonize(bool systemdMode)
     int fd = open("/dev/null", O_RDWR);
     if (fd < 0)
     {
-        std::cerr << "[ERROR] Failed to open /dev/null\n";
         exit(1);
     }
 
@@ -82,7 +62,7 @@ bool IsDaemonRunning(const std::string& daemonName)
 }
 
 // PID 파일 생성 및 fork
-void LaunchDaemonIfNotRunning(bool systemdMode, const std::string& daemonName, std::function<void()> daemonFunc)
+void LaunchDaemonIfNotRunning(const std::string& daemonName, std::function<void()> daemonFunc)
 {
     if (IsDaemonRunning(daemonName))
     {
@@ -90,7 +70,7 @@ void LaunchDaemonIfNotRunning(bool systemdMode, const std::string& daemonName, s
         return;
     }
 
-    Daemonize(systemdMode);
+    Daemonize();
     fs::create_directories(PATH_PID);
     std::ofstream pidFile(GetPidFilePath(daemonName));
     pidFile << getpid(); //기존 파일의 내용을 삭제하고 새로 작성. 만약 이전 PID파일 정보만 남아있고 프로세스는 꺼졌을 경우 대비

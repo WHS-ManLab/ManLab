@@ -2,7 +2,6 @@
 #include <getopt.h>
 #include <stdexcept>
 #include <unistd.h>  // for getopt_long
-#include "INIReader.h" 
 
 
 CommandHandler::CommandHandler(int argc, char** argv)
