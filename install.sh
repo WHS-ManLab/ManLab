@@ -35,7 +35,8 @@ echo "[INFO] Installing ManLab..."
 # 1. 디렉토리 생성 및 바이너리 설치
 mkdir -p "$BIN_DIR"
 cp -v ManLab "$BIN_DIR/ManLab"
-ln -sf "$BIN_DIR/ManLab" /usr/local/bin/ManLab
+cp -v ManLab-cli "$BIN_DIR/ManLab-cli"
+ln -sf "$BIN_DIR/ManLab-cli" /usr/local/bin/ManLab
 
 # 2. DB 및 기타 디렉토리
 mkdir -p "$DB_DIR" "$RULE_DST_DIR" "$CONF_DST_DIR" "$QUARANTINE_DIR" "$MALWARE_DIR"
@@ -64,4 +65,4 @@ echo "[INFO] Copying malware_hashes.txt..."
 cp -v "$MALHASH_SRC" "$MALHASH_DST"
 
 echo "[OK] ManLab installation completed."
-echo "▶ 설치가 완료되었습니다. 제품을 실행하려면 다음 명령어를 입력하세요: sudo ManLab run"
+systemctl start "$SERVICE_UNIT"

@@ -4,7 +4,7 @@
 #include <functional>
 
 bool IsDaemonRunning(const std::string& daemonName);
-void LaunchDaemonIfNotRunning(bool systemdMode, const std::string& daemonName, std::function<void()> daemonFunc);
+void LaunchDaemonIfNotRunning(const std::string& daemonName, std::function<void()> daemonFunc);
 void StopDaemon(const std::string& daemonName);
 std::string GetPidFilePath(const std::string& daemonName);
-void Daemonize(bool systemdMode);
+void Daemonize();

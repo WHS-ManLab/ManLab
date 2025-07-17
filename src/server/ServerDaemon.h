@@ -17,7 +17,7 @@ class ServerDaemon
 {
 public:
     ServerDaemon();
-    void Run(bool systemdMode);  // 데몬 실행 시작
+    void Run();  // 데몬 실행 시작
     void Stop();                 // 데몬 종료 요청
 
 private:

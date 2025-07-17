@@ -4,7 +4,7 @@ Description=ManLab AutoStart Service
 [Service]
 Type=simple
 User=root
-ExecStart=/root/ManLab/bin/ManLab autostart
+ExecStart=/root/ManLab/bin/ManLab
 
 [Install]
 WantedBy=multi-user.target
