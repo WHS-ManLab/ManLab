@@ -1,5 +1,6 @@
 #include "AuditLogManager.h"
 #include "LogStorageManager.h"
+#include "Paths.h"
 
 #include <iostream>
 #include <sstream>
@@ -8,6 +9,11 @@
 #include <chrono>
 
 using namespace std;
+
+void AuditLogManager::Init(std::atomic<bool> &shouldRun)
+{
+    mpShouldRun = &shouldRun;
+}
 
 // 로그 라인에서 msg=audit(...) 내부 숫자 추출 (msgId)
 string AuditLogManager::ExtractMsgId(const string &line) const
@@ -41,6 +47,13 @@ bool AuditLogManager::parseLogLine(const string &line, AuditLogRecord &record)
     else if (line.find("type=EXECVE") != string::npos)
     {
         record.bHasExecve = true;
+    }
+    else if (line.find("type=PATH") != string::npos)
+    {
+        if (line.find("item=1") != string::npos)
+        {
+            record.bHasPath = true;
+        }
     }
     else
     {
@@ -143,7 +156,7 @@ bool AuditLogManager::Matches(const AuditLogRecord &record, const AuditLogRule &
 // 룰 불러오기
 void AuditLogManager::LoadRules()
 {
-    const string ruleFile = "/ManLab/conf/AuditLogRules.yaml";
+    const string ruleFile = PATH_AUDITLOGRULES;
     YAML::Node yaml = YAML::LoadFile(ruleFile);
 
     for (const YAML::Node &ruleNode : yaml)
@@ -201,7 +214,7 @@ bool AuditLogManager::LogMonitor(ifstream &infile)
 void AuditLogManager::Run()
 {
     LogStorageManager manager;
-    const string auditLogPath = "/var/log/audit/audit.log";
+    const string auditLogPath = PATH_AUDITLOG;
 
     LoadRules();
 
@@ -214,7 +227,7 @@ void AuditLogManager::Run()
 
     infile.seekg(0, ios::end);
 
-    while (true)
+    while (*mpShouldRun)
     {
         LogMonitor(infile);
 
@@ -222,7 +235,7 @@ void AuditLogManager::Run()
         {
             AuditLogRecord &record = it->second;
 
-            if (record.bHasExecve && record.bHasSyscall)
+            if (record.bHasSyscall && (record.bHasExecve || record.bHasPath))
             {
                 for (const AuditLogRule &rule : mRules)
                 {
@@ -239,10 +252,10 @@ void AuditLogManager::Run()
                         else
                             lar.timestamp = record.MsgId;
 
-                        lar.uid = record.Fields.count("uid") > 0 ? record.Fields.at("uid") : "";
+                        lar.uid = record.Fields.count("auid") > 0 ? record.Fields.at("auid") : "";
                         lar.bIsSuccess = true;
-                        lar.originalLogPath = "/var/log/audit/audit.log";
-                        lar.rawLine = "";
+                        lar.originalLogPath = PATH_AUDITLOG;
+                        lar.rawLine = record.RawLine;
 
                         manager.Run(lar, true);
                     }
