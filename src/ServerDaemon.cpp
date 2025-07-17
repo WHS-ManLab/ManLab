@@ -20,6 +20,7 @@ void ServerDaemon::Run(bool systemdMode)
     mRealtimeMonitorDaemon.Init(mShouldRun);
     mRsyslogManager.Init(mShouldRun);
     mCommandReceiver.Init(*this, mShouldRun);
+    mAuditLogManager.Init(mShouldRun);
 
     // 다른 인스턴스가 실행 중이 아니면 실행
     LaunchDaemonIfNotRunning(systemdMode, "ManLabCommandDaemon", [this]() { this->startWorkerThreads(); });
@@ -32,6 +33,7 @@ void ServerDaemon::startWorkerThreads()
     mThreads.emplace_back(&ScheduledScanExecutor::Run, &mScheduledScanExecutor);
     mThreads.emplace_back(&RsyslogManager::RsyslogRun, &mRsyslogManager);
     mThreads.emplace_back(&CommandReceiver::Run, &mCommandReceiver);
+    mThreads.emplace_back(&AuditLogManager::Run, &mAuditLogManager);
 
     joinWorkerThreads();
     cleanup();
