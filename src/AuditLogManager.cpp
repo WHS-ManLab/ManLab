@@ -10,13 +10,13 @@
 
 using namespace std;
 
-void AuditLogManager::Init(std::atomic<bool> &shouldRun)
+void AuditLogManager::Init(std::atomic<bool>& shouldRun)
 {
     mpShouldRun = &shouldRun;
 }
 
 // 로그 라인에서 msg=audit(...) 내부 숫자 추출 (msgId)
-string AuditLogManager::ExtractMsgId(const string &line) const
+string AuditLogManager::ExtractMsgId(const string& line) const
 {
     size_t pos = line.find("msg=audit(");
 
@@ -37,7 +37,7 @@ string AuditLogManager::ExtractMsgId(const string &line) const
 }
 
 // 로그 한 줄 파싱해서 AuditLogRecord에 필요한 정보 저장
-bool AuditLogManager::parseLogLine(const string &line, AuditLogRecord &record)
+bool AuditLogManager::parseLogLine(const string& line, AuditLogRecord& record)
 {
     if (line.find("type=SYSCALL") != string::npos)
     {
@@ -87,15 +87,15 @@ bool AuditLogManager::parseLogLine(const string &line, AuditLogRecord &record)
 }
 
 // 로그 레코드가 룰 조건에 부합하는지 확인
-bool AuditLogManager::Matches(const AuditLogRecord &record, const AuditLogRule &rule) const
+bool AuditLogManager::Matches(const AuditLogRecord& record, const AuditLogRule& rule) const
 {
-    for (const Condition &cond : rule.Conditions)
+    for (const Condition& cond : rule.Conditions)
     {
         if (cond.Field == "*") // 모든 필드 대상 조건 검사
         {
             bool bFound = false;
 
-            for (const pair<const string, string> &field : record.Fields)
+            for (const pair<const string, string>& field : record.Fields)
             {
                 if (cond.MatchType == "contains" && field.second.find(cond.Value) != string::npos)
                 {
@@ -124,9 +124,9 @@ bool AuditLogManager::Matches(const AuditLogRecord &record, const AuditLogRule &
                 return false;
             }
 
-            const string &actual = it->second;
-            const string &expected = cond.Value;
-            const string &mt = cond.MatchType;
+            const string& actual = it->second;
+            const string& expected = cond.Value;
+            const string& mt = cond.MatchType;
 
             if (mt == "equals" && actual != expected)
             {
@@ -159,7 +159,7 @@ void AuditLogManager::LoadRules()
     const string ruleFile = PATH_AUDITLOGRULES;
     YAML::Node yaml = YAML::LoadFile(ruleFile);
 
-    for (const YAML::Node &ruleNode : yaml)
+    for (const YAML::Node& ruleNode : yaml)
     {
         AuditLogRule rule;
 
@@ -182,7 +182,7 @@ void AuditLogManager::LoadRules()
 }
 
 // 로그 파일에서 한 줄 읽어 레코드에 저장
-bool AuditLogManager::LogMonitor(ifstream &infile)
+bool AuditLogManager::LogMonitor(ifstream& infile)
 {
     string line;
     streampos lastPos = infile.tellg();
@@ -203,7 +203,7 @@ bool AuditLogManager::LogMonitor(ifstream &infile)
         return true;
     }
 
-    AuditLogRecord &record = mRecords[msgId];
+    AuditLogRecord& record = mRecords[msgId];
     record.MsgId = msgId;
 
     parseLogLine(line, record);
@@ -233,11 +233,11 @@ void AuditLogManager::Run()
 
         for (map<string, AuditLogRecord>::iterator it = mRecords.begin(); it != mRecords.end();)
         {
-            AuditLogRecord &record = it->second;
+            AuditLogRecord& record = it->second;
 
             if (record.bHasSyscall && (record.bHasExecve || record.bHasPath))
             {
-                for (const AuditLogRule &rule : mRules)
+                for (const AuditLogRule& rule : mRules)
                 {
                     if (Matches(record, rule))
                     {
