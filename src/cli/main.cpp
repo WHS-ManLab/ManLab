@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     if (connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) 
     {
         std::cerr << "\033[1;31m[!] 제품 실행 중이 아닙니다.\033[0m\n";
-        std::cerr << "   \033[1;36mmanlabd run\033[0m 으로 실행하십시오.\n";
+        std::cerr << "   \033[1;36m서비스 파일을 수정한 뒤 재부팅해주십시오.\n";
         close(sock);
         return 1;
     }
