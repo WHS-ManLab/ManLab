@@ -32,11 +32,13 @@ SRCS = $(SRC_DIR)/main.cpp \
 	   $(SRC_DIR)/CommandReceiver.cpp \
 	   $(SRC_DIR)/FIMIntegScan.cpp \
 	   $(SRC_DIR)/UserNotifier.cpp \
+	   $(SRC_DIR)/GmailClient.cpp \
+	   $(SRC_DIR)/ReportService.cpp \
 	   $(UTILS_DIR)/StringUtils.cpp \
        $(LIB_DIR)/INIReader.cpp \
 	   $(LIB_DIR)/ini.c
 
-LDLIBS = -lyaml-cpp -lsqlite3 -lyara -lssl -lcrypto -lpthread -lsystemd
+LDLIBS = -lyaml-cpp -lsqlite3 -lyara -lssl -lcrypto -lpthread -lsystemd -lcurl
 
 .PHONY: all clean
 
