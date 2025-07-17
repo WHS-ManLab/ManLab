@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <fstream>
+#include <atomic>
 
 struct Condition
 {
@@ -28,6 +29,7 @@ public:
     std::map<std::string, std::string> Fields;
     bool bHasExecve = false;
     bool bHasSyscall = false;
+    bool bHasPath = false;
     std::string RawLine;
 };
 
@@ -38,6 +40,7 @@ public:
     std::string ExtractMsgId(const std::string &line) const;
     bool LogMonitor(std::ifstream &infile);
     void Run();
+    void Init(std::atomic<bool> &shouldRun);
 
 private:
     std::vector<AuditLogRule> mRules;
@@ -45,4 +48,6 @@ private:
 
     bool parseLogLine(const std::string &line, AuditLogRecord &record);
     bool Matches(const AuditLogRecord &record, const AuditLogRule &rule) const;
+
+    std::atomic<bool> *mpShouldRun = nullptr;
 };
