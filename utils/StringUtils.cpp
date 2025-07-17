@@ -2,9 +2,25 @@
 
 namespace manlab::utils {
 
-    std::string trim(const std::string& s) {
+    std::string trim(const std::string& s)
+    {
         size_t start = s.find_first_not_of(" \t\r\n");
         size_t end   = s.find_last_not_of(" \t\r\n");
         return (start == std::string::npos) ? "" : s.substr(start, end - start + 1);
+    }
+
+    std::string stripComment(const std::string &s)
+    {
+        size_t pos = s.find('#');
+        if (pos != std::string::npos)
+        {
+            return s.substr(0, pos);
+        }
+        pos = s.find(';');
+        if (pos != std::string::npos)
+        {
+            return s.substr(0, pos);
+        }
+        return s;
     }
 }
