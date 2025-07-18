@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <set>
 #include <sstream>
-
+#include <ostream>
 
 // 사용자 친화적 이벤트 마스크 정의
 enum CustomEvent : uint64_t {
@@ -29,7 +29,7 @@ enum CustomEvent : uint64_t {
 
 constexpr size_t BUF_SIZE = 4096;
 constexpr size_t FD_PATH_SIZE = 128;
-std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::string& iniPath);
+std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::string& iniPath, std::ostream& err = std::cerr);
 uint64_t parseCustomEventMask(const std::string& eventsStr);
 uint64_t mapActualMaskToCustomMask(uint64_t actualMask);
 
@@ -56,7 +56,7 @@ private:
     std::vector<int> mMountFds; 
     std::vector<std::string> mWatchDirs;
 
-    void printErrorAndExit(const std::string& msg);
+    void printErrorAndExit(const std::string& msg, std::ostream& err);
     void processFanotifyEvents(struct fanotify_event_metadata* metadata, ssize_t bufLen); 
     int findMountFdForFileHandle(const struct file_handle* fid); 
     std::unordered_map<std::string, uint64_t> mUserEventFilters;
