@@ -15,26 +15,27 @@ SRCS = $(SRC_DIR)/main.cpp \
        $(SRC_DIR)/FimCommandHandler.cpp \
        $(SRC_DIR)/SigCommandHandler.cpp \
        $(SRC_DIR)/RealtimeMonitorDaemon.cpp \
-	   $(SRC_DIR)/RealTimeMonitor.cpp \
+	   		$(SRC_DIR)/RealTimeMonitor.cpp \
        $(SRC_DIR)/ScheduledScanWatcher.cpp \
-	   $(SRC_DIR)/ScheduledScanExecutor.cpp \
+	  		$(SRC_DIR)/ScheduledScanExecutor.cpp \
        $(SRC_DIR)/MalwareScan.cpp \
        $(SRC_DIR)/QuarantineManager.cpp \
-	   $(SRC_DIR)/LogStorageManager.cpp \
-	   $(SRC_DIR)/RestoreManager.cpp \
-	   $(SRC_DIR)/DaemonUtils.cpp \
-	   $(SRC_DIR)/RsyslogManager.cpp \
-	   $(SRC_DIR)/RsyslogRule.cpp \
-	   $(SRC_DIR)/ScheduledScan.cpp \
-	   $(SRC_DIR)/FIMBaselineGenerator.cpp \
-	   $(SRC_DIR)/ServerDaemon.cpp \
-	   $(SRC_DIR)/CommandExecutor.cpp \
-	   $(SRC_DIR)/CommandReceiver.cpp \
-	   $(SRC_DIR)/FIMIntegScan.cpp \
-	   $(SRC_DIR)/UserNotifier.cpp \
-	   $(UTILS_DIR)/StringUtils.cpp \
+	   		$(SRC_DIR)/LogStorageManager.cpp \
+	   		$(SRC_DIR)/RestoreManager.cpp \
+	   		$(SRC_DIR)/DaemonUtils.cpp \
+	   		$(SRC_DIR)/RsyslogManager.cpp \
+	   		$(SRC_DIR)/RsyslogRule.cpp \
+	   		$(SRC_DIR)/AuditLogManager.cpp \
+	   		$(SRC_DIR)/ScheduledScan.cpp \
+	   		$(SRC_DIR)/FIMBaselineGenerator.cpp \
+	   		$(SRC_DIR)/ServerDaemon.cpp \
+	   		$(SRC_DIR)/CommandExecutor.cpp \
+	   		$(SRC_DIR)/CommandReceiver.cpp \
+	   		$(SRC_DIR)/FIMIntegScan.cpp \
+	   		$(SRC_DIR)/UserNotifier.cpp \
+	   		$(UTILS_DIR)/StringUtils.cpp \
        $(LIB_DIR)/INIReader.cpp \
-	   $(LIB_DIR)/ini.c
+	   		$(LIB_DIR)/ini.c
 
 LDLIBS = -lyaml-cpp -lsqlite3 -lyara -lssl -lcrypto -lpthread -lsystemd
 
