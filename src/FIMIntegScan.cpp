@@ -6,6 +6,10 @@
 #include <filesystem>
 #include <vector>
 
+// spdlog 헤더 추가
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/rotating_file_sink.h"
+
 //기준선 DB와 현재 파일 상태를 비교하여 변조 여부 확인
 //verbose가 true일 경우 상세 로그를 출력
 void compare_with_baseline(bool verbose, std::ostream& out) {
@@ -18,12 +22,14 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
     } catch (const std::exception& e) {
         if (verbose)
             out << "[ERROR] 기준선 DB 조회 실패: " << e.what() << std::endl;
+        spdlog::error("기준선 DB 조회 실패: {}", e.what()); // 에러 로깅
         return;
     }
 
     if (entries.empty()) {
         if (verbose)
             out << "[INFO] 기준선에 등록된 항목이 없습니다.\n";
+        spdlog::info("기준선에 등록된 항목이 없습니다."); // 정보 로깅
         return;
     }
 
@@ -34,6 +40,7 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
         if (!std::filesystem::exists(path)) {
             if (verbose)
                 out << "[WARN] 파일 없음: " << path << std::endl;
+            spdlog::warn("기준선 파일 없음: {}", path); // 경고 로깅
             continue;
         }
 
@@ -42,6 +49,7 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
         if (current_hash.empty()) {
             if (verbose)
                 out << "[ERROR] 해시 계산 실패: " << path << std::endl;
+            spdlog::error("해시 계산 실패: {}", path); // 에러 로깅
             continue;
         }
 
@@ -50,18 +58,18 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
                 out << "[OK] 일치: " << path << std::endl;
         } else {
             out << "[ALERT] 변조 감지: " << path << std::endl;
-            out << "  - 기준선: " << stored_hash << std::endl;
-            out << "  - 현재값: " << current_hash << std::endl;
+            out << "  - 기준선: " << stored_hash << std::endl;
+            out << "  - 현재값: " << current_hash << std::endl;
 
             try {
                 modified_storage.replace(ModifiedEntry{path, current_hash});  // 변조된 항목 저장
             } catch (const std::exception& e) {
                 out << "[ERROR] 변조 항목 저장 실패: " << e.what() << std::endl;
+                spdlog::error("변조 항목 저장 실패: {}", e.what()); // 에러 로깅
             }
         }
     }
 
     if (verbose)
         out << "\n[SUCCESS] 무결성 검사 완료\n";
-} 
-
+}
