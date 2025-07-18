@@ -50,7 +50,7 @@ UTIL_SRCS = $(UTILS_DIR)/StringUtils.cpp
 LIB_SRCS = $(LIB_DIR)/INIReader.cpp $(LIB_DIR)/ini.c
 
 # 링커 라이브러리
-LDLIBS = -lyaml-cpp -lsqlite3 -lyara -lssl -lcrypto -lpthread -lsystemd
+LDLIBS = -lyaml-cpp -lsqlite3 -lyara -lssl -lcrypto -lpthread -lsystemd -lcurl
 
 .PHONY: all clean
 
