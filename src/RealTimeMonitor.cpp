@@ -54,7 +54,7 @@ std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::strin
 }
 
 //ini파일에서 읽어온 이벤트 유형을 사용자 정의 마스크(customMask)로 변경하는 함수 (감지된 이벤트와 비교하기 위해)
-uint64_t parseCustomEventMask(const std::string& eventsStr) 
+uint64_t parseCustomEventMask(const std::string& eventsStr, std::ostream& err) 
 {
     std::unordered_map<std::string, CustomEvent> eventMap = 
     {
@@ -79,7 +79,7 @@ uint64_t parseCustomEventMask(const std::string& eventsStr)
         if (it != eventMap.end()) {
             mask |= it->second;
         } else {
-            std::cerr << " 알 수 없는 이벤트: '" << token << "'\n";
+            err << " 알 수 없는 이벤트: '" << token << "'\n";
         }
     }
 
@@ -148,20 +148,20 @@ int RealTimeMonitor::findMountFdForFileHandle(const struct file_handle* fid)
 }
 
 //fanotify 이벤트 처리 및 로그 출력
-void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* metadata, ssize_t bufLen) 
+void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* metadata, ssize_t bufLen,std::ostream& out, std::ostream& err) 
 {
     while (FAN_EVENT_OK(metadata, bufLen)) 
     {
         if (metadata->vers != FANOTIFY_METADATA_VERSION) //fanotify 버전확인
         {
-            std::cerr << "Mismatched fanotify metadata version" << std::endl;
+            err << "Mismatched fanotify metadata version" << std::endl;
             std::exit(EXIT_FAILURE);
         }
 
         auto fid = reinterpret_cast<struct fanotify_event_info_fid*>(metadata + 1); //FID 이벤트 타입인지 확인
         if (fid->hdr.info_type != FAN_EVENT_INFO_TYPE_FID)
         {
-            std::cerr << "Unexpected event info type." << std::endl;
+            err << "Unexpected event info type." << std::endl;
             std::exit(EXIT_FAILURE);
         }
 
@@ -192,9 +192,9 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
         if (ShouldDisplayEvent(mPath.data(), metadata->mask)) //필터링 후 출력
         {
             if (metadata->mask & FAN_MODIFY)
-                std::cout << "📁 파일 수정 : " << mPath.data() << std::endl;
+                out << "📁 파일 수정 : " << mPath.data() << std::endl;
             if (metadata->mask & FAN_ATTRIB)
-                std::cout << "📁 메타데이터 변경 : " << mPath.data() << std::endl;
+                out << "📁 메타데이터 변경 : " << mPath.data() << std::endl;
         }
 
         close(eventFd);
@@ -204,7 +204,7 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
 }
 
 //Inotify 이벤트 처리 및 로그 출력
-void RealTimeMonitor::processInotifyEvents() 
+void RealTimeMonitor::processInotifyEvents(std::ostream& out) 
 {
     char buffer[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
     ssize_t length = read(mInotifyFd, buffer, sizeof(buffer));
@@ -218,10 +218,10 @@ void RealTimeMonitor::processInotifyEvents()
         if (ShouldDisplayEvent(path, event->mask)) //필터링 후 출력
         {
             if (event->mask & IN_CREATE)
-                std::cout << "📁 파일 생성 : " << path << std::endl;
+                out << "📁 파일 생성 : " << path << std::endl;
                 //syslog(LOG_INFO, "📁 파일 생성");
             if (event->mask & IN_DELETE)
-                std::cout << "📁 파일 삭제 : " << path << std::endl;
+                out << "📁 파일 삭제 : " << path << std::endl;
         }
 
         ptr += sizeof(struct inotify_event) + event->len;
@@ -263,20 +263,20 @@ bool RealTimeMonitor::Init()
 }
 
 //모니터링 시작 준비 확인 및 감시 경로 출력
-void RealTimeMonitor::Start() 
+void RealTimeMonitor::Start(std::ostream& out, std::ostream& err) 
 {
     if (mFanFd == -1 || mInotifyFd == -1) 
     {
-        std::cerr << "Init first!" << std::endl;
+        err << "Init first!" << std::endl;
         return;
     }
 
-    std::cout << "✅ 모니터링 시작" << std::endl;
+    out << "✅ 모니터링 시작" << std::endl;
     for (const auto& dir : mWatchDirs) 
     {
-        std::cout << "- 감시 중 : " << dir << std::endl;
+        out << "- 감시 중 : " << dir << std::endl;
     }
-     std::cout << std::endl;
+     out << std::endl;
 }
 
 // fanotify와 inotify 파일 디스크립터에서 이벤트가 있는지  검사하고,
