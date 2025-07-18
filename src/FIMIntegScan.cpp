@@ -23,7 +23,7 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
 
     if (entries.empty()) {
         if (verbose)
-            std::cout << "[INFO] 기준선에 등록된 항목이 없습니다.\n";
+            out << "[INFO] 기준선에 등록된 항목이 없습니다.\n";
         return;
     }
 
@@ -33,7 +33,7 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
 
         if (!std::filesystem::exists(path)) {
             if (verbose)
-                std::cout << "[WARN] 파일 없음: " << path << std::endl;
+                out << "[WARN] 파일 없음: " << path << std::endl;
             continue;
         }
 
@@ -41,7 +41,7 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
         std::string current_hash = BaselineGenerator::compute_md5(path);
         if (current_hash.empty()) {
             if (verbose)
-                std::cout << "[ERROR] 해시 계산 실패: " << path << std::endl;
+                out << "[ERROR] 해시 계산 실패: " << path << std::endl;
             continue;
         }
 
