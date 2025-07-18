@@ -12,8 +12,9 @@
 #include "ScheduledScanWatcher.h"
 #include "ScheduledScanExecutor.h"
 #include "CommandReceiver.h"
+#include "AuditLogManager.h"
 
-class ServerDaemon 
+class ServerDaemon
 {
 public:
     ServerDaemon();
@@ -33,6 +34,7 @@ private:
     ScheduledScanWatcher mScheduledScanWatcher;
     ScheduledScanExecutor mScheduledScanExecutor;
     CommandReceiver mCommandReceiver;
+    AuditLogManager mAuditLogManager;
 
     // 실행 중인 스레드들
     std::vector<std::thread> mThreads;
