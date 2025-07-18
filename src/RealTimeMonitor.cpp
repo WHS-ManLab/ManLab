@@ -18,14 +18,14 @@ RealTimeMonitor::~RealTimeMonitor()
 }
 
 //에러 출력 함수
-void RealTimeMonitor::printErrorAndExit(const std::string& msg) 
+void RealTimeMonitor::printErrorAndExit(const std::string& msg, std::ostream& err) 
 {
-    std::cerr << msg << ": " << std::strerror(errno) << std::endl;
+    err << msg << ": " << std::strerror(errno) << std::endl;
     std::exit(EXIT_FAILURE);
 }
 
 //FIMConfig.ini 파싱하는 함수
-std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::string& iniPath) 
+std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::string& iniPath, std::ostream& err) 
 {
     std::vector<std::pair<std::string, uint64_t>> pathAndMaskList;
     INIReader reader(iniPath);
@@ -41,7 +41,7 @@ std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::strin
 
 
         if (path.empty() || events.empty()) {
-            std::cerr << "⚠️ 섹션 [" << section << "]에 Path 또는 Events가 없습니다" << std::endl;
+            err << "⚠️ 섹션 [" << section << "]에 Path 또는 Events가 없습니다" << std::endl;
             continue;
         }
 
@@ -235,7 +235,7 @@ bool RealTimeMonitor::Init()
     mInotifyFd = inotify_init1(IN_NONBLOCK);                            // 이 옵션이 있어야 이벤트에서 핸들을 받아 open_by_handle_at()으로 fd 접근 가능하며,
     if (mFanFd == -1 || mInotifyFd == -1)                               // 그렇지 않으면 fd 직접 접근 시 오류가 발생할 수 있음
     {
-        printErrorAndExit("fanotify/inotify init");
+        printErrorAndExit("fanotify/inotify init", std::cerr);
     }
 
     for (const auto& dir : mWatchDirs) //설정한 경로마다 mountfd 얻어서 벡터에 저장
@@ -243,7 +243,7 @@ bool RealTimeMonitor::Init()
         int mountFd = open(dir.c_str(), O_DIRECTORY | O_RDONLY);
         if (mountFd == -1) 
         {
-            printErrorAndExit(dir);
+            printErrorAndExit(dir, std::cerr);
         }
         mMountFds.push_back(mountFd);
 
@@ -251,11 +251,11 @@ bool RealTimeMonitor::Init()
         int ret = fanotify_mark(mFanFd, FAN_MARK_ADD, // fanotify 설정
                                 FAN_MODIFY | FAN_ATTRIB | FAN_EVENT_ON_CHILD,
                                 AT_FDCWD, dir.c_str());
-        if (ret == -1) printErrorAndExit("fanotify_mark");
+        if (ret == -1) printErrorAndExit("fanotify_mark", std::cerr);
 
        
         int wd = inotify_add_watch(mInotifyFd, dir.c_str(), IN_CREATE | IN_DELETE);  // inotify 설정
-        if (wd == -1) printErrorAndExit("inotify_add_watch");
+        if (wd == -1) printErrorAndExit("inotify_add_watch", std::cerr);
         mInotifyWdToPath[wd] = dir; // inotify가 반환한 watch descriptor(wd)를 실제 경로 문자열에 매핑 저장
     }
 
