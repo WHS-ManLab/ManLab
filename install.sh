@@ -11,6 +11,7 @@ CONF_DST_DIR="$INSTALL_DIR/conf"
 RULE_DST_DIR="$INSTALL_DIR/rules"
 QUARANTINE_DIR="$INSTALL_DIR/quarantine"
 MALWARE_DIR="$INSTALL_DIR/malware"
+REPORT_DIR="$INSTALL_DIR/report"
 
 SERVICE_NAME="manlab-init"
 SERVICE_UNIT="${SERVICE_NAME}.service"
@@ -39,7 +40,7 @@ cp -v ManLab-cli "$BIN_DIR/ManLab-cli"
 ln -sf "$BIN_DIR/ManLab-cli" /usr/local/bin/ManLab
 
 # 2. DB 및 기타 디렉토리
-mkdir -p "$DB_DIR" "$RULE_DST_DIR" "$CONF_DST_DIR" "$QUARANTINE_DIR" "$MALWARE_DIR"
+mkdir -p "$DB_DIR" "$RULE_DST_DIR" "$CONF_DST_DIR" "$QUARANTINE_DIR" "$MALWARE_DIR" "$REPORT_DIR"
 chown "$USER":"$USER" "$QUARANTINE_DIR"
 
 # 3. 설정 및 룰 복사

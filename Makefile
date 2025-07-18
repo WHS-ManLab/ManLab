@@ -36,7 +36,9 @@ SERVER_SRCS = \
     $(SERVER_DIR)/UserNotifier.cpp \
     $(SERVER_DIR)/FimCommandHandler.cpp \
     $(SERVER_DIR)/SigCommandHandler.cpp \
-    $(SERVER_DIR)/DBManager.cpp
+    $(SERVER_DIR)/DBManager.cpp \
+    $(SERVER_DIR)/ReportService.cpp \
+    $(SERVER_DIR)/GmailClient.cpp \
 
 # 클라이언트용 소스 목록
 CLI_SRCS = \
