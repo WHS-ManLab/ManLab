@@ -12,40 +12,40 @@ namespace fim {
 
 void IntScan(std::ostream& out) {
 
-    spdlog::info("[FIM] 해시값 무결성 검사 시작."); // info 레벨 로그
+    spdlog::info("해시값 무결성 검사 시작."); // info 레벨 로그
 
     out << "해시값 무결성 검사 실행중..." << std::endl;
     
     try {
         compare_with_baseline(true, out);
-        spdlog::info("[FIM] 해시값 무결성 검사 완료."); // info 레벨 로그
+        spdlog::info("해시값 무결성 검사 완료."); // info 레벨 로그
     } catch (const std::exception& e) {
-        spdlog::error("[FIM] 무결성 검사 중 오류 발생: {}", e.what()); // error 레벨 로그
+        spdlog::error(" 무결성 검사 중 오류 발생: {}", e.what()); // error 레벨 로그
         out << "[ERROR] 무결성 검사 중 오류 발생: " << e.what() << std::endl;
     }
 }
 
 void BaselineGen(std::ostream& out) {
-    spdlog::info("[FIM] Baseline 해시값 생성 시작."); // info 레벨 로그
+    spdlog::info("Baseline 해시값 생성 시작."); // info 레벨 로그
     out << "baseline 해시값 생성중...\n" << std::endl;
 
     const std::string ini_path = PATH_FIM_CONFIG_INI;  // INI 파일 경로
     const std::string db_path  = PATH_BASELINE_DB;      // DB 저장 경로
 
     try {
-        spdlog::debug("[FIM] Baseline 생성기 초기화. INI: {}, DB: {}", ini_path, db_path); // debug 레벨 로그
+        spdlog::debug("Baseline 생성기 초기화. INI: {}, DB: {}", ini_path, db_path); // debug 레벨 로그
         BaselineGenerator generator(ini_path, db_path);
         generator.generate_and_store(out);
         out << "[SUCCESS] Baseline 생성 완료\n";
-        spdlog::info("[FIM] Baseline 생성 완료."); // info 레벨 로그
+        spdlog::info("Baseline 생성 완료."); // info 레벨 로그
     } catch (const std::exception& e) {
         out << "[ERROR] Baseline 생성 실패: " << e.what() << '\n';
-        spdlog::error("[FIM] Baseline 생성 실패: {}", e.what()); // error 레벨 로그
+        spdlog::error("Baseline 생성 실패: {}", e.what()); // error 레벨 로그
     }
 
 }
 void PrintBaseline(std::ostream& out) {
-    spdlog::info("[FIM] Baseline DB 내용 출력 시작."); // info 레벨 로그
+    spdlog::info("Baseline DB 내용 출력 시작."); // info 레벨 로그
     out << "\n[INFO] Baseline DB 내용 출력:\n" << std::endl;
     auto& storage = DBManager::GetInstance().GetBaselineStorage();
 
@@ -53,23 +53,23 @@ void PrintBaseline(std::ostream& out) {
         auto all_entries = storage.get_all<BaselineEntry>();
         if (all_entries.empty()) {
             out << "DB에 저장된 해시값이 없습니다." << std::endl;
-            spdlog::info("[FIM] Baseline DB에 저장된 해시값이 없습니다."); // info 레벨 로그
+            spdlog::info("Baseline DB에 저장된 해시값이 없습니다."); // info 레벨 로그
             return;
         }
 
-        spdlog::info("[FIM] Baseline DB에서 {}개의 항목 발견.", all_entries.size()); // info 레벨 로그 (항목 개수)
+        spdlog::info("Baseline DB에서 {}개의 항목 발견.", all_entries.size()); // info 레벨 로그 (항목 개수)
         for (const auto& entry : all_entries) {
             out << "Path: " << entry.path << "\nMD5:  " << entry.md5 << "\n---" << std::endl;
-            spdlog::debug("[FIM] Baseline 항목: Path={}, MD5={}", entry.path, entry.md5); // debug 레벨 로그 (각 항목)
+            spdlog::debug("Baseline 항목: Path={}, MD5={}", entry.path, entry.md5); // debug 레벨 로그 (각 항목)
         }
-        spdlog::info("[FIM] Baseline DB 내용 출력 완료."); // info 레벨 로그
+        spdlog::info("Baseline DB 내용 출력 완료."); // info 레벨 로그
     } catch (const std::exception& e) {
         out << "[ERROR] DB 조회 중 오류 발생: " << e.what() << std::endl;
-        spdlog::error("[FIM] Baseline DB 조회 중 오류 발생: {}", e.what()); // error 레벨 로그
+        spdlog::error("Baseline DB 조회 중 오류 발생: {}", e.what()); // error 레벨 로그
     }
 }
 void PrintIntegscan(std::ostream& out) {
-    spdlog::info("[FIM] 무결성 검사 결과 출력 시작."); // info 레벨 로그
+    spdlog::info("무결성 검사 결과 출력 시작."); // info 레벨 로그
      out << "[INFO] 무결성 검사 중...\n" << std::endl;
 
     // 변조된 항목 DB 불러오기
@@ -80,20 +80,20 @@ void PrintIntegscan(std::ostream& out) {
 
         if (modified_entries.empty()) {
             out << "[INFO] 변조된 파일이 없습니다.\n";
-            spdlog::info("[FIM] 변조된 파일이 발견되지 않았습니다."); // info 레벨 로그
+            spdlog::info("변조된 파일이 발견되지 않았습니다."); // info 레벨 로그
         } else {
             out << "\n[ALERT] 변조된 파일 목록:\n";
-            spdlog::warn("[FIM] {}개의 변조된 파일 발견!", modified_entries.size()); // warn 레벨 로그
+            spdlog::warn("{}개의 변조된 파일 발견!", modified_entries.size()); // warn 레벨 로그
             for (const auto& entry : modified_entries) {
                 out << "Path: " << entry.path << "\n"
                     << "Current MD5: " << entry.current_md5 << "\n---\n";
-                spdlog::debug("[FIM] 변조된 파일: Path={}, Current MD5={}", entry.path, entry.current_md5); // debug 레벨 로그
             }
+            out << "[warn] {}개의 변조된 파일 발견!", modified_entries.size() << std::endl;
         }
 
     } catch (const std::exception& e) {
         out << "[ERROR] modifiedhash.db 조회 실패: " << e.what() << std::endl;
-        spdlog::error("[FIM] modifiedhash.db 조회 실패: {}", e.what()); // error 레벨 로그
+        spdlog::error("modifiedhash.db 조회 실패: {}", e.what()); // error 레벨 로그
     }
 }
 

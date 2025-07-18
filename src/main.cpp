@@ -9,6 +9,9 @@
 #include "INIReader.h"
 #include "Paths.h"
 
+#include "spdlog/spdlog.h" // spdlog 헤더
+#include "spdlog/sinks/rotating_file_sink.h" // spdlog 회전 파일 싱크 헤더
+
 void printUsage()
 {
     std::cout << "Usage:\n"
