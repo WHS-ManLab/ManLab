@@ -1,6 +1,15 @@
 #include "GmailClient.h"
 #include <stdlib.h>
 #include <iostream> // 디버깅용
+#include <openssl/evp.h>
+#include <openssl/bio.h>
+#include <openssl/buffer.h>
+#include <vector>
+#include <cstring>
+
+// 컴파일 시 이 부분을 주석 처리 후 key, iv를 붙여넣으시면 됩니다.
+const unsigned char key[32] = {};
+const unsigned char iv[16] = {};
 
 GmailClient::GmailClient(const std::string &to)
 {
@@ -13,8 +22,8 @@ GmailClient::GmailClient(const std::string &to)
     }
 
     mTo = to;
-    std::string appPassword("..."); // TODO : AES 암호화
-    mAppPassword = appPassword;
+    std::string encryptedAppPassword = "pYJ53KhgQmK4T8HLiqWggNchno0fQ+ZAhFX8NUIH2cY=";
+    mAppPassword = GmailClient::DecryptAppPassword(encryptedAppPassword);
 }
 
 GmailClient::~GmailClient()
@@ -27,7 +36,7 @@ GmailClient::~GmailClient()
 
 bool GmailClient::Run(const std::string &file)
 {
-    if(mCurl)
+    if (mCurl)
     {
         struct curl_slist *recipients = nullptr;
         curl_mime *mime = nullptr;
@@ -87,8 +96,84 @@ bool GmailClient::Run(const std::string &file)
             return true;
         }
     }
-    else 
+    else
     {
         return false;
     }
+}
+
+std::string GmailClient::DecryptAppPassword(const std::string &appPassword)
+{
+    std::string encrypted = Base64Decode(appPassword);
+    unsigned char decrypted[128];
+    int decrypted_len = 0;
+
+    bool success = AesDecrypt(
+        reinterpret_cast<const unsigned char *>(encrypted.data()),
+        encrypted.length(),
+        key,
+        iv,
+        decrypted,
+        decrypted_len);
+
+    if (!success) {
+        // TODO : 에러 핸들링
+        return "";
+    }
+
+    return std::string(reinterpret_cast<const char*>(decrypted), decrypted_len);
+}
+
+std::string GmailClient::Base64Decode(const std::string &input)
+{
+    BIO* bio, * b64;
+    int decodeLen = input.length();
+    std::vector<char> buffer(decodeLen);
+
+    b64 = BIO_new(BIO_f_base64());
+    bio = BIO_new_mem_buf(input.data(), input.length());
+    bio = BIO_push(b64, bio);
+    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
+
+    int len = BIO_read(bio, buffer.data(), decodeLen);
+    BIO_free_all(bio);
+
+    if (len <= 0) {
+        // TODO: 에러 처리
+        return "";
+    }
+
+    // TODO : 로깅 (Base64 Decode successed.)
+    return std::string(buffer.data(), len);
+}
+
+bool GmailClient::AesDecrypt(const unsigned char* ciphertext, int ciphertextLen,
+                const unsigned char* key, const unsigned char* iv,
+                unsigned char* plaintext, int& plaintextLen)
+{
+
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+        // TODO : 로깅 (Failed to create OpenSSL Context.)
+        return false;
+
+    int len = 0;
+
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) != 1)
+        // TODO : 로깅 (Decryption initialization failed in AES-256-CBC mode.)
+        return false;
+
+    if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertextLen) != 1)
+        // TODO : 로깅 (Decryption failed.)
+        return false;
+    plaintextLen = len;
+
+    if (EVP_DecryptFinal_ex(ctx, plaintext + len, &len) != 1)
+        // TODO : 로깅 (Failed to remove padding.)
+        return false;
+    plaintextLen += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+    // TODO : 로깅 (Decryption successed.)
+    return true;
 }
