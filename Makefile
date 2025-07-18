@@ -25,6 +25,7 @@ SRCS = $(SRC_DIR)/main.cpp \
 	   $(SRC_DIR)/DaemonUtils.cpp \
 	   $(SRC_DIR)/RsyslogManager.cpp \
 	   $(SRC_DIR)/RsyslogRule.cpp \
+	   $(SRC_DIR)/AuditLogManager.cpp \
 	   $(SRC_DIR)/ScheduledScan.cpp \
 	   $(SRC_DIR)/FIMBaselineGenerator.cpp \
 	   $(SRC_DIR)/ServerDaemon.cpp \
