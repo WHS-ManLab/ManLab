@@ -38,18 +38,20 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
         const std::string& stored_hash = entry.md5;
 
         if (!std::filesystem::exists(path)) {
-            if (verbose)
+            if (verbose){
                 out << "[WARN] 파일 없음: " << path << std::endl;
-            spdlog::warn("기준선 파일 없음: {}", path); // 경고 로깅
+                spdlog::warn("기준선 파일 없음: {}", path); // 경고 로깅
+            }
             continue;
         }
 
         //현재 파일의 MD5 해시값 계산
         std::string current_hash = BaselineGenerator::compute_md5(path);
         if (current_hash.empty()) {
-            if (verbose)
+            if (verbose){
                 out << "[ERROR] 해시 계산 실패: " << path << std::endl;
-            spdlog::error("해시 계산 실패: {}", path); // 에러 로깅
+                spdlog::error("해시 계산 실패: {}", path); // 에러 로깅
+            }
             continue;
         }
 
