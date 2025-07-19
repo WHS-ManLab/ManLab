@@ -70,5 +70,9 @@ apt install -y auditd
 systemctl enable auditd
 systemctl start auditd
 
+# 8. spdlog 설치
+echo "[INFO] Installing spdlog..."
+sudo apt install libspdlog-dev
+
 echo "[OK] ManLab installation completed."
 echo "▶ 설치가 완료되었습니다. 제품을 실행하려면 다음 명령어를 입력하세요: sudo ManLab run"
