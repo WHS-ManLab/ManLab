@@ -21,6 +21,9 @@
 // 베이스라인 DB 경로
 #define PATH_BASELINE_DB "/root/ManLab/db/baseline.db"
 
+// 파일 실시간 검사 DB 경로
+#define PATH_REAL_TIME_MONITOR_DB "/root/ManLab/db/realtimemonitor.db"
+
 // 변경 감지 DB 경로
 #define PATH_MODIFIED_DB "/root/ManLab/db/modifiedhash.db"
 
