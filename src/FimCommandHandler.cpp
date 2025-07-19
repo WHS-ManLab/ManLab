@@ -60,7 +60,6 @@ void PrintBaseline(std::ostream& out) {
         spdlog::info("Baseline DB에서 {}개의 항목 발견.", all_entries.size()); // info 레벨 로그 (항목 개수)
         for (const auto& entry : all_entries) {
             out << "Path: " << entry.path << "\nMD5:  " << entry.md5 << "\n---" << std::endl;
-            spdlog::debug("Baseline 항목: Path={}, MD5={}", entry.path, entry.md5); // debug 레벨 로그 (각 항목)
         }
         spdlog::info("Baseline DB 내용 출력 완료."); // info 레벨 로그
     } catch (const std::exception& e) {
@@ -88,7 +87,7 @@ void PrintIntegscan(std::ostream& out) {
                 out << "Path: " << entry.path << "\n"
                     << "Current MD5: " << entry.current_md5 << "\n---\n";
             }
-            out << "[warn] {}개의 변조된 파일 발견!", modified_entries.size() << std::endl;
+            out << "\n[ALERT] " << modified_entries.size() << "개의 변조된 파일 발견!\n";
         }
 
     } catch (const std::exception& e) {
