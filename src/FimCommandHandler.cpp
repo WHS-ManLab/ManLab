@@ -33,7 +33,6 @@ void BaselineGen(std::ostream& out) {
     const std::string db_path  = PATH_BASELINE_DB;      // DB 저장 경로
 
     try {
-        spdlog::debug("Baseline 생성기 초기화. INI: {}, DB: {}", ini_path, db_path); // debug 레벨 로그
         BaselineGenerator generator(ini_path, db_path);
         generator.generate_and_store(out);
         out << "[SUCCESS] Baseline 생성 완료\n";
@@ -69,7 +68,7 @@ void PrintBaseline(std::ostream& out) {
 }
 void PrintIntegscan(std::ostream& out) {
     spdlog::info("무결성 검사 결과 출력 시작."); // info 레벨 로그
-     out << "[INFO] 무결성 검사 중...\n" << std::endl;
+    out << "[INFO] 무결성 검사 결과 출력 중...\n" << std::endl;
 
     // 변조된 항목 DB 불러오기
     auto& modified_storage = DBManager::GetInstance().GetModifiedStorage();
@@ -88,6 +87,7 @@ void PrintIntegscan(std::ostream& out) {
                     << "Current MD5: " << entry.current_md5 << "\n---\n";
             }
             out << "\n[ALERT] " << modified_entries.size() << "개의 변조된 파일 발견!\n";
+            spdlog::info("변조된 파일 목록 출력 완료."); // info 레벨 로그
         }
 
     } catch (const std::exception& e) {
