@@ -9,6 +9,9 @@
 #include "INIReader.h"
 #include "Paths.h"
 
+#include "spdlog/spdlog.h" // spdlog 헤더
+#include "spdlog/sinks/rotating_file_sink.h" // spdlog 회전 파일 싱크 헤더
+
 void printUsage()
 {
     std::cout << "Usage:\n"
@@ -32,6 +35,7 @@ void InitLogger() {
 
 int main(int argc, char* argv[])
 {
+    
     InitLogger();  // 로거 초기화
 
     if (argc < 2)
@@ -131,6 +135,7 @@ int main(int argc, char* argv[])
 
         close(sock); // 소켓 종료
     }
+
     spdlog::shutdown(); // 로거 종료
     return 0;
 }
