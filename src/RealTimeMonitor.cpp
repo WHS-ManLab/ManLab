@@ -343,16 +343,16 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
                 auto it = mRecentModifiedInodes.find(inode);
                 if (it != mRecentModifiedInodes.end())
                 {
-                    spdlog::info("[Event Type] = MODIFY         [Path] = {}", fullPath);
-                    spdlog::default_logger()->flush();
+                    RealTime_logger->info("[Event Type] = MODIFY         [Path] = {}", fullPath);
+                    RealTime_logger->flush();
                     mRecentModifiedInodes.erase(it);
                 }
             }             
 
             if ((metadata->mask & FAN_ATTRIB))
             {
-                spdlog::info("[Event Type] = ATTRIB CHANGE  [Path] = {}", fullPath);
-                spdlog::default_logger()->flush();
+                RealTime_logger->info("[Event Type] = ATTRIB CHANGE  [Path] = {}", fullPath);
+                RealTime_logger->flush();
             }
         }
 
@@ -379,15 +379,15 @@ void RealTimeMonitor::processInotifyEvents()
         // 생성 이벤트
         if ((mask & IN_CREATE) && ShouldDisplayEvent(path, IN_CREATE) && !IsExcludedFile(path))
         {
-            spdlog::info("[Event Type] = CREATE         [Path] = {}", normalizePath(path));
-            spdlog::default_logger()->flush();
+            RealTime_logger->info("[Event Type] = CREATE         [Path] = {}", normalizePath(path));
+            RealTime_logger->flush();
         }
 
         // 삭제 이벤트 
         if ((mask & IN_DELETE) && ShouldDisplayEvent(path, IN_DELETE))
         {
-            spdlog::info("[Event Type] = DELETE         [Path] = {}", normalizePath(path));
-            spdlog::default_logger()->flush();  
+            RealTime_logger->info("[Event Type] = DELETE         [Path] = {}", normalizePath(path));
+            RealTime_logger->flush();  
         }
 
         // 리네임 이벤트 (From -> To)
@@ -402,8 +402,8 @@ void RealTimeMonitor::processInotifyEvents()
             auto it = renameMap.find(event->cookie);
             if (it != renameMap.end()) 
             {
-                spdlog::info("[Event Type] = RENAME         [From] = {} -> [To] = {}", it->second, normalizePath(path));
-                spdlog::default_logger()->flush();
+                RealTime_logger->info("[Event Type] = RENAME         [From] = {} -> [To] = {}", it->second, normalizePath(path));
+                RealTime_logger->flush();
                 renameMap.erase(it);
             }
         }

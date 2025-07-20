@@ -8,6 +8,7 @@
 #include <vector>
 #include <syslog.h>
 
+std::shared_ptr<spdlog::logger> RealTime_logger = nullptr;
 
 void RealtimeMonitorDaemon::Init(std::atomic<bool>& shouldRun)
 {
@@ -17,21 +18,20 @@ void RealtimeMonitorDaemon::Init(std::atomic<bool>& shouldRun)
 
 void RealtimeMonitorDaemon::Run()
 {   
-
-
+    
     try {
-    auto logger = spdlog::rotating_logger_mt(
-    "file_logger",
+    RealTime_logger = spdlog::rotating_logger_mt(
+    "RealTime_logger",
     "/root/ManLab/log/RealTimeMonitor.log",
     1024 * 1024 * 5, // 최대 파일 크기 5MB
     3                // 최대 파일 개수 3개
     );
-    spdlog::set_default_logger(logger);
-    spdlog::set_level(spdlog::level::info);
-    spdlog::flush_on(spdlog::level::info);
+    
+    RealTime_logger->set_level(spdlog::level::info);
+    RealTime_logger->flush_on(spdlog::level::info);
 
-    spdlog::info("Logging started");
-    spdlog::default_logger()->flush();
+    RealTime_logger->info("Logging started");
+    RealTime_logger->flush();
     } 
     catch (const spdlog::spdlog_ex &ex) 
     {
