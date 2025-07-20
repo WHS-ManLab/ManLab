@@ -29,7 +29,7 @@ void BaselineGen(std::ostream& out) {
     spdlog::info("Baseline 해시값 생성 시작."); // info 레벨 로그
     out << "baseline 해시값 생성중...\n" << std::endl;
 
-    const std::string ini_path = PATH_FIM_CONFIG_INI;  // INI 파일 경로
+    const std::string ini_path = PATH_FIM_INTEG_INI;  // INI 파일 경로
     const std::string db_path  = PATH_BASELINE_DB;      // DB 저장 경로
 
     try {
