@@ -55,6 +55,12 @@ struct BaselineEntry
 {
     std::string path;
     std::string md5;
+    std::string permission;
+    int uid;
+    int gid;
+    std::string ctime;
+    std::string mtime;
+    uintmax_t size;
 };
 
 // 검사 리포트 저장 테이블 구조
@@ -105,9 +111,13 @@ using StorageLogAnalysisResult = decltype(sqlite_orm::make_storage("",
 using StorageBaseline = decltype(sqlite_orm::make_storage("",
     sqlite_orm::make_table("baseline",
         sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
-        sqlite_orm::make_column("md5",  &BaselineEntry::md5)
-    )
-));
+        sqlite_orm::make_column("md5",  &BaselineEntry::md5),
+        sqlite_orm::make_column("permission",  &BaselineEntry::permission),
+        sqlite_orm::make_column("uid",         &BaselineEntry::uid),
+        sqlite_orm::make_column("gid",         &BaselineEntry::gid),
+        sqlite_orm::make_column("ctime",       &BaselineEntry::ctime),
+        sqlite_orm::make_column("mtime",       &BaselineEntry::mtime),
+        sqlite_orm::make_column("size",        &BaselineEntry::size))));
 
 //FIM 해시값 변조 탐지 완료된 파일만 따로 모아놓는 테이블 구조
 struct ModifiedEntry {
