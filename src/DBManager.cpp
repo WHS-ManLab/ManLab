@@ -61,6 +61,16 @@ DBManager::DBManager()
             sqlite_orm::make_column("mtime",       &BaselineEntry::mtime),
             sqlite_orm::make_column("size",        &BaselineEntry::size)))),
 
+      mRealTimeMonitorStorage(sqlite_orm::make_storage(
+        PATH_REAL_TIME_MONITOR_DB,
+        sqlite_orm::make_table("RealTimeMonitor",
+        sqlite_orm::make_column("ID", &RealtimeEventLog::id, sqlite_orm::primary_key().autoincrement()),
+        sqlite_orm::make_column("PATH", &RealtimeEventLog::path),
+        sqlite_orm::make_column("EVENT_TYPE", &RealtimeEventLog::eventType),
+        sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp)
+        )
+    )),
+
       mModifiedStorage(sqlite_orm::make_storage(
         PATH_MODIFIED_DB,
             sqlite_orm::make_table("modifiedhash",
@@ -88,6 +98,7 @@ void DBManager::InitSchema()
     mQuarantineStorage.sync_schema();
     mLogAnalysisResultStorage.sync_schema();
     mBaselineStorage.sync_schema();
+    mRealTimeMonitorStorage.sync_schema();
     mModifiedStorage.sync_schema();
     mScanReportStorage.sync_schema();
 }
@@ -161,6 +172,11 @@ StorageLogAnalysisResult& DBManager::GetLogAnalysisResultStorage()
 StorageBaseline& DBManager::GetBaselineStorage() 
 {
     return mBaselineStorage;
+}
+
+StorageRealTimeMonitor& DBManager::GetRealTimeMonitorStorage() 
+{
+    return mRealTimeMonitorStorage;
 }
 
 StorageModified& DBManager::GetModifiedStorage() 

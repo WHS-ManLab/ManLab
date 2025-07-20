@@ -63,6 +63,14 @@ struct BaselineEntry
     uintmax_t size;
 };
 
+// FIM RealTimeMonitor 테이블 구조
+struct RealtimeEventLog {
+    int id;
+    std::string path;
+    std::string eventType;
+    std::string timestamp;
+};
+
 // 검사 리포트 저장 테이블 구조
 struct ScanReport
 {
@@ -119,6 +127,16 @@ using StorageBaseline = decltype(sqlite_orm::make_storage("",
         sqlite_orm::make_column("mtime",       &BaselineEntry::mtime),
         sqlite_orm::make_column("size",        &BaselineEntry::size))));
 
+// 실시간 이벤트 모니터링 테이블에 대한 storage 타입 정의
+using StorageRealTimeMonitor = decltype(sqlite_orm::make_storage("",
+    sqlite_orm::make_table("RealTimeMonitor",
+        sqlite_orm::make_column("ID", &RealtimeEventLog::id, sqlite_orm::primary_key().autoincrement()),
+        sqlite_orm::make_column("PATH", &RealtimeEventLog::path),
+        sqlite_orm::make_column("EVENT_TYPE", &RealtimeEventLog::eventType),
+        sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp)
+    )
+));
+
 //FIM 해시값 변조 탐지 완료된 파일만 따로 모아놓는 테이블 구조
 struct ModifiedEntry {
     std::string path;
@@ -159,6 +177,7 @@ public:
     StorageQuarantine& GetQuarantineStorage();
     StorageLogAnalysisResult& GetLogAnalysisResultStorage();
     StorageBaseline& GetBaselineStorage();
+    StorageRealTimeMonitor& GetRealTimeMonitorStorage();
     StorageModified& GetModifiedStorage();
     StorageScanReport& GetScanReportStorage();
 
@@ -170,6 +189,7 @@ private:
     StorageQuarantine mQuarantineStorage;
     StorageLogAnalysisResult mLogAnalysisResultStorage;
     StorageBaseline mBaselineStorage;
+    StorageRealTimeMonitor mRealTimeMonitorStorage;
     StorageModified mModifiedStorage;
     StorageScanReport mScanReportStorage;
 };
