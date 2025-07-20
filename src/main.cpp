@@ -35,7 +35,7 @@ void InitLogger() {
 
 int main(int argc, char* argv[])
 {
-    
+
     InitLogger();  // 로거 초기화
 
     if (argc < 2)
