@@ -439,7 +439,7 @@ bool RealTimeMonitor::Init()
         int ret = fanotify_mark(mFanFd, FAN_MARK_ADD, // fanotify 설정
                                 FAN_MODIFY | FAN_ATTRIB | FAN_CLOSE_WRITE | FAN_EVENT_ON_CHILD,
                                 AT_FDCWD, dir.c_str());
-        if (ret == -1) printErrorAndExit("fanotify_mark");
+        if (ret == -1) printErrorAndExit("fanotify_mark", std::cerr);
 
        
         int wd = inotify_add_watch(mInotifyFd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
