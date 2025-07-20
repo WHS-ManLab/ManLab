@@ -49,11 +49,17 @@ DBManager::DBManager()
             sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
             sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine)))),
                                  
-      mBaselineStorage(sqlite_orm::make_storage(
+       mBaselineStorage(sqlite_orm::make_storage(
         PATH_BASELINE_DB,
             sqlite_orm::make_table("baseline",
             sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
-            sqlite_orm::make_column("md5",  &BaselineEntry::md5)))),
+            sqlite_orm::make_column("md5",  &BaselineEntry::md5),
+            sqlite_orm::make_column("permission",  &BaselineEntry::permission),
+            sqlite_orm::make_column("uid",         &BaselineEntry::uid),
+            sqlite_orm::make_column("gid",         &BaselineEntry::gid),
+            sqlite_orm::make_column("ctime",       &BaselineEntry::ctime),
+            sqlite_orm::make_column("mtime",       &BaselineEntry::mtime),
+            sqlite_orm::make_column("size",        &BaselineEntry::size)))),
 
       mModifiedStorage(sqlite_orm::make_storage(
         PATH_MODIFIED_DB,
