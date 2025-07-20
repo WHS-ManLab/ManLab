@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <map>
 #include <syslog.h>
+#include <spdlog/spdlog.h>
+
+#include "ScanQueue.h" //악성코드 팀 추가
 
 // 생성자
 RealTimeMonitor::RealTimeMonitor(const std::vector<std::string>& watchDirs)
@@ -217,9 +220,11 @@ void RealTimeMonitor::processInotifyEvents()
 
         if (ShouldDisplayEvent(path, event->mask)) //필터링 후 출력
         {
-            if (event->mask & IN_CREATE)
+            if (event->mask & IN_CREATE) 
+            {
                 std::cout << "📁 파일 생성 : " << path << std::endl;
                 //syslog(LOG_INFO, "📁 파일 생성");
+            }
             if (event->mask & IN_DELETE)
                 std::cout << "📁 파일 삭제 : " << path << std::endl;
         }
@@ -258,7 +263,6 @@ bool RealTimeMonitor::Init()
         if (wd == -1) printErrorAndExit("inotify_add_watch");
         mInotifyWdToPath[wd] = dir; // inotify가 반환한 watch descriptor(wd)를 실제 경로 문자열에 매핑 저장
     }
-
     return true;
 }
 

@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <openssl/evp.h>
 #include <openssl/aes.h>
+#include <sys/xattr.h>
 
 namespace fs = std::filesystem;
 
@@ -110,7 +111,8 @@ void RestoreManager::Run()
         {
             // 복호화된 임시 파일에 저장된 원본 권한을 적용
             fs::perms restored_perms = static_cast<fs::perms>(meta.OriginalPermissions);
-            if (restored_perms != fs::perms::unknown) {
+            if (restored_perms != fs::perms::unknown) 
+            {
                 fs::permissions(tempDecryptedPath, restored_perms);
             }
 

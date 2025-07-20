@@ -56,8 +56,7 @@ void CommandExecutor::Execute(const std::vector<std::string>& tokens, std::ostre
 
 void CommandExecutor::ShowManual(std::ostream& out)
 {
-    out << "매뉴얼\n"
-        << "  ManLab run    : ManLab을 실행합니다.\n"
+    out << "\x1B[1;36m매뉴얼\x1B[0m\n"
         << "  restore <file>  Restore quarantined file\n"
         << "  integscan       Run integrity scan\n"
         << "  baseline        Generate baseline\n"

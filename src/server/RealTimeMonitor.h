@@ -17,7 +17,6 @@
 #include <set>
 #include <sstream>
 
-
 // 사용자 친화적 이벤트 마스크 정의
 enum CustomEvent : uint64_t {
     CREATE  = 0x01,
