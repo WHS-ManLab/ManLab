@@ -22,7 +22,7 @@ SERVER_SRCS = \
     $(SERVER_DIR)/CommandReceiver.cpp \
     $(SERVER_DIR)/RealtimeMonitorDaemon.cpp \
     $(SERVER_DIR)/RealTimeMonitor.cpp \
-    $(SERVER_DIR)/ScheduledScanWatcher.cpp \
+    $(SERVER_DIR)/ScheduleWatcher.cpp \
     $(SERVER_DIR)/ScheduledScanExecutor.cpp \
     $(SERVER_DIR)/MalwareScan.cpp \
     $(SERVER_DIR)/QuarantineManager.cpp \
@@ -39,6 +39,11 @@ SERVER_SRCS = \
     $(SERVER_DIR)/DBManager.cpp \
     $(SERVER_DIR)/ReportService.cpp \
     $(SERVER_DIR)/GmailClient.cpp \
+    $(SERVER_DIR)/ScheduledReportExecutor.cpp \
+    $(SERVER_DIR)/RealTimeScanWorker.cpp \
+    $(SERVER_DIR)/ScanQueue.cpp \
+    $(SERVER_DIR)/ScanWatchThread.cpp
+
 
 # 클라이언트용 소스 목록
 CLI_SRCS = \
@@ -46,7 +51,10 @@ CLI_SRCS = \
     $(CLI_DIR)/CommandHandler.cpp
 
 # 공통 유틸 / 외부 라이브러리 소스
-UTIL_SRCS = $(UTILS_DIR)/StringUtils.cpp
+UTIL_SRCS = \
+     $(UTILS_DIR)/StringUtils.cpp \
+     $(UTILS_DIR)/ScheduleParser.cpp
+     
 LIB_SRCS = $(LIB_DIR)/INIReader.cpp $(LIB_DIR)/ini.c
 
 # 링커 라이브러리

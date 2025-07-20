@@ -9,9 +9,12 @@
 
 #include "RsyslogManager.h"
 #include "RealtimeMonitorDaemon.h"
-#include "ScheduledScanWatcher.h"
+#include "ScheduleWatcher.h"
 #include "ScheduledScanExecutor.h"
 #include "CommandReceiver.h"
+#include "ScheduledReportExecutor.h"
+#include "RealTimeScanWorker.h" 
+#include "ScanWatchThread.h" 
 
 class ServerDaemon 
 {
@@ -30,9 +33,12 @@ private:
     // 데몬 구성 요소
     RsyslogManager mRsyslogManager;
     RealtimeMonitorDaemon mRealtimeMonitorDaemon;
-    ScheduledScanWatcher mScheduledScanWatcher;
+    RealTimeScanWorker mRealTimeScanWorker;   
+    ScheduleWatcher mScheduleWatcher;
     ScheduledScanExecutor mScheduledScanExecutor;
     CommandReceiver mCommandReceiver;
+    ScheduledReportExecutor mScheduledReportExecutor;
+    ScanWatchThread mScanWatchThread;
 
     // 실행 중인 스레드들
     std::vector<std::thread> mThreads;
@@ -41,4 +47,9 @@ private:
     std::atomic<bool> mbScanRequested;
     std::mutex mScheduleMutex;
     std::condition_variable mScheduleCondVar;
+
+    // 리포트 공유 상태
+    std::atomic<bool> mbReportRequested;
+    std::mutex mReportMutex;
+    std::condition_variable mReportCondVar;
 };

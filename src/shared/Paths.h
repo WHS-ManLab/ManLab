@@ -4,7 +4,7 @@
 #define PATH_IPC                  "/root/ManLab/ipc"
 
 // 소켓 PATH경로
-#define PATH_SOCKET              "/root/ManLab/ipc/cmdsocket"
+#define PATH_SOCKET               "/root/ManLab/ipc/cmdsocket"
 
 // PID 파일 경로
 #define PATH_PID                  "/root/ManLab/pid"

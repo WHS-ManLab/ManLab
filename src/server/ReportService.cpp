@@ -3,42 +3,25 @@
 #include "StringUtils.h"
 #include "GmailClient.h"
 #include "Paths.h"
+#include "DBManager.h"
 
 #include <sstream>    // istringstream
 #include <fstream>    // ofstream
 #include <cstdlib>    // close, system
 #include <chrono>     // system_clock 등
 #include <thread>     // sleep
-#include <iostream>   // 테스트용 (cout, cerr)
 
 using namespace std::chrono;
 using manlab::utils::stripComment;
 using manlab::utils::trim;
 
-bool ReportService::loadFromIni()
+bool ReportService::loadEmailSettings()
 {
     INIReader reader(PATH_LOG_REPORT_INI);
-
     if (reader.ParseError() < 0)
     {
-        std::cerr << "Failed to parse INI file\n";
-
         return false;
     }
-
-    mPeriodType = trim(stripComment(reader.Get("Report", "Period", "daily")));
-
-    mDayOfWeek = stoi(stripComment(reader.Get("Report", "DayOfWeek", "0")));
-
-    mDayOfMonth = stoi(stripComment(reader.Get("Report", "DayOfMonth", "1")));
-    if (mDayOfMonth <= 0 || mDayOfMonth > 31)
-    {
-        mDayOfMonth = 1;
-    }
-
-    std::istringstream iss(stripComment(reader.Get("Report", "GenerationTime", "21:00")));
-    char colon;
-    iss >> mGenerationHour >> colon >> mGenerationMinute;
 
     std::string strEnabled = trim(stripComment(reader.Get("Email", "Enabled", "false")));
     mbIsEnabled = (strEnabled == "true");
@@ -50,11 +33,11 @@ bool ReportService::loadFromIni()
 
 bool ReportService::Run()
 {
-    loadFromIni();
+    loadEmailSettings();
 
     mCurrentTime = getCurrentTimeString();
     std::string htmlFile = std::string(PATH_LOG_REPORT) + "/Report_" + mCurrentTime.substr(0, 10) + ".html";
-    
+
     auto events = fetchData(mLastReportTime, mCurrentTime);
     if (generateHTML(htmlFile, events))
     {
@@ -94,7 +77,6 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     std::ofstream html(htmlFile);
     if (!html)
     {
-        std::cerr << "Failed to create HTML file" << std::endl;
         return false;
     }
 
@@ -148,30 +130,28 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         </tr>
     </tbody>
 </table>
-</body>
-</html>)";
-        html.close();
-        return true;
+)";
     }
-
-    std::map<std::string, int> typeCounts;
-
-    for (const auto &e : events)
+    else
     {
-        typeCounts[e.type]++;
+        std::map<std::string, int> typeCounts;
 
-        html << "<tr>";
-        html << "<td>" << e.id << "</td>";
-        html << "<td>" << e.type << "</td>";
-        html << "<td>" << e.uid << "</td>";
-        html << "<td>" << e.timestamp << "</td>";
-        html << "<td>" << (e.bIsSuccess ? "Yes" : "No") << "</td>";
-        html << "<td>" << e.originalLogPath << "</td>";
-        html << "<td>" << e.description << "</td>";
-        html << "</tr>\n";
-    }
+        for (const auto &e : events)
+        {
+            typeCounts[e.type]++;
 
-    html << R"(</tbody>
+            html << "<tr>";
+            html << "<td>" << e.id << "</td>";
+            html << "<td>" << e.type << "</td>";
+            html << "<td>" << e.uid << "</td>";
+            html << "<td>" << e.timestamp << "</td>";
+            html << "<td>" << (e.bIsSuccess ? "Yes" : "No") << "</td>";
+            html << "<td>" << e.originalLogPath << "</td>";
+            html << "<td>" << e.description << "</td>";
+            html << "</tr>\n";
+        }
+
+        html << R"(</tbody>
 </table>
 
 <h2>Event Log Line by ID</h2>
@@ -185,67 +165,62 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     <tbody>
 )";
 
-    for (const auto &e : events)
-    {
-        html << "<tr>";
-        html << "<td>" << e.id << "</td>";
-        html << "<td>" << e.rawLine << "</td>";
-        html << "</tr>\n";
-    }
+        for (const auto &e : events)
+        {
+            html << "<tr>";
+            html << "<td>" << e.id << "</td>";
+            html << "<td>" << e.rawLine << "</td>";
+            html << "</tr>\n";
+        }
 
-    html << R"(</tbody>
+        html << R"(</tbody>
 </table>
 )";
 
-    std::string labelsStr, dataStr, colorStr;
-    bool first = true;
-    size_t colorIdx = 0;
+        std::string labelsStr, dataStr, colorStr;
+        bool first = true;
+        size_t colorIdx = 0;
 
-    for (const auto &pair : typeCounts)
-    {
-        if (!first)
+        for (const auto &pair : typeCounts)
         {
-            labelsStr += ", ";
-            dataStr += ", ";
-            colorStr += ", ";
+            if (!first)
+            {
+                labelsStr += ", ";
+                dataStr += ", ";
+                colorStr += ", ";
+            }
+            labelsStr += "\"" + pair.first + "\"";
+            dataStr += std::to_string(pair.second);
+            colorStr += "\"" + ReportService::generateColor(colorIdx) + "\"";
+            colorIdx++;
+            first = false;
         }
-        labelsStr += "\"" + pair.first + "\"";
-        dataStr += std::to_string(pair.second);
-        colorStr += "\"" + ReportService::generateColor(colorIdx) + "\"";
-        colorIdx++;
-        first = false;
-    }
 
-    // Chart.js 코드 출력
-    html << R"(
+        html << R"(
 <script>
 const ctx = document.getElementById('typeDonutChart').getContext('2d');
 new Chart(ctx, {
     type: 'doughnut',
     data: {
         labels: [)";
-    html << labelsStr;
-    html << R"(],
+        html << labelsStr;
+        html << R"(],
         datasets: [{
             data: [)";
-    html << dataStr;
-    html << R"(],
+        html << dataStr;
+        html << R"(],
             backgroundColor: [)";
-    html << colorStr;
-    html << R"(]
+        html << colorStr;
+        html << R"(]
         }]
     },
     options: {
         responsive: false,
         plugins: {
-            legend: {
-                position: 'bottom'
-            },
+            legend: { position: 'bottom' },
             datalabels: {
                 color : '#000',
-                font: {
-                    weight: 'bold'
-                },
+                font: { weight: 'bold' },
                 formatter: (value) => value
             }
         }
@@ -254,6 +229,56 @@ new Chart(ctx, {
 });
 </script>
 )";
+    }
+
+    html << R"(
+<h1>Malware Scan Report</h1>
+<p>Scan records from )" << mLastReportTime << " to " << mCurrentTime << R"(</p>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Type</th>
+            <th>Date</th>
+            <th>Detected</th>
+        </tr>
+    </thead>
+    <tbody>
+)";
+
+    auto& scanStorage = DBManager::GetInstance().GetScanReportStorage();
+    auto scanReports = scanStorage.get_all<ScanReport>(
+        sqlite_orm::where(sqlite_orm::between(&ScanReport::date, mLastReportTime, mCurrentTime)));
+
+    if (scanReports.empty()) {
+        html << R"(<tr>
+            <td colspan="4" style="text-align: center; font-style: italic;">
+            No scan data found during this period.
+            </td>
+        </tr>
+    </tbody>
+</table>
+)";
+    } else {
+        for (const auto& report : scanReports) {
+            html << "<tr>";
+            html << "<td>" << report.id << "</td>";
+            html << "<td>" << report.type << "</td>";
+            html << "<td>" << report.date << "</td>";
+            html << "<td>" << (report.detected ? "Yes" : "No") << "</td>";
+            html << "</tr>\n";
+        }
+        html << R"(</tbody>
+</table>
+<h2>Full Report Texts</h2>
+)";
+
+        for (const auto& report : scanReports) {
+            html << "<pre style=\"background:#f9f9f9; padding:10px; border:1px solid #ccc;\">\n";
+            html << report.report;
+            html << "\n</pre>\n";
+        }
+    }
 
     html << R"(
 </body>
@@ -269,9 +294,12 @@ std::string ReportService::generateColor(size_t index)
         "255, 99, 132", "54, 162, 235", "255, 206, 86",
         "75, 192, 192", "153, 102, 255", "255, 159, 64"
     };
-    if (index < baseColors.size()) {
+    if (index < baseColors.size()) 
+    {
         return "rgba(" + baseColors[index] + ", 0.6)";
-    } else {
+    } 
+    else 
+    {
         int r = (index * 50) % 256;
         int g = (index * 80) % 256;
         int b = (index * 110) % 256;

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <spdlog/spdlog.h>
 
 namespace fs = std::filesystem;
 
@@ -22,7 +23,7 @@ void Daemonize()
     // 작업 디렉토리 변경
     if (chdir("/") < 0)
     {
-        std::cerr << "[ERROR] chdir() failed\n";
+        spdlog::error("Daemonize(): 작업 디렉토리 변경 실패: {}", strerror(errno));
         exit(1);
     }
 
@@ -33,6 +34,7 @@ void Daemonize()
     int fd = open("/dev/null", O_RDWR);
     if (fd < 0)
     {
+        spdlog::error("Daemonize(): /dev/null 열기 실패: {}", strerror(errno));
         exit(1);
     }
 
@@ -40,6 +42,8 @@ void Daemonize()
     dup2(fd, STDOUT_FILENO);
     dup2(fd, STDERR_FILENO);
     if (fd > 2) close(fd);
+
+    spdlog::debug("Daemonize(): 표준 입출력을 /dev/null로 리다이렉트함");
 }
 
 
@@ -51,12 +55,15 @@ bool IsDaemonRunning(const std::string& daemonName)
     std::ifstream pidFile(path);
     if (!pidFile.is_open())
     {
+        spdlog::debug("IsDaemonRunning(): '{}'의 PID 파일을 열 수 없습니다 (존재하지 않거나 접근 권한 없음)", daemonName);
         return false;
     }
 
     pid_t pid;
     pidFile >> pid;
     pidFile.close();
+
+    spdlog::info("PID 파일 생성 완료: {} → PID {}", GetPidFilePath(daemonName), getpid());
 
     return (kill(pid, 0) == 0);
 }
@@ -66,16 +73,28 @@ void LaunchDaemonIfNotRunning(const std::string& daemonName, std::function<void(
 {
     if (IsDaemonRunning(daemonName))
     {
-        // 이미 데몬이 실행 중이라면 return 
+        spdlog::info("LaunchDaemonIfNotRunning(): '{}' 데몬이 이미 실행 중이므로 실행 생략", daemonName);
         return;
     }
 
+    spdlog::info("LaunchDaemonIfNotRunning(): '{}' 데몬을 실행합니다", daemonName);
+
     Daemonize();
-    fs::create_directories(PATH_PID);
+    try 
+    {
+        fs::create_directories(PATH_PID);
+        spdlog::debug("PID 디렉토리 생성 또는 이미 존재함: {}", PATH_PID);
+    } 
+    catch (const std::exception& e) 
+    {
+        spdlog::error("PID 디렉토리 생성 실패 '{}': {}", PATH_PID, e.what());
+        exit(1);
+    }
     std::ofstream pidFile(GetPidFilePath(daemonName));
     pidFile << getpid(); //기존 파일의 내용을 삭제하고 새로 작성. 만약 이전 PID파일 정보만 남아있고 프로세스는 꺼졌을 경우 대비
     pidFile.close();
 
+    spdlog::info("PID 파일 생성 완료: {} → PID {}", GetPidFilePath(daemonName), getpid());
     daemonFunc();
 }
 
