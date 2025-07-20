@@ -71,7 +71,7 @@ private:
     int findMountFdForFileHandle(const struct file_handle* fid); 
     std::unordered_map<std::string, uint64_t> mUserEventFilters;
     std::unordered_map<int, std::string> mInotifyWdToPath;
-    void processInotifyEvents();
+    void processInotifyEvents(std::ostream& out = std::cout);
 
 
 };

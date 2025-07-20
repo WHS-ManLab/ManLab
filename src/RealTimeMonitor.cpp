@@ -20,7 +20,7 @@ RealTimeMonitor::~RealTimeMonitor()
 //에러 출력 함수
 void RealTimeMonitor::printErrorAndExit(const std::string& msg, std::ostream& err) 
 {
-    std::cerr << msg << ": " << std::strerror(errno) << std::endl;
+    err << msg << ": " << std::strerror(errno) << std::endl;
     std::exit(EXIT_FAILURE);
 }
 
@@ -40,7 +40,7 @@ std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::strin
 
 
         if (path.empty() || events.empty()) {
-            std::cerr << "⚠️ 섹션 [" << section << "]에 Path 또는 Events가 없습니다" << std::endl;
+            err << "⚠️ 섹션 [" << section << "]에 Path 또는 Events가 없습니다" << std::endl;
             continue;
         }
 
@@ -290,14 +290,14 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
     {
         if (metadata->vers != FANOTIFY_METADATA_VERSION) 
         {
-            std::cerr << "Mismatched fanotify metadata version" << std::endl;
+            err << "Mismatched fanotify metadata version" << std::endl;
             std::exit(EXIT_FAILURE);
         }
 
         auto fid = reinterpret_cast<struct fanotify_event_info_fid*>(metadata + 1);
         if (fid->hdr.info_type != FAN_EVENT_INFO_TYPE_FID)
         {
-            std::cerr << "Unexpected event info type." << std::endl;
+            err << "Unexpected event info type." << std::endl;
             std::exit(EXIT_FAILURE);
         }
 
@@ -363,7 +363,7 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
 }
 
 //Inotify 이벤트 처리 및 로그 출력
-void RealTimeMonitor::processInotifyEvents() 
+void RealTimeMonitor::processInotifyEvents(std::ostream& out) 
 {
     char buffer[4096] __attribute__((aligned(__alignof__(struct inotify_event)))); //메모리 정렬
     ssize_t length = read(mInotifyFd, buffer, sizeof(buffer)); //데이터 읽어오기
@@ -439,7 +439,7 @@ bool RealTimeMonitor::Init()
         int ret = fanotify_mark(mFanFd, FAN_MARK_ADD, // fanotify 설정
                                 FAN_MODIFY | FAN_ATTRIB | FAN_CLOSE_WRITE | FAN_EVENT_ON_CHILD,
                                 AT_FDCWD, dir.c_str());
-        if (ret == -1) printErrorAndExit("fanotify_mark", std::cerr);
+        if (ret == -1) printErrorAndExit("fanotify_mark");
 
        
         int wd = inotify_add_watch(mInotifyFd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
