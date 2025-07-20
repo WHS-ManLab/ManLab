@@ -18,14 +18,14 @@ RealTimeMonitor::~RealTimeMonitor()
 }
 
 //에러 출력 함수
-void RealTimeMonitor::printErrorAndExit(const std::string& msg) 
+void RealTimeMonitor::printErrorAndExit(const std::string& msg, std::ostream& err) 
 {
     std::cerr << msg << ": " << std::strerror(errno) << std::endl;
     std::exit(EXIT_FAILURE);
 }
 
 //FIMConfig.ini 파싱하는 함수
-std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::string& iniPath) 
+std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::string& iniPath, std::ostream& err) 
 {
     std::vector<std::pair<std::string, uint64_t>> pathAndMaskList;
     INIReader reader(iniPath);
@@ -52,8 +52,47 @@ std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::strin
     return pathAndMaskList;
 }
 
+// excludeFilesByPath는 RealTimeMonitor 클래스 멤버라고 가정
+void RealTimeMonitor::parseExcludeFromIni(const std::string& iniFilePath) {
+    INIReader reader(iniFilePath);
+    if (reader.ParseError() != 0) {
+        return;
+    }
+
+    excludeFilesByPath.clear();
+
+    for (int i = 1;; ++i) {
+        std::string section = "TARGETS_" + std::to_string(i);
+        if (!reader.HasSection(section)) break;
+
+        std::string path = reader.Get(section, "Path", "");
+        std::string excludeStr = reader.Get(section, "Exclude", "");
+
+        std::unordered_set<std::string> excludeSet;
+        std::stringstream ss(excludeStr);
+        std::string file;
+        while (std::getline(ss, file, ',')) {
+            file.erase(std::remove_if(file.begin(), file.end(), ::isspace), file.end());
+            if (!file.empty()) {
+                excludeSet.insert(file);
+            }
+        }
+        excludeFilesByPath[path] = excludeSet;
+    }
+}
+
+bool RealTimeMonitor::IsExcludedFile(const std::string& fullPath) {
+    std::string dir = fullPath.substr(0, fullPath.find_last_of('/'));
+    std::string fileName = fullPath.substr(fullPath.find_last_of('/') + 1);
+
+    auto it = excludeFilesByPath.find(dir);
+    if (it == excludeFilesByPath.end()) return false;
+
+    return it->second.find(fileName) != it->second.end();
+}
+
 //ini파일에서 읽어온 이벤트 유형을 사용자 정의 마스크(customMask)로 변경하는 함수 (감지된 이벤트와 비교하기 위해)
-uint64_t parseCustomEventMask(const std::string& eventsStr) 
+uint64_t parseCustomEventMask(const std::string& eventsStr, std::ostream& err) 
 {
     std::unordered_map<std::string, CustomEvent> eventMap = 
     {
@@ -129,12 +168,24 @@ void RealTimeMonitor::AddWatchWithFilter(const std::string& path, uint64_t custo
     mUserEventFilters[path] = customMask;
 }
 
+//inode 얻기
+uint64_t RealTimeMonitor::getInodeFromFd(int fd) {
+    struct stat statbuf;
+    if (fstat(fd, &statbuf) == -1) {
+        perror("fstat");
+        return 0;  // 오류 시 0 반환 (처리 필요)
+    }
+    return statbuf.st_ino;
+}
+
 // 경로와 사용자 필터에 매핑된 디렉토리를 확인하고,
 // 실제 발생한 마스크(actualMask)를 사용자 정의 마스크(customMask)로 변환한 뒤,
 // 그 둘이 매칭되는지 검사해서, 이벤트 출력 여부를 결정
 bool RealTimeMonitor::ShouldDisplayEvent(const std::string& path, uint64_t actualMask)
 {
     uint64_t matched = mapActualMaskToCustomMask(actualMask);
+
+    bool eventMatches = false;
     for (const auto& [dir, customMask] : mUserEventFilters)
     {
         // 경로가 완전히 같거나,
@@ -142,12 +193,30 @@ bool RealTimeMonitor::ShouldDisplayEvent(const std::string& path, uint64_t actua
         if (path == dir || (path.find(dir) == 0 && path[dir.size()] == '/'))
         {
             if ((matched & customMask) != 0)
-                return true;
+            {
+                eventMatches = true;
+                break;
+            }
         }
     }
-    return false;
-}
+    if (!eventMatches) {
+        return false;
+    }
 
+    for (const auto& [exDir, excludeSet] : excludeFilesByPath)
+    {
+        if (path == exDir || (path.find(exDir) == 0 && path[exDir.size()] == '/'))
+        {
+            std::string fileName = path.substr(path.find_last_of('/') + 1);
+            if (excludeSet.find(fileName) != excludeSet.end())
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
 
 //파일 핸들이 속한 mountFD를 찾기
 int RealTimeMonitor::findMountFdForFileHandle(const struct file_handle* fid) 
@@ -205,13 +274,13 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
 {
     while (FAN_EVENT_OK(metadata, bufLen)) 
     {
-        if (metadata->vers != FANOTIFY_METADATA_VERSION) //fanotify 버전확인
+        if (metadata->vers != FANOTIFY_METADATA_VERSION) 
         {
             std::cerr << "Mismatched fanotify metadata version" << std::endl;
             std::exit(EXIT_FAILURE);
         }
 
-        auto fid = reinterpret_cast<struct fanotify_event_info_fid*>(metadata + 1); //FID 이벤트 타입인지 확인
+        auto fid = reinterpret_cast<struct fanotify_event_info_fid*>(metadata + 1);
         if (fid->hdr.info_type != FAN_EVENT_INFO_TYPE_FID)
         {
             std::cerr << "Unexpected event info type." << std::endl;
@@ -219,7 +288,7 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
         }
 
         struct file_handle* fileHandle = reinterpret_cast<struct file_handle*>(fid->handle);
-        int mountFd = findMountFdForFileHandle(fileHandle); //이벤트가 발생한 mountfd 찾기
+        int mountFd = findMountFdForFileHandle(fileHandle);
         if (mountFd == -1) 
         {
             metadata = FAN_EVENT_NEXT(metadata, bufLen);
@@ -305,27 +374,31 @@ void RealTimeMonitor::processInotifyEvents()
 //fanotify, inotify 초기화 설정
 bool RealTimeMonitor::Init() 
 {
+    parseExcludeFromIni(PATH_FIM_CONFIG_INI);
+
+
     mFanFd = fanotify_init(FAN_CLASS_NOTIF | FAN_REPORT_FID, O_RDONLY); // FAN_REPORT_FID: 파일 핸들(FID) 기반 이벤트 보고 모드 활성화
     mInotifyFd = inotify_init1(IN_NONBLOCK);                            // 이 옵션이 있어야 이벤트에서 핸들을 받아 open_by_handle_at()으로 fd 접근 가능하며,
     if (mFanFd == -1 || mInotifyFd == -1)                               // 그렇지 않으면 fd 직접 접근 시 오류가 발생할 수 있음
     {
-        printErrorAndExit("fanotify/inotify init");
+        printErrorAndExit("fanotify/inotify init", std::cerr );
     }
 
     for (const auto& dir : mWatchDirs) //설정한 경로마다 mountfd 얻어서 벡터에 저장
     {
+        registerWatchPath(dir);
         int mountFd = open(dir.c_str(), O_DIRECTORY | O_RDONLY);
         if (mountFd == -1) 
         {
-            printErrorAndExit(dir);
+            printErrorAndExit(dir, std::cerr);
         }
         mMountFds.push_back(mountFd);
 
         
         int ret = fanotify_mark(mFanFd, FAN_MARK_ADD, // fanotify 설정
-                                FAN_MODIFY | FAN_ATTRIB | FAN_EVENT_ON_CHILD,
+                                FAN_MODIFY | FAN_ATTRIB | FAN_CLOSE_WRITE | FAN_EVENT_ON_CHILD,
                                 AT_FDCWD, dir.c_str());
-        if (ret == -1) printErrorAndExit("fanotify_mark");
+        if (ret == -1) printErrorAndExit("fanotify_mark", std::cerr);
 
        
         int wd = inotify_add_watch(mInotifyFd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
@@ -334,23 +407,6 @@ bool RealTimeMonitor::Init()
     }
 
     return true;
-}
-
-//모니터링 시작 준비 확인 및 감시 경로 출력
-void RealTimeMonitor::Start() 
-{
-    if (mFanFd == -1 || mInotifyFd == -1) 
-    {
-        std::cerr << "Init first!" << std::endl;
-        return;
-    }
-
-    std::cout << "✅ 모니터링 시작" << std::endl;
-    for (const auto& dir : mWatchDirs) 
-    {
-        std::cout << "- 감시 중 : " << dir << std::endl;
-    }
-     std::cout << std::endl;
 }
 
 // fanotify와 inotify 파일 디스크립터에서 이벤트가 있는지  검사하고,
@@ -374,9 +430,8 @@ void RealTimeMonitor::pollOnce()
     {
         ssize_t len = read(mFanFd, mBuf.data(), mBuf.size());
         auto metadata = reinterpret_cast<struct fanotify_event_metadata*>(mBuf.data());
-        processFanotifyEvents(metadata, len);
+        processFanotifyEvents(metadata, len, std::cerr);
     }
-
     if (fds[1].revents & POLLIN) //inotify 이벤트 처리
     {
         processInotifyEvents();

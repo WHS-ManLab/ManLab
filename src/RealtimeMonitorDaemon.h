@@ -1,22 +1,15 @@
 #pragma once
-#include "DaemonBase.h"
-#include <csignal>
 #include <atomic>
-#include <thread>
-#include <chrono>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 
-class RealtimeMonitorDaemon : public DaemonBase {
+
+class RealtimeMonitorDaemon 
+{
 public:
-    void run() override;
-
-protected:
-    void setupSignalHandlers() override {
-        signal(SIGTERM, [](int){ running = false; });
-        signal(SIGINT,  [](int){ running = false; });
-    }
-
-    static bool isRunning() { return running; }
+    void Init(std::atomic<bool>& shouldRun);
+    void Run();
 
 private:
-    static std::atomic<bool> running;
+    std::atomic<bool>* mpShouldRun = nullptr;
 };
