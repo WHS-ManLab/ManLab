@@ -21,6 +21,9 @@
 // 베이스라인 DB 경로
 #define PATH_BASELINE_DB "/root/ManLab/db/baseline.db"
 
+// 파일 실시간 검사 DB 경로
+#define PATH_REAL_TIME_MONITOR_DB "/root/ManLab/db/realtimemonitor.db"
+
 // 변경 감지 DB 경로
 #define PATH_MODIFIED_DB "/root/ManLab/db/modifiedhash.db"
 
@@ -30,7 +33,10 @@
 // 해시 텍스트 초기화용 데이터
 #define PATH_HASH_INIT_TXT "/root/ManLab/malhash/malware_hashes.txt"
 
-// FIM 설정파일
+//FIM 수동 설정파일
+#define PATH_FIM_INTEG_INI "/root/ManLab/conf/FIMIntegScan.ini"
+
+// FIM 실시간 설정파일
 #define PATH_FIM_CONFIG_INI "/root/ManLab/conf/FIMConfig.ini"
 
 // MALSCAN 설정파일

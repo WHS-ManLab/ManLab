@@ -16,6 +16,7 @@ SRCS = $(SRC_DIR)/main.cpp \
        $(SRC_DIR)/SigCommandHandler.cpp \
        $(SRC_DIR)/RealtimeMonitorDaemon.cpp \
 	   $(SRC_DIR)/RealTimeMonitor.cpp \
+	   $(SRC_DIR)/FimLogToDB.cpp \
        $(SRC_DIR)/ScheduledScanWatcher.cpp \
 	   $(SRC_DIR)/ScheduledScanExecutor.cpp \
        $(SRC_DIR)/MalwareScan.cpp \

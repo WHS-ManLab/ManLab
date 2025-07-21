@@ -49,11 +49,27 @@ DBManager::DBManager()
             sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
             sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine)))),
                                  
-      mBaselineStorage(sqlite_orm::make_storage(
+       mBaselineStorage(sqlite_orm::make_storage(
         PATH_BASELINE_DB,
             sqlite_orm::make_table("baseline",
             sqlite_orm::make_column("path", &BaselineEntry::path, sqlite_orm::primary_key()),
-            sqlite_orm::make_column("md5",  &BaselineEntry::md5)))),
+            sqlite_orm::make_column("md5",  &BaselineEntry::md5),
+            sqlite_orm::make_column("permission",  &BaselineEntry::permission),
+            sqlite_orm::make_column("uid",         &BaselineEntry::uid),
+            sqlite_orm::make_column("gid",         &BaselineEntry::gid),
+            sqlite_orm::make_column("ctime",       &BaselineEntry::ctime),
+            sqlite_orm::make_column("mtime",       &BaselineEntry::mtime),
+            sqlite_orm::make_column("size",        &BaselineEntry::size)))),
+
+      mRealTimeMonitorStorage(sqlite_orm::make_storage(
+        PATH_REAL_TIME_MONITOR_DB,
+        sqlite_orm::make_table("RealTimeMonitor",
+        sqlite_orm::make_column("ID", &RealtimeEventLog::id, sqlite_orm::primary_key().autoincrement()),
+        sqlite_orm::make_column("PATH", &RealtimeEventLog::path),
+        sqlite_orm::make_column("EVENT_TYPE", &RealtimeEventLog::eventType),
+        sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp)
+        )
+    )),
 
       mModifiedStorage(sqlite_orm::make_storage(
         PATH_MODIFIED_DB,
@@ -82,6 +98,7 @@ void DBManager::InitSchema()
     mQuarantineStorage.sync_schema();
     mLogAnalysisResultStorage.sync_schema();
     mBaselineStorage.sync_schema();
+    mRealTimeMonitorStorage.sync_schema();
     mModifiedStorage.sync_schema();
     mScanReportStorage.sync_schema();
 }
@@ -155,6 +172,11 @@ StorageLogAnalysisResult& DBManager::GetLogAnalysisResultStorage()
 StorageBaseline& DBManager::GetBaselineStorage() 
 {
     return mBaselineStorage;
+}
+
+StorageRealTimeMonitor& DBManager::GetRealTimeMonitorStorage() 
+{
+    return mRealTimeMonitorStorage;
 }
 
 StorageModified& DBManager::GetModifiedStorage() 
