@@ -15,8 +15,9 @@
 #include "ScheduledReportExecutor.h"
 #include "RealTimeScanWorker.h" 
 #include "ScanWatchThread.h" 
+#include "AuditLogManager.h"
 
-class ServerDaemon 
+class ServerDaemon
 {
 public:
     ServerDaemon();
@@ -37,6 +38,7 @@ private:
     ScheduleWatcher mScheduleWatcher;
     ScheduledScanExecutor mScheduledScanExecutor;
     CommandReceiver mCommandReceiver;
+    AuditLogManager mAuditLogManager;
     ScheduledReportExecutor mScheduledReportExecutor;
     ScanWatchThread mScanWatchThread;
 

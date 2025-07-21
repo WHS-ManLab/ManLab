@@ -65,5 +65,15 @@ systemctl enable "$SERVICE_UNIT"
 echo "[INFO] Copying malware_hashes.txt..."
 cp -v "$MALHASH_SRC" "$MALHASH_DST"
 
+# 7. auditd 설치
+echo "[INFO] Installing auditd..."
+apt install -y auditd
+systemctl enable auditd
+systemctl start auditd
+
+# 8. spdlog 설치
+echo "[INFO] Installing spdlog..."
+sudo apt install libspdlog-dev
+
 echo "[OK] ManLab installation completed."
 systemctl start "$SERVICE_UNIT"
