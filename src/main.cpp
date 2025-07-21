@@ -9,6 +9,9 @@
 #include "INIReader.h"
 #include "Paths.h"
 
+#include "spdlog/spdlog.h" // spdlog 헤더
+#include "spdlog/sinks/rotating_file_sink.h" // spdlog 회전 파일 싱크 헤더
+
 void printUsage()
 {
     std::cout << "Usage:\n"
@@ -17,8 +20,24 @@ void printUsage()
               << "  ManLab integscan             # Run integrity scan\n\n";
 }
 
+void InitLogger() {
+    // 최대 5MB, 최대 3개 파일 보관 (manlab.log, manlab.log.1, manlab.log.2)
+    auto logger = spdlog::rotating_logger_mt(
+        "manlab_logger", "/root/ManLab/log/manlab.log",
+        1024 * 1024 * 5,  // 5MB
+        3                 // 파일 개수
+    );
+
+    spdlog::set_default_logger(logger);
+    spdlog::set_level(spdlog::level::debug);
+    spdlog::flush_on(spdlog::level::info);
+}
+
 int main(int argc, char* argv[])
 {
+
+    InitLogger();  // 로거 초기화
+
     if (argc < 2)
     {
         // 사용자를 위한 에러 메시지
@@ -117,5 +136,6 @@ int main(int argc, char* argv[])
         close(sock); // 소켓 종료
     }
 
+    spdlog::shutdown(); // 로거 종료
     return 0;
 }
