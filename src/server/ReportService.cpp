@@ -10,6 +10,7 @@
 #include <cstdlib>    // close, system
 #include <chrono>     // system_clock 등
 #include <thread>     // sleep
+#include <spdlog/spdlog.h>
 
 using namespace std::chrono;
 using manlab::utils::stripComment;
@@ -52,8 +53,11 @@ bool ReportService::Run()
             }
         }
     }
+    else
+    {
+        spdlog::error("Failed to generate HTML.");
+    }
     return false;
-    // TODO : HTML 생성 실패 / 루프 종료 로직
 }
 
 std::vector<LogAnalysisResult> ReportService::fetchData(const std::string &fromTime, const std::string &toTime)
