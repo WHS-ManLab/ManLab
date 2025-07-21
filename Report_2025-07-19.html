@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Malicious Behavior Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+<h1>Malicious Behavior Report</h1>
+<p>Report generated: 2025-07-19 02:14:25</p>
+
+<h2>Detected Malicious Behavior Types Overview</h2><canvas id="typeDonutChart" width="400" height="400"></canvas>
+<h2>Detected Malicious Behavior Details</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Event ID</th>
+            <th>Type</th>
+            <th>User ID</th>
+            <th>Timestamp</th>
+            <th>Success</th>
+            <th>Original Log Path</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+<tr><td>1</td><td>unauthorized_sudo</td><td>manlab</td><td>2025-07-19 02:12:46</td><td>Yes</td><td>/var/log/manlab.log</td><td>비인가 사용자 jiwoo가 sudo 명령 사용 : /usr/bin/tail -F /root/ManLab/log/manlab.log</td></tr>
+<tr><td>2</td><td>unauthorized_sudo</td><td>manlab</td><td>2025-07-19 02:13:08</td><td>Yes</td><td>/var/log/manlab.log</td><td>비인가 사용자 jiwoo가 sudo 명령 사용 : /usr/local/bin/ManLab malscan</td></tr>
+<tr><td>3</td><td>unauthorized_sudo</td><td>manlab</td><td>2025-07-19 02:13:39</td><td>Yes</td><td>/var/log/manlab.log</td><td>비인가 사용자 jiwoo가 sudo 명령 사용 : /usr/bin/ls /root/ManLab/report</td></tr>
+<tr><td>4</td><td>unauthorized_sudo</td><td>manlab</td><td>2025-07-19 02:13:44</td><td>Yes</td><td>/var/log/manlab.log</td><td>비인가 사용자 jiwoo가 sudo 명령 사용 : /usr/bin/vim /root/ManLab/conf/ReportConfig.ini</td></tr>
+</tbody>
+</table>
+
+<h2>Event Log Line by ID</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Event ID</th>
+            <th>Raw Log Line</th>
+        </tr>
+    </thead>
+    <tbody>
+<tr><td>1</td><td>2025-07-19T02:12:46.151831+09:00 manlab sudo:    jiwoo : TTY=pts/5 ; PWD=/home/jiwoo/ManLab ; USER=root ; COMMAND=/usr/bin/tail -F /root/ManLab/log/manlab.log</td></tr>
+<tr><td>2</td><td>2025-07-19T02:13:08.624844+09:00 manlab sudo:    jiwoo : TTY=pts/7 ; PWD=/home/jiwoo/ManLab ; USER=root ; COMMAND=/usr/local/bin/ManLab malscan</td></tr>
+<tr><td>3</td><td>2025-07-19T02:13:39.220818+09:00 manlab sudo:    jiwoo : TTY=pts/7 ; PWD=/home/jiwoo/ManLab ; USER=root ; COMMAND=/usr/bin/ls /root/ManLab/report</td></tr>
+<tr><td>4</td><td>2025-07-19T02:13:44.845076+09:00 manlab sudo:    jiwoo : TTY=pts/7 ; PWD=/home/jiwoo/ManLab ; USER=root ; COMMAND=/usr/bin/vim /root/ManLab/conf/ReportConfig.ini</td></tr>
+</tbody>
+</table>
+
+<script>
+const ctx = document.getElementById('typeDonutChart').getContext('2d');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ["unauthorized_sudo"],
+        datasets: [{
+            data: [4],
+            backgroundColor: ["rgba(255, 99, 132, 0.6)"]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+</script>
+
+<h1>Malware Scan Report</h1>
+<p>Scan records from 2025-07-01 00:00:00 to 2025-07-19 02:14:25</p>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Type</th>
+            <th>Date</th>
+            <th>Detected</th>
+        </tr>
+    </thead>
+    <tbody>
+<tr><td>1</td><td>manual</td><td>2025-07-19 02:13:29</td><td>Yes</td></tr>
+</tbody>
+</table>
+<h2>Full Report Texts</h2>
+<h3>Scan ID: 1</h3>
+<pre style="background:#f9f9f9; padding:10px; border:1px solid #ccc;">
+[Scan Type] Manual
+[Scan Time] 2025-07-19 02:13:08
+[Scanned Path] /home
+
+[Detected Files]
+  1. File: /home/jiwoo/eicar
+     Detected At: 2025-07-19 02:13:29
+     Quarantine: Success
+     Reason: yara match
+     Rule Name: EICAR_Test_Rule
+     Original Size: 16696 bytes
+
+[Summary]
+Scanned Files: 72
+Infected Files: 1
+Quarantined Files: 1
+Elapsed Time: 0:20
+
+</pre>
+
+</body>
+</html>
