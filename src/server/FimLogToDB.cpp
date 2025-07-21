@@ -14,7 +14,8 @@ bool FimLogToDB::parseLogLine(const std::string& line, ParsedLog& outLog)
     // RENAME 로그
     std::regex renamePattern(R"(\[(.*?)\]\s+\[RealTime_logger\]\s+\[info\]\s+\[Event Type\] =\s*RENAME\s+\[From\] =\s*(.*?)\s*->\s*\[To\] =\s*(.+))");
 
-    std::regex generalPattern(R"(\[(.*?)\]\s+\[RealTime_logger\]\s+\[info\]\s+\[Event Type\] =\s*(\S+)\s+\[Path\] =\s+(.+))");
+    std::regex generalPattern(R"(\[(.*?)\]\s+\[RealTime_logger\]\s+\[info\]\s+\[Event Type\] =\s*(.+?)\s+\[Path\] =\s+(.+))");
+
 
     if (std::regex_match(line, match, renamePattern)) 
     {
