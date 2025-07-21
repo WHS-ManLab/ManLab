@@ -62,15 +62,14 @@ DBManager::DBManager()
             sqlite_orm::make_column("mtime",       &BaselineEntry::mtime),
             sqlite_orm::make_column("size",        &BaselineEntry::size)))),
 
-      mRealTimeMonitorStorage(sqlite_orm::make_storage(
+       mRealTimeMonitorStorage(sqlite_orm::make_storage(
         PATH_REAL_TIME_MONITOR_DB,
-        sqlite_orm::make_table("RealTimeMonitor",
-        sqlite_orm::make_column("ID", &RealtimeEventLog::id, sqlite_orm::primary_key().autoincrement()),
-        sqlite_orm::make_column("PATH", &RealtimeEventLog::path),
-        sqlite_orm::make_column("EVENT_TYPE", &RealtimeEventLog::eventType),
-        sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp)
-        )
-    )),
+            sqlite_orm::make_table("RealTimeMonitor",
+            sqlite_orm::make_column("ID", &RealtimeEventLog::id, sqlite_orm::primary_key().autoincrement()),
+            sqlite_orm::make_column("EVENT_TYPE", &RealtimeEventLog::eventType),
+            sqlite_orm::make_column("PATH", &RealtimeEventLog::path),       
+            sqlite_orm::make_column("NEW_NAME", &RealtimeEventLog::newName), 
+            sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp)))),
 
       mModifiedStorage(sqlite_orm::make_storage(
         PATH_MODIFIED_DB,
