@@ -12,6 +12,7 @@
 // spdlog 헤더 추가
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/rotating_file_sink.h"
+#include "indicator.hpp"  // ProgressBar
 
 // 기준선 DB와 현재 파일 상태를 비교하여 변조 여부 확인
 // verbose가 true일 경우 상세 로그를 출력
@@ -39,24 +40,42 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
         return;
     }
 
+    // 커서 숨기기 (프로그래스바 깜빡임 방지)
+    indicators::show_console_cursor(false);
+
+    // ProgressBar 설정 (전체 항목 개수 기준)
+    indicators::ProgressBar bar{
+        indicators::option::BarWidth{50},
+        indicators::option::Start{"["},
+        indicators::option::Fill{"="},
+        indicators::option::Lead{">"},
+        indicators::option::Remainder{"-"},
+        indicators::option::End{"]"},
+        indicators::option::ShowPercentage{true},
+        indicators::option::ShowElapsedTime{true},
+        indicators::option::ShowRemainingTime{true},
+        indicators::option::Stream{out}
+    };
+
+    size_t processed = 0;
+    size_t total = entries.size();
+
     for (const auto& entry : entries) {
         const std::string& path = entry.path;
 
         if (!std::filesystem::exists(path)) {
-            if (verbose) {
-                out << "[WARN] 파일 없음: " << path << std::endl;
+            if (verbose)
                 spdlog::warn("기준선 파일 없음: {}", path); // 경고 로깅
-            }
+            bar.set_progress(++processed * 100.0f / total);
             continue;
         }
 
         // 현재 파일의 MD5 해시값 계산
         std::string current_hash = BaselineGenerator::compute_md5(path);
         if (current_hash.empty()) {
-            if (verbose) {
-                out << "[ERROR] 해시 계산 실패: " << path << std::endl;
+            if (verbose)
                 spdlog::error("해시 계산 실패: {}", path); // 에러 로깅
-            }
+            bar.set_progress(++processed * 100.0f / total);
             continue;
         }
 
@@ -65,8 +84,9 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
         try {
             current_entry = generator.collect_metadata(path, current_hash);
         } catch (const std::exception& e) {
-            out << "[ERROR] 메타데이터 수집 실패: " << e.what() << std::endl;
-            spdlog::error("메타데이터 수집 실패: {}", e.what()); // 에러 로깅
+            if (verbose)
+                spdlog::error("메타데이터 수집 실패: {} ({})", path, e.what()); // 에러 로깅
+            bar.set_progress(++processed * 100.0f / total);
             continue;
         }
 
@@ -80,33 +100,50 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
             current_entry.mtime      != entry.mtime ||
             current_entry.size       != entry.size;
 
-        if (!tampered) {
-            if (verbose)
-                out << "[OK] 일치: " << path << std::endl;
-        } else {
-            out << "[ALERT] 변조 감지: " << path << std::endl;
-            out << "  - 기준선 MD5: " << entry.md5 << "\n";
-            out << "  - 현재 MD5:   " << current_entry.md5 << "\n";
-            if (entry.permission != current_entry.permission)
-                out << "  - 권한 변경: " << entry.permission << " → " << current_entry.permission << "\n";
-            if (entry.uid != current_entry.uid || entry.gid != current_entry.gid)
-                out << "  - 소유자 변경: UID " << entry.uid << " → " << current_entry.uid
-                    << ", GID " << entry.gid << " → " << current_entry.gid << "\n";
-            if (entry.ctime != current_entry.ctime)
-                out << "  - 생성시간 변경: " << entry.ctime << " → " << current_entry.ctime << "\n";
-            if (entry.mtime != current_entry.mtime)
-                out << "  - 수정시간 변경: " << entry.mtime << " → " << current_entry.mtime << "\n";
-            if (entry.size != current_entry.size)
-                out << "  - 크기 변경: " << entry.size << " → " << current_entry.size << " bytes\n";
-
+        if (tampered) {
             try {
                 // ModifiedEntry로만 저장 (BaselineEntry는 매핑 대상이 아님)
                 modified_storage.replace(ModifiedEntry{path, current_hash});
             } catch (const std::exception& e) {
-                out << "[ERROR] 변조 항목 저장 실패: " << e.what() << std::endl;
+                if (verbose)
+                    out << "[ERROR] 변조 항목 저장 실패: " << e.what() << std::endl;
                 spdlog::error("변조 항목 저장 실패: {}", e.what()); // 에러 로깅
             }
         }
+
+        // 프로그래스 바 갱신
+        bar.set_progress(++processed * 100.0f / total);
+    }
+
+    // 프로그래스바 완료
+    //bar.set_progress(100.0f);
+    out << std::endl;
+
+    // 커서 다시 보이기
+    indicators::show_console_cursor(true);
+
+    // 프로그래스바 완료 후 변조 항목 출력
+    auto alerts = DBManager::GetInstance().GetModifiedStorage().get_all<ModifiedEntry>();
+    for (const auto& m : alerts) {
+        BaselineEntry old = DBManager::GetInstance().GetBaselineStorage().get<BaselineEntry>(m.path);
+        BaselineEntry curr = generator.collect_metadata(m.path, m.current_md5);
+
+        out << "[ALERT] 변조 감지: " << m.path << std::endl;
+        out << "  - 기준선 MD5: " << old.md5 << std::endl;
+        out << "  - 현재 MD5:   " << curr.md5 << std::endl;
+        if (old.permission != curr.permission)
+            out << "  - 권한 변경: " << old.permission << " → " << curr.permission << std::endl;
+        if (old.uid != curr.uid || old.gid != curr.gid)
+            out << "  - 소유자 변경: UID " << old.uid << " → " << curr.uid
+                << ", GID " << old.gid << " → " << curr.gid << std::endl;
+        if (old.ctime != curr.ctime)
+            out << "  - 생성시간 변경: " << old.ctime << " → " << curr.ctime << std::endl;
+        if (old.mtime != curr.mtime)
+            out << "  - 수정시간 변경: " << old.mtime << " → " << curr.mtime << std::endl;
+        if (old.size != curr.size)
+            out << "  - 크기 변경: " << old.size << " → " << curr.size << " bytes" << std::endl;
+
+        out << std::endl;
     }
 
     if (verbose)

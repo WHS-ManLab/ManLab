@@ -58,7 +58,15 @@ void PrintBaseline(std::ostream& out) {
 
         spdlog::info("Baseline DB에서 {}개의 항목 발견.", all_entries.size()); // info 레벨 로그 (항목 개수)
         for (const auto& entry : all_entries) {
-            out << "Path: " << entry.path << "\nMD5:  " << entry.md5 << "\n---" << std::endl;
+            out << "Path:       " << entry.path << "\n"
+                << "MD5:        " << entry.md5 << "\n"
+                << "Permission: " << entry.permission << "\n"
+                << "UID:        " << entry.uid << "\n"
+                << "GID:        " << entry.gid << "\n"
+                << "CTime:      " << entry.ctime << "\n"
+                << "MTime:      " << entry.mtime << "\n"
+                << "Size:       " << entry.size << " bytes\n"
+                << "-------------------------------------\n";
         }
         spdlog::info("Baseline DB 내용 출력 완료."); // info 레벨 로그
     } catch (const std::exception& e) {
