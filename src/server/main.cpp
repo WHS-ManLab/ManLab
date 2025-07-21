@@ -39,6 +39,8 @@ int main(int argc, char* argv[])
     daemon.Run();
     spdlog::info("=== ManLab Daemon Exited ===");
 
+    spdlog::shutdown();
+
     return 0;
 }
 

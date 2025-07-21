@@ -29,6 +29,7 @@ void ServerDaemon::Run()
     mRsyslogManager.Init(mShouldRun);
     mCommandReceiver.Init(*this, mShouldRun);
     mScanWatchThread.Init(mShouldRun);
+    mAuditLogManager.Init(mShouldRun);
     spdlog::info("모든 데몬 초기화 완료");
 
     // 다른 인스턴스가 실행 중이 아니면 실행
@@ -47,7 +48,8 @@ void ServerDaemon::startWorkerThreads()
     mThreads.emplace_back(&CommandReceiver::Run, &mCommandReceiver);
     mThreads.emplace_back(&ScheduledReportExecutor::Run, &mScheduledReportExecutor);
     mThreads.emplace_back(&ScanWatchThread::Run, &mScanWatchThread);
-
+    mThreads.emplace_back(&AuditLogManager::Run, &mAuditLogManager);
+    
     joinWorkerThreads();
     spdlog::info("startWorkerThreads(): 모든 스레드 종료됨");
     cleanup();

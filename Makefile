@@ -46,7 +46,9 @@ SERVER_SRCS = \
     $(SERVER_DIR)/ScheduledReportExecutor.cpp \
     $(SERVER_DIR)/RealTimeScanWorker.cpp \
     $(SERVER_DIR)/ScanQueue.cpp \
-    $(SERVER_DIR)/ScanWatchThread.cpp
+    $(SERVER_DIR)/ScanWatchThread.cpp \
+    $(SERVER_DIR)/AuditLogManager.cpp \
+    $(SERVER_DIR)/FimLogToDB.cpp \
 
 # 클라이언트 소스
 CLI_SRCS = \
