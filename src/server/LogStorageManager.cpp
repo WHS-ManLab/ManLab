@@ -1,4 +1,5 @@
 #include "LogStorageManager.h"
+#include <spdlog/spdlog.h> 
 
 using namespace std;
 
@@ -12,7 +13,14 @@ LogStorageManager::LogStorageManager()
 void LogStorageManager::Run(LogAnalysisResult& result, bool bIsAudit)
 {
     result.timestamp = convertTimestamp(result.timestamp, bIsAudit);
+    spdlog::debug("result.type : {}", result.type);
+    spdlog::debug("result.description : {}", result.description);
+    spdlog::debug("result.timestamp : {}", result.timestamp);
+    spdlog::debug("result.username : {}", result.username);
+    spdlog::debug("result.originalLogPath : {}", result.originalLogPath);
+    spdlog::debug("result.rawLine : {}", result.rawLine);
     mStorage->insert(result);
+    spdlog::info("Saving to LogAnalysisResultDB has been completed.");
 }
 
 // 타임스탬프 형식 변환('YYYY-MM-DD HH:MM:SS' 형식으로)
