@@ -34,7 +34,11 @@ bool ReportService::loadEmailSettings()
 
 bool ReportService::Run()
 {
-    loadEmailSettings();
+    if(!loadEmailSettings())
+    {
+        spdlog::info("Failed to load EmailSettings.");
+        return false;
+    }
 
     mCurrentTime = getCurrentTimeString();
     std::string htmlFile = std::string(PATH_LOG_REPORT) + "/Report_" + mCurrentTime.substr(0, 10) + ".html";
@@ -115,11 +119,10 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         <tr>
             <th>Event ID</th>
             <th>Type</th>
-            <th>User ID</th>
-            <th>Timestamp</th>
-            <th>Success</th>
-            <th>Original Log Path</th>
             <th>Description</th>
+            <th>Timestamp</th>
+            <th>Username</th>
+            <th>Original Log Path</th>
         </tr>
     </thead>
     <tbody>
@@ -147,11 +150,10 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
             html << "<tr>";
             html << "<td>" << e.id << "</td>";
             html << "<td>" << e.type << "</td>";
-            html << "<td>" << e.uid << "</td>";
-            html << "<td>" << e.timestamp << "</td>";
-            html << "<td>" << (e.bIsSuccess ? "Yes" : "No") << "</td>";
-            html << "<td>" << e.originalLogPath << "</td>";
             html << "<td>" << e.description << "</td>";
+            html << "<td>" << e.timestamp << "</td>";
+            html << "<td>" << e.username << "</td>";
+            html << "<td>" << e.originalLogPath << "</td>";
             html << "</tr>\n";
         }
 
