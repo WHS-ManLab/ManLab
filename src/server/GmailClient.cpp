@@ -56,7 +56,7 @@ bool GmailClient::Run(const std::string &file)
         curl_easy_setopt(mCurl, CURLOPT_MAIL_RCPT, recipients);
 
         mime = curl_mime_init(mCurl);
-        std::string body = "만랩 로그 분석 리포트입니다.";
+        std::string body = "설정하신 ReportConfig.ini 내용에 따라 생성된 만랩 정기 리포트입니다.";
 
         // 본문
         part = curl_mime_addpart(mime);
@@ -74,7 +74,7 @@ bool GmailClient::Run(const std::string &file)
         struct curl_slist *headers = nullptr;
         headers = curl_slist_append(headers, ("To: " + mTo).c_str());
         headers = curl_slist_append(headers, ("From: " + mFrom).c_str());
-        headers = curl_slist_append(headers, "Subject: 만랩 로그 분석 리포트");
+        headers = curl_slist_append(headers, "Subject: 만랩 정기 리포트");
         curl_easy_setopt(mCurl, CURLOPT_HTTPHEADER, headers);
 
         curl_easy_setopt(mCurl, CURLOPT_MIMEPOST, mime);
