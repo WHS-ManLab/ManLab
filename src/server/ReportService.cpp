@@ -13,23 +13,39 @@
 #include <spdlog/spdlog.h>
 
 using namespace std::chrono;
-using manlab::utils::stripComment;
-using manlab::utils::trim;
+using namespace manlab::utils;
 
 bool ReportService::loadEmailSettings()
 {
     INIReader reader(PATH_LOG_REPORT_INI);
-    if (reader.ParseError() < 0)
+    if (reader.ParseError() != 0)
     {
+        spdlog::warn("리포트 INI 파싱 실패");
         return false;
     }
 
-    std::string strEnabled = trim(stripComment(reader.Get("Email", "Enabled", "false")));
-    mbIsEnabled = (strEnabled == "true");
+    std::string typeStr = reader.Get("Report", "Type", "");
+    std::string timeStr = reader.Get("Report", "Time", "");
+    spdlog::debug("typeStr {}, timestr {}", typeStr, timeStr);
 
-    mRecipient = trim(stripComment(reader.Get("Email", "Recipient", "")));
+    GeneralSchedule schedule;
+    bool parsed = ParseScheduleFromINI("Report", typeStr, timeStr, schedule);
+    if (parsed)
+    {
+        mStartTime = getReportStartTime(schedule);
+        spdlog::info("mStartTime {}", mStartTime);
 
-    return true;
+        std::string strEnabled = trim(stripComment(reader.Get("Email", "Enabled", "false")));
+        mbIsEnabled = (strEnabled == "true");
+
+        mRecipient = trim(stripComment(reader.Get("Email", "Recipient", "")));
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool ReportService::Run()
@@ -40,14 +56,12 @@ bool ReportService::Run()
         return false;
     }
 
-    mCurrentTime = getCurrentTimeString();
-    std::string htmlFile = std::string(PATH_LOG_REPORT) + "/Report_" + mCurrentTime.substr(0, 10) + ".html";
+    mEndTime = getCurrentTimeString();
+    std::string htmlFile = std::string(PATH_LOG_REPORT) + "/Report_" + mEndTime.substr(0, 10) + ".html";
 
-    auto events = fetchData(mLastReportTime, mCurrentTime);
+    auto events = fetchData(mStartTime, mEndTime);
     if (generateHTML(htmlFile, events))
     {
-        mLastReportTime = mCurrentTime;
-
         if (mbIsEnabled)
         {
             GmailClient client(mRecipient);
@@ -69,6 +83,30 @@ std::vector<LogAnalysisResult> ReportService::fetchData(const std::string &fromT
     auto &storage = DBManager::GetInstance().GetLogAnalysisResultStorage();
     return storage.get_all<LogAnalysisResult>(
         sqlite_orm::where(sqlite_orm::between(&LogAnalysisResult::timestamp, fromTime, toTime)));
+}
+
+std::string ReportService::getReportStartTime(const GeneralSchedule& schedule) const
+{
+    auto now = system_clock::now();
+
+    if (schedule.type == ScheduleType::Daily)
+    {
+        now -= hours(24);
+    }
+    else if (schedule.type == ScheduleType::Weekly)
+    {
+        now -= hours(24 * 7);
+    }
+    else if (schedule.type == ScheduleType::Monthly)
+    {
+        // 한 달 전은 30일 전으로 처리
+        now -= hours(24 * 30);
+    }
+
+    auto timet = system_clock::to_time_t(now);
+    char buf[20];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&timet));
+    return buf;
 }
 
 std::string ReportService::getCurrentTimeString() const
@@ -104,9 +142,9 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
 </head>
 <body>
 <h1>Malicious Behavior Report</h1>
-<p>Report generated: )";
+<p>Report period: )";
 
-    html << mCurrentTime << "</p>\n";
+    html << mStartTime << " ~ " << mEndTime  << "</p>\n";
 
     html << R"(
 <h2>Detected Malicious Behavior Types Overview</h2>)";
@@ -142,13 +180,14 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     else
     {
         std::map<std::string, int> typeCounts;
+        int id = 1;
 
         for (const auto &e : events)
         {
             typeCounts[e.type]++;
 
             html << "<tr>";
-            html << "<td>" << e.id << "</td>";
+            html << "<td>" << id++ << "</td>";
             html << "<td>" << e.type << "</td>";
             html << "<td>" << e.description << "</td>";
             html << "<td>" << e.timestamp << "</td>";
@@ -171,10 +210,11 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     <tbody>
 )";
 
+        id = 1;
         for (const auto &e : events)
         {
             html << "<tr>";
-            html << "<td>" << e.id << "</td>";
+            html << "<td>" << id++ << "</td>";
             html << "<td>" << e.rawLine << "</td>";
             html << "</tr>\n";
         }
@@ -239,7 +279,7 @@ new Chart(ctx, {
 
     html << R"(
 <h1>Malware Scan Report</h1>
-<p>Scan records from )" << mLastReportTime << " to " << mCurrentTime << R"(</p>
+<p>Scan records from )" << mStartTime << " to " << mEndTime << R"(</p>
 <table>
     <thead>
         <tr>
@@ -254,7 +294,7 @@ new Chart(ctx, {
 
     auto& scanStorage = DBManager::GetInstance().GetScanReportStorage();
     auto scanReports = scanStorage.get_all<ScanReport>(
-        sqlite_orm::where(sqlite_orm::between(&ScanReport::date, mLastReportTime, mCurrentTime)));
+        sqlite_orm::where(sqlite_orm::between(&ScanReport::date, mStartTime, mEndTime)));
 
     if (scanReports.empty()) {
         html << R"(<tr>
