@@ -48,8 +48,7 @@ struct LogAnalysisResult
     std::string type;
     std::string description;
     std::string timestamp;
-    std::string uid;
-    bool bIsSuccess;
+    std::string username;
     std::string originalLogPath;
     std::string rawLine;
 };
@@ -115,8 +114,7 @@ using StorageLogAnalysisResult = decltype(sqlite_orm::make_storage("",
         sqlite_orm::make_column("Type", &LogAnalysisResult::type),
         sqlite_orm::make_column("Description", &LogAnalysisResult::description),
         sqlite_orm::make_column("Timestamp", &LogAnalysisResult::timestamp),
-        sqlite_orm::make_column("UID", &LogAnalysisResult::uid),
-        sqlite_orm::make_column("IsSuccess", &LogAnalysisResult::bIsSuccess),
+        sqlite_orm::make_column("Username", &LogAnalysisResult::username),
         sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
         sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine))));
 

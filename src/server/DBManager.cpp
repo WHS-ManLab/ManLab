@@ -45,8 +45,7 @@ DBManager::DBManager()
             sqlite_orm::make_column("Type", &LogAnalysisResult::type),
             sqlite_orm::make_column("Description", &LogAnalysisResult::description),
             sqlite_orm::make_column("Timestamp", &LogAnalysisResult::timestamp),
-            sqlite_orm::make_column("UID", &LogAnalysisResult::uid),
-            sqlite_orm::make_column("IsSuccess", &LogAnalysisResult::bIsSuccess),
+            sqlite_orm::make_column("Username", &LogAnalysisResult::username),
             sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
             sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine)))),
                                  
