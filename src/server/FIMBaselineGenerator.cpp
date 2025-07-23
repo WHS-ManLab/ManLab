@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <ctime>
 #include <iostream>
+#include <unordered_set>
 #include "DBManager.h"
 #include "indicator.hpp"
 
@@ -86,15 +87,31 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
 
     auto& storage = DBManager::GetInstance().GetBaselineStorage();
     std::vector<std::string> target_paths;
+    std::unordered_set<std::string> exclude_paths;
+
     std::string line;
+    bool is_exclude = false;
+
     while (std::getline(ini_file, line)) {
+        if (line.find("[EXCLUDES") != std::string::npos) {
+            is_exclude = true;
+            continue;
+        }
+        if (line.find("[TARGETS") != std::string::npos) {
+            is_exclude = false;
+            continue;
+        }
         if (line.find("Path") != std::string::npos) {
             auto eq = line.find('=');
             if (eq != std::string::npos) {
                 std::string p = line.substr(eq + 1);
                 p.erase(0, p.find_first_not_of(" \t"));
                 p.erase(p.find_last_not_of(" \t") + 1);
-                target_paths.push_back(p);
+
+                if (is_exclude)
+                    exclude_paths.insert(p);
+                else
+                    target_paths.push_back(p);
             }
         }
     }
@@ -102,12 +119,24 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
     // 전체 파일 개수 계산
     size_t total_files = 0;
     for (auto& p : target_paths) {
-        if (std::filesystem::is_regular_file(p)) ++total_files;
+        if (std::filesystem::is_regular_file(p)) {
+            bool excluded = false;
+            for (const auto& ex : exclude_paths)
+                if (p.rfind(ex, 0) == 0) { excluded = true; break; }
+            if (!excluded) ++total_files;
+        }
         else if (std::filesystem::is_directory(p)) {
-            for (auto& e : std::filesystem::recursive_directory_iterator(p))
-                if (e.is_regular_file()) ++total_files;
+            for (auto& e : std::filesystem::recursive_directory_iterator(p)) {
+                if (!e.is_regular_file()) continue;
+                std::string fp = e.path().string();
+                bool excluded = false;
+                for (const auto& ex : exclude_paths)
+                    if (fp.rfind(ex, 0) == 0) { excluded = true; break; }
+                if (!excluded) ++total_files;
+            }
         }
     }
+
     if (total_files == 0) {
         out << "[INFO] 대상 파일이 없습니다.\n";
         return;
@@ -135,6 +164,11 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
     for (auto& p : target_paths) {
         try {
             if (std::filesystem::is_regular_file(p)) {
+                bool excluded = false;
+                for (const auto& ex : exclude_paths)
+                    if (p.rfind(ex, 0) == 0) { excluded = true; break; }
+                if (excluded) continue;
+
                 auto h = compute_md5(p);
                 storage.replace(collect_metadata(p, h));
                 out << "\033[u"    
@@ -151,7 +185,13 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
             else if (std::filesystem::is_directory(p)) {
                 for (auto& e : std::filesystem::recursive_directory_iterator(p)) {
                     if (!e.is_regular_file()) continue;
-                    auto fp = e.path().string();
+                    std::string fp = e.path().string();
+
+                    bool excluded = false;
+                    for (const auto& ex : exclude_paths)
+                        if (fp.rfind(ex, 0) == 0) { excluded = true; break; }
+                    if (excluded) continue;
+
                     auto h  = compute_md5(fp);
                     storage.replace(collect_metadata(fp, h));
 
