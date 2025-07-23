@@ -277,6 +277,107 @@ new Chart(ctx, {
 )";
     }
 
+    // -------------------------------------------------------
+    // FIM 팀 리포트
+    html << R"(
+<h1>File Integrity Monitoring Report</h1>
+<h2>Modified Files (Manual Scan Results)</h2>
+<p>List of files with changed MD5 hashes detected during manual scans:</p>
+<table>
+    <thead>
+        <tr>
+            <th>Path</th>
+            <th>Current MD5 Hash</th>
+        </tr>
+    </thead>
+    <tbody>
+)";
+
+auto& modifiedStorage = DBManager::GetInstance().GetModifiedStorage();
+std::vector<ModifiedEntry> modifiedRecords;
+
+try {
+    modifiedRecords = modifiedStorage.get_all<ModifiedEntry>();
+} catch (const std::exception& e) {
+    html << R"(<tr>
+        <td colspan="2" style="text-align: center; font-style: italic; color: red;">
+        Failed to load manual scan data: )" << e.what() << R"(</td></tr>
+    )";
+    modifiedRecords.clear();
+}
+
+if (modifiedRecords.empty()) {
+    html << R"(<tr>
+        <td colspan="2" style="text-align: center; font-style: italic;">
+        No file integrity changes detected during manual scans.
+        </td>
+    </tr>
+)";
+} else {
+    for (const auto& record : modifiedRecords) {
+        html << "<tr>";
+        html << "<td>" << record.path << "</td>";
+        html << "<td>" << record.current_md5 << "</td>";
+        html << "</tr>\n";
+    }
+}
+
+html << R"(</tbody>
+</table>
+)";
+
+html << R"(
+<h2>Real-time Monitoring Events</h2>
+<p>Real-time monitoring records from )" << mStartTime << " to " << mEndTime << R"(</p>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Path</th>
+            <th>Event Type</th>
+            <th>Timestamp</th>
+        </tr>
+    </thead>
+    <tbody>
+)";
+
+auto& realTimeStorage = DBManager::GetInstance().GetRealTimeMonitorStorage();
+std::vector<RealtimeEventLog> realTimeRecords;
+
+try {
+    realTimeRecords = realTimeStorage.get_all<RealtimeEventLog>(
+        sqlite_orm::where(sqlite_orm::between(&RealtimeEventLog::timestamp,  mStartTime, mEndTime)));
+} catch (const std::exception& e) {
+    html << R"(<tr>
+        <td colspan="4" style="text-align: center; font-style: italic; color: red;">
+        Failed to load real-time monitoring data: )" << e.what() << R"(</td></tr>
+    )";
+    realTimeRecords.clear();
+}
+
+if (realTimeRecords.empty()) {
+    html << R"(<tr>
+        <td colspan="4" style="text-align: center; font-style: italic;">
+        No real-time monitoring events detected during this period.
+        </td>
+    </tr>
+)";
+} else {
+    for (const auto& record : realTimeRecords) {
+        html << "<tr>";
+        html << "<td>" << record.id << "</td>";
+        html << "<td>" << record.path << "</td>";
+        html << "<td>" << record.eventType << "</td>";
+        html << "<td>" << record.timestamp << "</td>";
+        html << "</tr>\n";
+    }
+}
+
+html << R"(</tbody>
+</table>
+)";
+
+    // -------------------------------------------------------
     html << R"(
 <h1>Malware Scan Report</h1>
 <p>Scan records from )" << mStartTime << " to " << mEndTime << R"(</p>

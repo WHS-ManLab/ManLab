@@ -66,6 +66,18 @@ struct BaselineEntry
     uintmax_t size;
 };
 
+//FIM 해시값 변조 탐지 완료된 파일만 따로 모아놓는 테이블 구조
+struct ModifiedEntry {
+    std::string path;
+    std::string current_md5;
+    std::string current_permission;
+    int current_uid;
+    int current_gid;
+    std::string current_ctime;
+    std::string current_mtime;
+    uintmax_t current_size;
+};
+
 // FIM RealTimeMonitor 테이블 구조
 struct RealtimeEventLog {
     int id;
@@ -141,17 +153,18 @@ using StorageRealTimeMonitor = decltype(sqlite_orm::make_storage("",
         sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp)
     )));
 
-//FIM 해시값 변조 탐지 완료된 파일만 따로 모아놓는 테이블 구조
-struct ModifiedEntry {
-    std::string path;
-    std::string current_md5;
-};
 
 //FIM 해시값 변조 탐지 테이블에 대한 storage 타입 정의
 using StorageModified = decltype(sqlite_orm::make_storage("",
     sqlite_orm::make_table("modifiedhash",
         sqlite_orm::make_column("path", &ModifiedEntry::path, sqlite_orm::primary_key()),
-        sqlite_orm::make_column("current_md5", &ModifiedEntry::current_md5)    
+        sqlite_orm::make_column("current_md5", &ModifiedEntry::current_md5),
+        sqlite_orm::make_column("current_permission",  &ModifiedEntry::current_permission),
+        sqlite_orm::make_column("current_uid",         &ModifiedEntry::current_uid),
+        sqlite_orm::make_column("current_gid",         &ModifiedEntry::current_gid),
+        sqlite_orm::make_column("current_ctime",       &ModifiedEntry::current_ctime),
+        sqlite_orm::make_column("current_mtime",       &ModifiedEntry::current_mtime),
+        sqlite_orm::make_column("current_size",        &ModifiedEntry::current_size)  
     )
 ));
 

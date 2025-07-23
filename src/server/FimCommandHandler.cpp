@@ -58,7 +58,15 @@ void PrintBaseline(std::ostream& out) {
 
         spdlog::info("Baseline DB에서 {}개의 항목 발견.", all_entries.size()); // info 레벨 로그 (항목 개수)
         for (const auto& entry : all_entries) {
-            out << "Path: " << entry.path << "\nMD5:  " << entry.md5 << "\n---" << std::endl;
+            out << "Path:       " << entry.path << "\n"
+                << "MD5:        " << entry.md5 << "\n"
+                << "Permission: " << entry.permission << "\n"
+                << "UID:        " << entry.uid << "\n"
+                << "GID:        " << entry.gid << "\n"
+                << "CTime:      " << entry.ctime << "\n"
+                << "MTime:      " << entry.mtime << "\n"
+                << "Size:       " << entry.size << " bytes\n"
+                << "-------------------------------------\n";
         }
         spdlog::info("Baseline DB 내용 출력 완료."); // info 레벨 로그
     } catch (const std::exception& e) {
@@ -84,7 +92,14 @@ void PrintIntegscan(std::ostream& out) {
             spdlog::warn("{}개의 변조된 파일 발견!", modified_entries.size()); // warn 레벨 로그
             for (const auto& entry : modified_entries) {
                 out << "Path: " << entry.path << "\n"
-                    << "Current MD5: " << entry.current_md5 << "\n---\n";
+                    << "Current MD5: " << entry.current_md5 << "\n"
+                    << "Current Permission: " << entry.current_permission << "\n"
+                    << "Current UID:        " << entry.current_uid << "\n"
+                    << "Current GID:        " << entry.current_gid << "\n"
+                    << "Current CTime:      " << entry.current_ctime << "\n"
+                    << "Current MTime:      " << entry.current_mtime << "\n"
+                    << "Current Size:       " << entry.current_size << " bytes\n"
+                    << "-------------------------------------\n";
             }
             out << "\n[ALERT] " << modified_entries.size() << "개의 변조된 파일 발견!\n";
             spdlog::info("변조된 파일 목록 출력 완료."); // info 레벨 로그
