@@ -81,7 +81,7 @@ bool GmailClient::Run(const std::string &file)
         CURLcode res = curl_easy_perform(mCurl);
         if (res != CURLE_OK)
         {
-            spdlog::error("curl_easy_perform() failed: ", curl_easy_strerror(res));
+            spdlog::error("curl_easy_perform() failed: {}", std::string(curl_easy_strerror(res)));
             curl_slist_free_all(recipients);
             curl_slist_free_all(headers);
             curl_mime_free(mime);
