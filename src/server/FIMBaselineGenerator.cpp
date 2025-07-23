@@ -86,6 +86,9 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
     }
 
     auto& storage = DBManager::GetInstance().GetBaselineStorage();
+
+    DBManager::GetInstance().GetModifiedStorage().remove_all<ModifiedEntry>();
+    
     std::vector<std::string> target_paths;
     std::unordered_set<std::string> exclude_paths;
 
