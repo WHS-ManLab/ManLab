@@ -24,4 +24,7 @@ private:
 
     // 내부 실행: ini 파일 파싱 → 경로 순회 및 해시/메타데이터 저장
     void parse_ini_and_store(std::ostream& out);
+
+    // 프로그래스바 바로 밑에 현재 파일명 출력
+   //void PrintCurrentFileBelowProgress(std::ostream& out, const std::string& filePath);
 };
