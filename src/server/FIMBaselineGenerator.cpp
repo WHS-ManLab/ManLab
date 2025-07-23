@@ -10,11 +10,13 @@
 #include "DBManager.h"
 #include "indicator.hpp"
 
+//ini 경로와 DB 경로를 멤버 변수로 저장
 BaselineGenerator::BaselineGenerator(const std::string& ini_path,
                                      const std::string& db_path)
     : ini_path_(ini_path), db_path_(db_path)
 {}
 
+//파일 경로를 받아 해당 파일의 MD5 해시값을 변환
 std::string BaselineGenerator::compute_md5(const std::string& filepath) {
     std::ifstream file(filepath, std::ios::binary);
     if (!file) return "";
@@ -36,12 +38,14 @@ std::string BaselineGenerator::compute_md5(const std::string& filepath) {
     return oss.str();
 }
 
+//파일의 메타데이터 수집
 BaselineEntry BaselineGenerator::collect_metadata(const std::string& path,
                                                  const std::string& md5) {
     struct stat stat_buf;
     if (stat(path.c_str(), &stat_buf) != 0)
         throw std::runtime_error("stat() 실패: " + path);
 
+    //권한 문자열 생성
     std::stringstream perm_ss;
     perm_ss << ((stat_buf.st_mode & S_IRUSR) ? "r" : "-")
             << ((stat_buf.st_mode & S_IWUSR) ? "w" : "-")
@@ -72,6 +76,7 @@ BaselineEntry BaselineGenerator::collect_metadata(const std::string& path,
     };
 }
 
+//INI 파일에서 경로를 파싱하고 해당 경로와 파일/디랙토리 해시를 DB에 저장
 void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
     std::ifstream ini_file(ini_path_);
     if (!ini_file) {
@@ -94,6 +99,7 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
         }
     }
 
+    // 전체 파일 개수 계산
     size_t total_files = 0;
     for (auto& p : target_paths) {
         if (std::filesystem::is_regular_file(p)) ++total_files;
@@ -107,7 +113,7 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
         return;
     }
 
-    // 1) ProgressBar 생성 (CompletedText 비활성화)
+    //ProgressBar 생성 
     indicators::ProgressBar bar(
         indicators::option::BarWidth{50},
         indicators::option::Start{"["},
@@ -120,12 +126,10 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
         indicators::option::ShowRemainingTime{true},
         indicators::option::Stream{out});
 
-    // 2) 첫 번째 set_progress 호출로 바를 그린 뒤,
     bar.set_progress(0);
 
-    // 3) 바로 다음 줄로 내려와서, “파일 경로”가 찍힐 위치를 저장
     out << "\n";
-    out << "\033[s";  // 이 시점부터 아래가 파일 출력 위치
+    out << "\033[s";  
 
     size_t processed = 0;
     for (auto& p : target_paths) {
@@ -133,16 +137,15 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
             if (std::filesystem::is_regular_file(p)) {
                 auto h = compute_md5(p);
                 storage.replace(collect_metadata(p, h));
-                // 4) 바를 업데이트하기 전에, 위쪽(바 위치)으로 커서 복원
-                out << "\033[u"    // 저장된 위치 복원(파일 위치)
-                    << "\033[1A"   // 한 줄 위로 → 바가 있던 라인
-                    << "\r";       // 캐리지 리턴으로 라인 덮어쓰기
+                out << "\033[u"    
+                    << "\033[1A"   
+                    << "\r";       
+
                 bar.set_progress(++processed * 100.0f / total_files);
 
-                // 5) 다시 파일 출력 위치로 복원 → 클리어 → 파일 경로 출력
-                out << "\033[1B"  // 한 줄 아래로 (파일 위치)
+                out << "\033[1B"  
                     <<"\r"
-                    << "\033[2K"  // 줄 전체 클리어
+                    << "\033[2K"  
                     << p << "\n";
             }
             else if (std::filesystem::is_directory(p)) {
@@ -167,9 +170,6 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
             out << "[ERROR] 처리 중 예외 발생: " << ex.what() << "\n";
         }
     }
-
-    // 6) 완료 메시지는 그대로 파일 위치 아래에 한 번만
-    out << "[INFO] Baseline 생성 완료.\n";
 }
 
 void BaselineGenerator::generate_and_store(std::ostream& out) {
