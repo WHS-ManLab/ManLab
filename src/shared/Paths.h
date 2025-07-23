@@ -63,7 +63,7 @@
 // AuditLog 디렉토리
 #define PATH_AUDITLOG "/var/log/audit/audit.log"
 
-// AuditLogRuels 디렉토리
+// AuditLogRules 디렉토리
 #define PATH_AUDITLOGRULES "/root/ManLab/conf/AuditLogRules.yaml"
 
 // 로그 리포트 저장 디렉토리

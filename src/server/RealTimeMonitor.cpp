@@ -257,6 +257,14 @@ bool RealTimeMonitor::isDuplicateEvent(uint64_t inode)
     return false;
 } 
 
+bool isTemporaryOrFile(const std::string& path) {
+    return path.find(".swp") != std::string::npos ||
+           path.find(".swx") != std::string::npos ||
+           path.find("4913") != std::string::npos ||
+           path.back() == '~' ||                    // 백업 파일
+           path.front() == '.';                     // 숨김 파일
+}
+
 // 감시 디렉토리 등록할 때
 void RealTimeMonitor::registerWatchPath(const std::string& userPath) {
     char resolvedPath[PATH_MAX];
@@ -329,10 +337,10 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
         mPath[linkLen] = '\0';
 
         std::string fullPath = mPath.data();
-        fullPath = normalizePath(fullPath);             // 이중 슬래시 제거
-        fullPath = mapToUserPath(fullPath);             // 🔥 사용자 설정 경로로 매핑
+        //fullPath = normalizePath(fullPath);             // 이중 슬래시 제거
+        fullPath = mapToUserPath(fullPath);             // 사용자 설정 경로로 매핑
 
-        if (ShouldDisplayEvent(fullPath, metadata->mask) && !IsExcludedFile(fullPath)) 
+        if (ShouldDisplayEvent(fullPath, metadata->mask) && !IsExcludedFile(fullPath) && !isTemporaryOrFile(fullPath)) 
         {
             if (metadata->mask & FAN_MODIFY)
             {
@@ -346,16 +354,16 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
                 auto it = mRecentModifiedInodes.find(inode);
                 if (it != mRecentModifiedInodes.end())
                 {
-                    RealTime_logger->info("[Event Type] = MODIFY         [Path] = {}", fullPath);
-                    RealTime_logger->flush();
+                    spdlog::get("RealTime_logger")->info("[Event Type] = MODIFY         [Path] = {}", fullPath);
+                    spdlog::get("RealTime_logger")->flush();
                     mRecentModifiedInodes.erase(it);
                 }
             }             
 
             if ((metadata->mask & FAN_ATTRIB))
             {
-                RealTime_logger->info("[Event Type] = ATTRIB CHANGE  [Path] = {}", fullPath);
-                RealTime_logger->flush();
+                spdlog::get("RealTime_logger")->info("[Event Type] = ATTRIB CHANGE  [Path] = {}", fullPath);
+                spdlog::get("RealTime_logger")->flush();
             }
         }
 
@@ -380,33 +388,33 @@ void RealTimeMonitor::processInotifyEvents(std::ostream& out)
         uint64_t mask = event->mask;
 
         // 생성 이벤트
-        if ((mask & IN_CREATE) && ShouldDisplayEvent(path, IN_CREATE) && !IsExcludedFile(path))
+        if ((mask & IN_CREATE) && ShouldDisplayEvent(path, IN_CREATE) && !IsExcludedFile(path) && !isTemporaryOrFile(path))
         {
-            RealTime_logger->info("[Event Type] = CREATE         [Path] = {}", normalizePath(path));
-            RealTime_logger->flush();
+            spdlog::get("RealTime_logger")->info("[Event Type] = CREATE         [Path] = {}", normalizePath(path));
+            spdlog::get("RealTime_logger")->flush();
         }
 
         // 삭제 이벤트 
-        if ((mask & IN_DELETE) && ShouldDisplayEvent(path, IN_DELETE))
+        if ((mask & IN_DELETE) && ShouldDisplayEvent(path, IN_DELETE) && !IsExcludedFile(path) && !isTemporaryOrFile(path))
         {
-            RealTime_logger->info("[Event Type] = DELETE         [Path] = {}", normalizePath(path));
-            RealTime_logger->flush();  
+            spdlog::get("RealTime_logger")->info("[Event Type] = DELETE         [Path] = {}", normalizePath(path));
+            spdlog::get("RealTime_logger")->flush();  
         }
 
         // 리네임 이벤트 (From -> To)
         // rename 이벤트 매칭용 임시 저장소
         static std::unordered_map<uint32_t, std::string> renameMap;
-        if ((event->mask & IN_MOVED_FROM) && ShouldDisplayEvent(path, IN_MOVED_FROM) && !IsExcludedFile(path)) 
+        if ((event->mask & IN_MOVED_FROM) && ShouldDisplayEvent(path, IN_MOVED_FROM) && !IsExcludedFile(path) && !isTemporaryOrFile(path)) 
         {
             renameMap[event->cookie] = path;  // 이동 전 경로 저장
         }
-        else if ((event->mask & IN_MOVED_TO) && ShouldDisplayEvent(path, IN_MOVED_TO) && !IsExcludedFile(path)) 
+        else if ((event->mask & IN_MOVED_TO) && ShouldDisplayEvent(path, IN_MOVED_TO) && !IsExcludedFile(path) && !isTemporaryOrFile(path)) 
         {
             auto it = renameMap.find(event->cookie);
             if (it != renameMap.end()) 
             {
-                RealTime_logger->info("[Event Type] = RENAME         [From] = {} -> [To] = {}", it->second, normalizePath(path));
-                RealTime_logger->flush();
+                spdlog::get("RealTime_logger")->info("[Event Type] = RENAME         [From] = {} -> [To] = {}", normalizePath(it->second) , normalizePath(path));
+                spdlog::get("RealTime_logger")->flush();
                 renameMap.erase(it);
             }
         }

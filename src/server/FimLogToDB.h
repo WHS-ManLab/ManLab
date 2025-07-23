@@ -9,10 +9,11 @@ public:
 
 private:
     struct ParsedLog {
-        std::string path;
-        std::string eventType;
-        std::string timestamp;
-    };
+    std::string timestamp;
+    std::string eventType;
+    std::string path;     
+    std::string newName;  
+};
 
     // 로그 한 줄을 파싱해서 ParsedLog 구조체에 저장하는 함수
     bool parseLogLine(const std::string& line, ParsedLog& outLog);
