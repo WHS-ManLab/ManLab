@@ -17,6 +17,7 @@ public:
 struct AuditLogRule
 {
 public:
+    std::string Type;
     std::string Key;
     std::string Description;
     std::vector<Condition> Conditions;
@@ -37,17 +38,19 @@ class AuditLogManager
 {
 public:
     void LoadRules();
-    std::string ExtractMsgId(const std::string &line) const;
-    bool LogMonitor(std::ifstream &infile);
+    std::string ExtractMsgId(const std::string& line) const;
+    std::string AuidToUsername(const std::string& auidStr);
+    bool LogMonitor(std::ifstream& infile);
     void Run();
-    void Init(std::atomic<bool> &shouldRun);
+    void Init(std::atomic<bool>& shouldRun);
 
 private:
     std::vector<AuditLogRule> mRules;
     std::map<std::string, AuditLogRecord> mRecords;
 
-    bool parseLogLine(const std::string &line, AuditLogRecord &record);
-    bool Matches(const AuditLogRecord &record, const AuditLogRule &rule) const;
+    bool parseLogLine(const std::string& line, AuditLogRecord& record);
+    std::map<std::string, std::string> parseKeyValue(const std::string& line);
+    bool matches(const AuditLogRecord& record, const AuditLogRule& rule) const;
 
-    std::atomic<bool> *mpShouldRun = nullptr;
+    std::atomic<bool>* mpShouldRun = nullptr;
 };
