@@ -48,8 +48,7 @@ struct LogAnalysisResult
     std::string type;
     std::string description;
     std::string timestamp;
-    std::string uid;
-    bool bIsSuccess;
+    std::string username;
     std::string originalLogPath;
     std::string rawLine;
 };
@@ -70,8 +69,9 @@ struct BaselineEntry
 // FIM RealTimeMonitor 테이블 구조
 struct RealtimeEventLog {
     int id;
-    std::string path;
     std::string eventType;
+    std::string path;       
+    std::string newName;    
     std::string timestamp;
 };
 
@@ -114,8 +114,7 @@ using StorageLogAnalysisResult = decltype(sqlite_orm::make_storage("",
         sqlite_orm::make_column("Type", &LogAnalysisResult::type),
         sqlite_orm::make_column("Description", &LogAnalysisResult::description),
         sqlite_orm::make_column("Timestamp", &LogAnalysisResult::timestamp),
-        sqlite_orm::make_column("UID", &LogAnalysisResult::uid),
-        sqlite_orm::make_column("IsSuccess", &LogAnalysisResult::bIsSuccess),
+        sqlite_orm::make_column("Username", &LogAnalysisResult::username),
         sqlite_orm::make_column("OriginalLogPath", &LogAnalysisResult::originalLogPath),
         sqlite_orm::make_column("RawLine", &LogAnalysisResult::rawLine))));
 
@@ -132,15 +131,15 @@ using StorageBaseline = decltype(sqlite_orm::make_storage("",
         sqlite_orm::make_column("mtime",       &BaselineEntry::mtime),
         sqlite_orm::make_column("size",        &BaselineEntry::size))));
 
-// 실시간 이벤트 모니터링 테이블에 대한 storage 타입 정의
+        // 실시간 이벤트 모니터링 테이블에 대한 storage 타입 정의
 using StorageRealTimeMonitor = decltype(sqlite_orm::make_storage("",
     sqlite_orm::make_table("RealTimeMonitor",
         sqlite_orm::make_column("ID", &RealtimeEventLog::id, sqlite_orm::primary_key().autoincrement()),
-        sqlite_orm::make_column("PATH", &RealtimeEventLog::path),
         sqlite_orm::make_column("EVENT_TYPE", &RealtimeEventLog::eventType),
+        sqlite_orm::make_column("PATH", &RealtimeEventLog::path),     
+        sqlite_orm::make_column("NEW_NAME", &RealtimeEventLog::newName),    
         sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp)
-    )
-));
+    )));
 
 //FIM 해시값 변조 탐지 완료된 파일만 따로 모아놓는 테이블 구조
 struct ModifiedEntry {

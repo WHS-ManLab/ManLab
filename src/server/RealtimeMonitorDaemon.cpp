@@ -8,7 +8,6 @@
 #include <vector>
 #include <syslog.h>
 
-std::shared_ptr<spdlog::logger> RealTime_logger = nullptr;
 
 void RealtimeMonitorDaemon::Init(std::atomic<bool>& shouldRun)
 {
@@ -18,25 +17,8 @@ void RealtimeMonitorDaemon::Init(std::atomic<bool>& shouldRun)
 
 void RealtimeMonitorDaemon::Run()
 {   
-    
-    try {
-    RealTime_logger = spdlog::rotating_logger_mt(
-    "RealTime_logger",
-    "/root/ManLab/log/RealTimeMonitor.log",
-    1024 * 1024 * 5, // 최대 파일 크기 5MB
-    3                // 최대 파일 개수 3개
-    );
-    
-    RealTime_logger->set_level(spdlog::level::info);
-    RealTime_logger->flush_on(spdlog::level::info);
-
-    RealTime_logger->info("Logging started");
-    RealTime_logger->flush();
-    } 
-    catch (const spdlog::spdlog_ex &ex) 
-    {
-        std::cerr << "Log init failed: " << ex.what() << std::endl;
-    }
+    spdlog::get("RealTime_logger")->info("Logging started");
+    spdlog::get("RealTime_logger")->flush();
 
     // 1. INI 파일에서 경로, 마스크 파싱
     auto pathMaskList = parsePathsFromIni(PATH_FIM_CONFIG_INI, std::cerr);
