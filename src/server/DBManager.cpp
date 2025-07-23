@@ -57,7 +57,7 @@ DBManager::DBManager()
             sqlite_orm::make_column("md5",  &BaselineEntry::md5),
             sqlite_orm::make_column("permission",  &BaselineEntry::permission),
             sqlite_orm::make_column("uid",         &BaselineEntry::uid),
-            sqlite_orm::make_column("gid",         &BaselineEntry::gid),
+            sqlite_orm::make_column("current_gid",         &BaselineEntry::gid),
             sqlite_orm::make_column("ctime",       &BaselineEntry::ctime),
             sqlite_orm::make_column("mtime",       &BaselineEntry::mtime),
             sqlite_orm::make_column("size",        &BaselineEntry::size)))),
@@ -76,7 +76,13 @@ DBManager::DBManager()
         PATH_MODIFIED_DB,
             sqlite_orm::make_table("modifiedhash",
             sqlite_orm::make_column("path", &ModifiedEntry::path, sqlite_orm::primary_key()),
-            sqlite_orm::make_column("current_md5", &ModifiedEntry::current_md5)))),
+            sqlite_orm::make_column("current_md5", &ModifiedEntry::current_md5),
+            sqlite_orm::make_column("current_permission",  &ModifiedEntry::current_permission),
+            sqlite_orm::make_column("current_uid",         &ModifiedEntry::current_uid),
+            sqlite_orm::make_column("current_gid",         &ModifiedEntry::current_gid),
+            sqlite_orm::make_column("current_ctime",       &ModifiedEntry::current_ctime),
+            sqlite_orm::make_column("current_mtime",       &ModifiedEntry::current_mtime),
+            sqlite_orm::make_column("current_size",        &ModifiedEntry::current_size)))),
 
      mScanReportStorage(sqlite_orm::make_storage(
         PATH_SCAN_REPORT_DB,

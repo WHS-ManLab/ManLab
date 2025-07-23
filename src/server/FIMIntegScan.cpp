@@ -103,7 +103,16 @@ void compare_with_baseline(bool verbose, std::ostream& out) {
         if (tampered) {
             try {
                 // ModifiedEntry로만 저장 (BaselineEntry는 매핑 대상이 아님)
-                modified_storage.replace(ModifiedEntry{path, current_hash});
+                modified_storage.replace(ModifiedEntry{
+                    path, 
+                    current_hash,
+                    current_entry.permission,
+                    current_entry.uid,
+                    current_entry.gid,
+                    current_entry.ctime,
+                    current_entry.mtime,
+                    current_entry.size
+                });
             } catch (const std::exception& e) {
                 if (verbose)
                     out << "[ERROR] 변조 항목 저장 실패: " << e.what() << std::endl;

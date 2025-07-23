@@ -92,7 +92,14 @@ void PrintIntegscan(std::ostream& out) {
             spdlog::warn("{}개의 변조된 파일 발견!", modified_entries.size()); // warn 레벨 로그
             for (const auto& entry : modified_entries) {
                 out << "Path: " << entry.path << "\n"
-                    << "Current MD5: " << entry.current_md5 << "\n---\n";
+                    << "Current MD5: " << entry.current_md5 << "\n"
+                    << "Current Permission: " << entry.current_permission << "\n"
+                    << "Current UID:        " << entry.current_uid << "\n"
+                    << "Current GID:        " << entry.current_gid << "\n"
+                    << "Current CTime:      " << entry.current_ctime << "\n"
+                    << "Current MTime:      " << entry.current_mtime << "\n"
+                    << "Current Size:       " << entry.current_size << " bytes\n"
+                    << "-------------------------------------\n";
             }
             out << "\n[ALERT] " << modified_entries.size() << "개의 변조된 파일 발견!\n";
             spdlog::info("변조된 파일 목록 출력 완료."); // info 레벨 로그
