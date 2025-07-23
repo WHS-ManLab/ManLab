@@ -328,7 +328,7 @@ html << R"(</tbody>
 
 html << R"(
 <h2>Real-time Monitoring Events</h2>
-<p>Real-time monitoring records from )" << mLastReportTime << " to " << mCurrentTime << R"(</p>
+<p>Real-time monitoring records from )" << mStartTime << " to " << mEndTime << R"(</p>
 <table>
     <thead>
         <tr>
@@ -346,7 +346,7 @@ std::vector<RealtimeEventLog> realTimeRecords;
 
 try {
     realTimeRecords = realTimeStorage.get_all<RealtimeEventLog>(
-        sqlite_orm::where(sqlite_orm::between(&RealtimeEventLog::timestamp, mLastReportTime, mCurrentTime)));
+        sqlite_orm::where(sqlite_orm::between(&RealtimeEventLog::timestamp,  mStartTime, mEndTime)));
 } catch (const std::exception& e) {
     html << R"(<tr>
         <td colspan="4" style="text-align: center; font-style: italic; color: red;">
