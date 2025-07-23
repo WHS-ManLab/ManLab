@@ -72,11 +72,9 @@ echo "[INFO] Setting up auditd..."
 apt install -y auditd
 systemctl enable auditd
 systemctl start auditd
-if ! cmp -s "$AUDITD_SRC" "$AUDITD_DST"; then
-  cp -v "$AUDITD_SRC" "$AUDITD_DST"
-  chmod 640 "$AUDITD_DST"
-  augenrules --load
-fi
+cp -v "$AUDITD_SRC" "$AUDITD_DST"
+chmod 640 "$AUDITD_DST"
+augenrules --load > /dev/null 2>&1
 
 # 8. spdlog 설치
 echo "[INFO] Installing spdlog..."
