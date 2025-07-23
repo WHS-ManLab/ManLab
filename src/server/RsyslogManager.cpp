@@ -116,10 +116,11 @@ void RsyslogManager::Run()
                 };
 
                 AnalysisResult result;
-                for (const auto& analyzer : analyzers) {
+                for (const auto& analyzer : analyzers)
+                {
+                    result = analyzer();
                     if (result.isMalicious)
                     {
-                        result = analyzer();
                         if (!result.username.empty())
                         {
                             entry->username = result.username;
