@@ -133,11 +133,9 @@ void RsyslogManager::Run()
                     lar.type = result.type;
                     lar.description = result.description;
                     lar.timestamp = entry->timestamp;
-                    lar.uid = entry->hostname;
-                    lar.bIsSuccess = true;
+                    lar.username = entry->hostname;
                     lar.originalLogPath = mLogPath;
                     lar.rawLine = entry->raw;
-
                     manager.Run(lar,false);
                 }
             }

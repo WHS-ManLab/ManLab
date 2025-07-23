@@ -1,11 +1,11 @@
 #include "GmailClient.h"
 #include <stdlib.h>
-#include <iostream> // 디버깅용
 #include <openssl/evp.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <vector>
 #include <cstring>
+#include <spdlog/spdlog.h>
 
 // 컴파일 시 이 부분을 주석 처리 후 key, iv를 붙여넣으시면 됩니다.
 const unsigned char key[32] = {};
@@ -16,14 +16,15 @@ GmailClient::GmailClient(const std::string &to)
     mCurl = curl_easy_init();
     if (!mCurl)
     {
-        std::cerr << "Failed to init curl" << std::endl;
         // TODO : 에러 처리 로직
+        spdlog::error("Failed to init curl.");
         return;
     }
 
     mTo = to;
     std::string encryptedAppPassword = "pYJ53KhgQmK4T8HLiqWggNchno0fQ+ZAhFX8NUIH2cY=";
     mAppPassword = GmailClient::DecryptAppPassword(encryptedAppPassword);
+    spdlog::info("GmailClient() completed.");
 }
 
 GmailClient::~GmailClient()
@@ -55,7 +56,7 @@ bool GmailClient::Run(const std::string &file)
         curl_easy_setopt(mCurl, CURLOPT_MAIL_RCPT, recipients);
 
         mime = curl_mime_init(mCurl);
-        std::string body = "만랩 로그 분석 리포트입니다.";
+        std::string body = "설정하신 ReportConfig.ini 내용에 따라 생성된 만랩 정기 리포트입니다.";
 
         // 본문
         part = curl_mime_addpart(mime);
@@ -73,15 +74,14 @@ bool GmailClient::Run(const std::string &file)
         struct curl_slist *headers = nullptr;
         headers = curl_slist_append(headers, ("To: " + mTo).c_str());
         headers = curl_slist_append(headers, ("From: " + mFrom).c_str());
-        headers = curl_slist_append(headers, "Subject: 만랩 로그 분석 리포트");
+        headers = curl_slist_append(headers, "Subject: 만랩 정기 리포트");
         curl_easy_setopt(mCurl, CURLOPT_HTTPHEADER, headers);
 
         curl_easy_setopt(mCurl, CURLOPT_MIMEPOST, mime);
         CURLcode res = curl_easy_perform(mCurl);
         if (res != CURLE_OK)
         {
-            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
-            // TODO : 로깅
+            spdlog::error("curl_easy_perform() failed: ", curl_easy_strerror(res));
             curl_slist_free_all(recipients);
             curl_slist_free_all(headers);
             curl_mime_free(mime);
@@ -89,7 +89,7 @@ bool GmailClient::Run(const std::string &file)
         }
         else
         {
-            std::cout << "Email sent successfully.\n";
+            spdlog::info("Email sent successfully.");
             curl_slist_free_all(recipients);
             curl_slist_free_all(headers);
             curl_mime_free(mime);
@@ -98,6 +98,7 @@ bool GmailClient::Run(const std::string &file)
     }
     else
     {
+        spdlog::error("Failed to init curl.");
         return false;
     }
 }
@@ -118,6 +119,7 @@ std::string GmailClient::DecryptAppPassword(const std::string &appPassword)
 
     if (!success) {
         // TODO : 에러 핸들링
+        spdlog::error("App password decryption failed.");
         return "";
     }
 
@@ -140,10 +142,11 @@ std::string GmailClient::Base64Decode(const std::string &input)
 
     if (len <= 0) {
         // TODO: 에러 처리
+        spdlog::error("Base64 decoding failed.");
         return "";
     }
 
-    // TODO : 로깅 (Base64 Decode successed.)
+    spdlog::debug("Base64 decoding successed.");
     return std::string(buffer.data(), len);
 }
 
@@ -154,26 +157,34 @@ bool GmailClient::AesDecrypt(const unsigned char* ciphertext, int ciphertextLen,
 
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx)
-        // TODO : 로깅 (Failed to create OpenSSL Context.)
+    {
+        spdlog::error("Failed to create OpenSSL Context.");
         return false;
+    }
 
     int len = 0;
 
     if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) != 1)
-        // TODO : 로깅 (Decryption initialization failed in AES-256-CBC mode.)
+    {
+        spdlog::error("Decryption initialization failed in AES-256-CBC mode.");
         return false;
+    }
 
     if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertextLen) != 1)
-        // TODO : 로깅 (Decryption failed.)
+    {
+        spdlog::error("Decryption failed.");
         return false;
+    }
     plaintextLen = len;
 
     if (EVP_DecryptFinal_ex(ctx, plaintext + len, &len) != 1)
-        // TODO : 로깅 (Failed to remove padding.)
+    {
+        spdlog::error("Failed to remove padding.");
         return false;
+    }
     plaintextLen += len;
 
     EVP_CIPHER_CTX_free(ctx);
-    // TODO : 로깅 (Decryption successed.)
+    spdlog::debug("Decryption successed.");
     return true;
 }
