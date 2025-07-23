@@ -74,6 +74,7 @@ struct RealtimeEventLog {
     std::string path;       
     std::string newName;    
     std::string timestamp;
+    std::string md5;
 };
 
 // 검사 리포트 저장 테이블 구조
@@ -140,7 +141,8 @@ using StorageRealTimeMonitor = decltype(sqlite_orm::make_storage("",
         sqlite_orm::make_column("EVENT_TYPE", &RealtimeEventLog::eventType),
         sqlite_orm::make_column("PATH", &RealtimeEventLog::path),     
         sqlite_orm::make_column("NEW_NAME", &RealtimeEventLog::newName),    
-        sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp)
+        sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp),
+        sqlite_orm::make_column("MD5", &RealtimeEventLog::md5)
     )));
 
 //FIM 해시값 변조 탐지 완료된 파일만 따로 모아놓는 테이블 구조
