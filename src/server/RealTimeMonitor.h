@@ -32,7 +32,6 @@ enum CustomEvent : uint64_t {
     RENAME  = 0x10 //리네임추가
 };
 
-extern std::shared_ptr<spdlog::logger> RealTime_logger;
 constexpr size_t BUF_SIZE = 4096;
 std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::string& iniPath, std::ostream& err);
 uint64_t parseCustomEventMask(const std::string& eventsStr, std::ostream& err);
