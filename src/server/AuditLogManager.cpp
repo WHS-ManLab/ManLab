@@ -252,8 +252,7 @@ void AuditLogManager::Run()
                         else
                             lar.timestamp = record.MsgId;
 
-                        lar.uid = record.Fields.count("auid") > 0 ? record.Fields.at("auid") : "";
-                        lar.bIsSuccess = true;
+                        lar.username = record.Fields.count("auid") > 0 ? record.Fields.at("auid") : "";
                         lar.originalLogPath = PATH_AUDITLOG;
                         lar.rawLine = record.RawLine;
 
