@@ -88,7 +88,7 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
     auto& storage = DBManager::GetInstance().GetBaselineStorage();
 
     DBManager::GetInstance().GetModifiedStorage().remove_all<ModifiedEntry>();
-    
+
     std::vector<std::string> target_paths;
     std::unordered_set<std::string> exclude_paths;
 
@@ -213,6 +213,27 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
             out << "[ERROR] 처리 중 예외 발생: " << ex.what() << "\n";
         }
     }
+    
+    //파일 경로 삭제
+    out << "\033[1A"
+            << "\033[2K"
+            << "\r";
+
+    //완료 후 요약 정보 출력
+    out << "\n[SUCCESS] Baseline 생성 완료\n";
+    out << "\n";
+    out << "총 검사 파일 수: " << processed << "\n";
+    out << "\n";
+
+    out << "대상 경로:\n";
+    for (const auto& tp : target_paths)
+        out << "  - " << tp << "\n";
+        out << "\n";
+        
+    out << "제외 경로:\n";
+    for (const auto& ep : exclude_paths)
+        out << "  - " << ep << "\n";
+
 }
 
 void BaselineGenerator::generate_and_store(std::ostream& out) {

@@ -35,7 +35,6 @@ void BaselineGen(std::ostream& out) {
     try {
         BaselineGenerator generator(ini_path, db_path);
         generator.generate_and_store(out);
-        out << "[SUCCESS] Baseline 생성 완료\n";
         spdlog::info("Baseline 생성 완료."); // info 레벨 로그
     } catch (const std::exception& e) {
         out << "[ERROR] Baseline 생성 실패: " << e.what() << '\n';
