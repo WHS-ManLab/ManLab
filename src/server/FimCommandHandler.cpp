@@ -8,9 +8,7 @@
 #include "spdlog/spdlog.h" // spdlog 헤더
 #include "spdlog/sinks/rotating_file_sink.h" // spdlog 회전 파일 싱크 헤더
 
-namespace fim {
-
-void IntScan(std::ostream& out) {
+void FimCommandHandler::IntScan(std::ostream& out) {
 
     spdlog::info("해시값 무결성 검사 시작."); // info 레벨 로그
 
@@ -25,7 +23,7 @@ void IntScan(std::ostream& out) {
     }
 }
 
-void BaselineGen(std::ostream& out) {
+void FimCommandHandler::BaselineGen(std::ostream& out) {
     spdlog::info("Baseline 해시값 생성 시작."); // info 레벨 로그
     out << "baseline 해시값 생성중...\n" << std::endl;
 
@@ -43,7 +41,7 @@ void BaselineGen(std::ostream& out) {
     }
 
 }
-void PrintBaseline(std::ostream& out) {
+void FimCommandHandler::PrintBaseline(std::ostream& out) {
     spdlog::info("Baseline DB 내용 출력 시작."); // info 레벨 로그
     out << "\n[INFO] Baseline DB 내용 출력:\n" << std::endl;
     auto& storage = DBManager::GetInstance().GetBaselineStorage();
@@ -74,7 +72,7 @@ void PrintBaseline(std::ostream& out) {
         spdlog::error("Baseline DB 조회 중 오류 발생: {}", e.what()); // error 레벨 로그
     }
 }
-void PrintIntegscan(std::ostream& out) {
+void FimCommandHandler::PrintIntegscan(std::ostream& out) {
     spdlog::info("무결성 검사 결과 출력 시작."); // info 레벨 로그
     out << "[INFO] 무결성 검사 결과 출력 중...\n" << std::endl;
 
@@ -109,7 +107,4 @@ void PrintIntegscan(std::ostream& out) {
         out << "[ERROR] modifiedhash.db 조회 실패: " << e.what() << std::endl;
         spdlog::error("modifiedhash.db 조회 실패: {}", e.what()); // error 레벨 로그
     }
-}
-
-
 }

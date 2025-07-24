@@ -22,8 +22,9 @@ SERVER_SRCS = \
     $(SERVER_DIR)/main.cpp \
     $(SERVER_DIR)/ServerDaemon.cpp \
     $(SERVER_DIR)/DaemonUtils.cpp \
-    $(SERVER_DIR)/CommandExecutor.cpp \
     $(SERVER_DIR)/CommandReceiver.cpp \
+    $(SERVER_DIR)/CommandBus.cpp \
+    $(SERVER_DIR)/RegisterCommands.cpp \
     $(SERVER_DIR)/RealtimeMonitorDaemon.cpp \
     $(SERVER_DIR)/RealTimeMonitor.cpp \
     $(SERVER_DIR)/ScheduleWatcher.cpp \
@@ -48,7 +49,7 @@ SERVER_SRCS = \
     $(SERVER_DIR)/ScanQueue.cpp \
     $(SERVER_DIR)/ScanWatchThread.cpp \
     $(SERVER_DIR)/AuditLogManager.cpp \
-    $(SERVER_DIR)/FimLogToDB.cpp \
+    $(SERVER_DIR)/FimLogToDB.cpp
 
 # 클라이언트 소스
 CLI_SRCS = \

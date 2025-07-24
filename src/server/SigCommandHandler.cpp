@@ -8,10 +8,9 @@
 #include <iomanip>  // std::setw
 #include <tuple>    // std::tie
 
-namespace sig 
-{
 
-void MalScan(std::ostream& out)
+
+void SigCommandHandler::MalScan(std::ostream& out)
 {
     using namespace std;
     using namespace std::chrono;
@@ -25,7 +24,8 @@ void MalScan(std::ostream& out)
     malscan.SaveReportToDB();
 }
 
-void Restore(const std::string& filename, std::ostream& out)
+
+void SigCommandHandler::Restore(const std::string& filename, std::ostream& out) 
 {
     using namespace std;
     out << "Restoring file: " << filename << endl;
@@ -43,7 +43,7 @@ void Restore(const std::string& filename, std::ostream& out)
     }
 }
 
-void CmdListReports(std::ostream& out)
+void SigCommandHandler::CmdListReports(std::ostream& out) 
 {
     using namespace std;
     auto& storage = DBManager::GetInstance().GetScanReportStorage();
@@ -73,7 +73,7 @@ void CmdListReports(std::ostream& out)
         out << "(no scan reports found)\n";
 }
 
-void CmdShowReport(int id, std::ostream& out)
+void SigCommandHandler::CmdShowReport(int id, std::ostream& out)
 {
     using namespace std;
     auto& storage = DBManager::GetInstance().GetScanReportStorage();
@@ -95,5 +95,3 @@ void CmdShowReport(int id, std::ostream& out)
     out << r.report << "\n";
     out << "==========================================\n";
 }
-
-} // namespace sig
