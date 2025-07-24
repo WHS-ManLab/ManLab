@@ -257,7 +257,8 @@ bool RealTimeMonitor::isDuplicateEvent(uint64_t inode)
     return false;
 } 
 
-bool isTemporaryOrFile(const std::string& path) {
+bool isTemporaryOrFile(const std::string& path) 
+{
     return path.find(".swp") != std::string::npos ||
            path.find(".swx") != std::string::npos ||
            path.find("4913") != std::string::npos ||
@@ -266,19 +267,23 @@ bool isTemporaryOrFile(const std::string& path) {
 }
 
 // 감시 디렉토리 등록할 때
-void RealTimeMonitor::registerWatchPath(const std::string& userPath) {
+void RealTimeMonitor::registerWatchPath(const std::string& userPath) 
+{
     char resolvedPath[PATH_MAX];
-    if (realpath(userPath.c_str(), resolvedPath)) {
+    if (realpath(userPath.c_str(), resolvedPath)) 
+    {
         std::string realPath = resolvedPath;
         realToUserPathMap[realPath] = userPath;
     }
 }
 
 // 이벤트 경로를 사용자 경로로 변환
-std::string RealTimeMonitor::mapToUserPath(const std::string& eventPath) const {
-    for (const auto& [realBase, userBase] : realToUserPathMap) {
-        // starts_with 지원 안 되면
-        if (eventPath.compare(0, realBase.size(), realBase) == 0) {
+std::string RealTimeMonitor::mapToUserPath(const std::string& eventPath) const 
+{
+    for (const auto& [realBase, userBase] : realToUserPathMap) 
+    {
+        if (eventPath.compare(0, realBase.size(), realBase) == 0) 
+        {
             std::string suffix = eventPath.substr(realBase.size());
             return userBase + suffix;
         }
@@ -287,7 +292,8 @@ std::string RealTimeMonitor::mapToUserPath(const std::string& eventPath) const {
 }
 
 //루트 경로 출력 수정 함수
-std::string normalizePath(const std::string& rawPath) {
+std::string normalizePath(const std::string& rawPath) 
+{
     std::string path = rawPath;
     while (path.find("//") != std::string::npos)
         path.erase(path.find("//"), 1);
@@ -336,8 +342,7 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
         }
         mPath[linkLen] = '\0';
 
-        std::string fullPath = mPath.data();
-        //fullPath = normalizePath(fullPath);             // 이중 슬래시 제거
+        std::string fullPath = mPath.data();  
         fullPath = mapToUserPath(fullPath);             // 사용자 설정 경로로 매핑
 
         if (ShouldDisplayEvent(fullPath, metadata->mask) && !IsExcludedFile(fullPath) && !isTemporaryOrFile(fullPath)) 
@@ -354,7 +359,8 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
                 auto it = mRecentModifiedInodes.find(inode);
                 if (it != mRecentModifiedInodes.end())
                 {
-                    spdlog::get("RealTime_logger")->info("[Event Type] = MODIFY         [Path] = {}", fullPath);
+                    std::string md5hash = BaselineGenerator::compute_md5(fullPath);
+                    spdlog::get("RealTime_logger")->info("[Event Type] = MODIFY         [Path] = {}  [MD5] = {}", fullPath, md5hash);
                     spdlog::get("RealTime_logger")->flush();
                     mRecentModifiedInodes.erase(it);
                 }
@@ -362,7 +368,8 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
 
             if ((metadata->mask & FAN_ATTRIB))
             {
-                spdlog::get("RealTime_logger")->info("[Event Type] = ATTRIB CHANGE  [Path] = {}", fullPath);
+                std::string md5hash = BaselineGenerator::compute_md5(fullPath);
+                spdlog::get("RealTime_logger")->info("[Event Type] = ATTRIB CHANGE  [Path] = {} [Path] = {}  [MD5] = {}", fullPath, md5hash);
                 spdlog::get("RealTime_logger")->flush();
             }
         }
@@ -390,14 +397,15 @@ void RealTimeMonitor::processInotifyEvents(std::ostream& out)
         // 생성 이벤트
         if ((mask & IN_CREATE) && ShouldDisplayEvent(path, IN_CREATE) && !IsExcludedFile(path) && !isTemporaryOrFile(path))
         {
-            spdlog::get("RealTime_logger")->info("[Event Type] = CREATE         [Path] = {}", normalizePath(path));
+            std::string md5hash = BaselineGenerator::compute_md5(path);
+            spdlog::get("RealTime_logger")->info("[Event Type] = CREATE         [Path] = {}  [MD5] = {}", normalizePath(path), md5hash);
             spdlog::get("RealTime_logger")->flush();
         }
 
         // 삭제 이벤트 
         if ((mask & IN_DELETE) && ShouldDisplayEvent(path, IN_DELETE) && !IsExcludedFile(path) && !isTemporaryOrFile(path))
         {
-            spdlog::get("RealTime_logger")->info("[Event Type] = DELETE         [Path] = {}", normalizePath(path));
+            spdlog::get("RealTime_logger")->info("[Event Type] = DELETE         [Path] = {}  [MD5] = - ", normalizePath(path));
             spdlog::get("RealTime_logger")->flush();  
         }
 
@@ -413,7 +421,8 @@ void RealTimeMonitor::processInotifyEvents(std::ostream& out)
             auto it = renameMap.find(event->cookie);
             if (it != renameMap.end()) 
             {
-                spdlog::get("RealTime_logger")->info("[Event Type] = RENAME         [From] = {} -> [To] = {}", normalizePath(it->second) , normalizePath(path));
+                std::string md5hash = BaselineGenerator::compute_md5(path);
+                spdlog::get("RealTime_logger")->info("[Event Type] = RENAME         [From] = {} -> [To] = {}  [MD5] = {}", normalizePath(it->second) , normalizePath(path), md5hash);
                 spdlog::get("RealTime_logger")->flush();
                 renameMap.erase(it);
             }
