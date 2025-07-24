@@ -12,9 +12,10 @@ bool FimLogToDB::parseLogLine(const std::string& line, ParsedLog& outLog)
     std::smatch match;
 
     // RENAME 로그
-    std::regex renamePattern(R"(\[(.*?)\]\s+\[RealTime_logger\]\s+\[info\]\s+\[Event Type\] =\s*RENAME\s+\[From\] =\s*(.*?)\s*->\s*\[To\] =\s*(.+))");
+    std::regex renamePattern(R"(\[(.*?)\]\s+\[RealTime_logger\]\s+\[info\]\s+\[Event Type\]\s*=\s*RENAME\s+\[From\]\s*=\s*(.*?)\s*->\s*\[To\]\s*=\s*(.*?)\s+\[MD5\]\s*=\s*([a-fA-F0-9]{32}))");
 
-    std::regex generalPattern(R"(\[(.*?)\]\s+\[RealTime_logger\]\s+\[info\]\s+\[Event Type\] =\s*(.+?)\s+\[Path\] =\s+(.+))");
+    std::regex generalPattern(R"(\[(.*?)\]\s+\[RealTime_logger\]\s+\[info\]\s+\[Event Type\]\s*=\s*(\w+)\s+\[Path\]\s*=\s*(\S+)\s+\[MD5\]\s*=\s*(.*))");
+
 
 
     if (std::regex_match(line, match, renamePattern)) 
@@ -23,26 +24,30 @@ bool FimLogToDB::parseLogLine(const std::string& line, ParsedLog& outLog)
         outLog.eventType = "RENAME";
         outLog.path = match[2].str();       // From 경로
         outLog.newName = match[3].str();    // To 경로
-    return true;
+        outLog.md5 = match.size() > 4 ? match[4].str() : "-";
+        return true;
     } 
     else if (std::regex_match(line, match, generalPattern)) 
     {
-    outLog.timestamp = match[1].str();
-    outLog.eventType = match[2].str();
-    outLog.path = match[3].str();
-    outLog.newName = "-";                
-    return true;
+        outLog.timestamp = match[1].str();
+        outLog.eventType = match[2].str();
+        outLog.path = match[3].str();
+        outLog.newName = "-";
+        outLog.md5 = match.size() > 4 ? match[4].str() : "-";  // MD5 있을 수도, 없을 수도 있음
+        return true;
     } 
     else 
     {
-    return false;
+        return false;
     }
 }
 
 
-void FimLogToDB::ParseAndStore(const std::string& logFilePath, const std::string& lastSavedTime) {
+void FimLogToDB::ParseAndStore(const std::string& logFilePath, const std::string& lastSavedTime) 
+{
     std::ifstream logFile(logFilePath);
-    if (!logFile.is_open()) {
+    if (!logFile.is_open()) 
+    {
         std::cerr << "[ERROR] 로그 파일 열기 실패: " << logFilePath << std::endl;
         return;
     }
@@ -52,22 +57,30 @@ void FimLogToDB::ParseAndStore(const std::string& logFilePath, const std::string
     std::string line;
     std::string newestTimestamp = lastSavedTime;
 
-    while (std::getline(logFile, line)) {
+    while (std::getline(logFile, line)) 
+    {
         ParsedLog parsed;
-        if (parseLogLine(line, parsed)) {
-            if (parsed.timestamp > lastSavedTime) {
+        if (parseLogLine(line, parsed)) 
+        {
+            if (parsed.timestamp > lastSavedTime) 
+            {
                 RealtimeEventLog event;
                 event.eventType = parsed.eventType;
                 event.timestamp = parsed.timestamp;
                 event.path = parsed.path;
                 event.newName = parsed.newName;
+                event.md5 = parsed.md5;      // MD5 필드 추가
 
-                try {
+                try 
+                {
                     storage.insert(event);
-                    if (parsed.timestamp > newestTimestamp) {
+                    if (parsed.timestamp > newestTimestamp) 
+                    {
                         newestTimestamp = parsed.timestamp;
                     }
-                } catch (const std::exception& e) {
+                } 
+                catch (const std::exception& e) 
+                {
                     std::cerr << "[ERROR] DB 저장 실패: " << e.what() << std::endl;
                 }
             }
@@ -75,14 +88,17 @@ void FimLogToDB::ParseAndStore(const std::string& logFilePath, const std::string
     }
 }
 
-
-std::string FimLogToDB::GetLatestTimestamp() {
+std::string FimLogToDB::GetLatestTimestamp() 
+{
     auto& storage = DBManager::GetInstance().GetRealTimeMonitorStorage();
     auto rows = storage.select(&RealtimeEventLog::timestamp);
 
-    if (!rows.empty()) {
+    if (!rows.empty()) 
+    {
         return *std::max_element(rows.begin(), rows.end());
-    } else {
+    } 
+    else 
+    {
         return "0000-00-00 00:00:00.000";
     }
 }
