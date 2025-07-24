@@ -175,7 +175,10 @@ AnalysisResult AnalyzeSudoGroupChangeLog(const LogEntry& entry, const std::deque
     AnalysisResult result{ false, "", "", "unknown" };
     std::smatch match;
 
+    //sudo 권한 추가 (usermod)
     std::regex sudoAddRegex(R"(add\s+'(\w+)'\s+to\s+group\s+'sudo')");
+    //sudo 권한 추가 (gpasswd)
+    std::regex sudoGpasswdAddRegex(R"(user\s+(\w+)\s+added\s+by\s+(\w+)\s+to\s+group\s+sudo)");
     // sudo 권한 제거 (gpasswd)
     std::regex sudoRemovedByRegex(R"(user\s+(\w+)\s+removed\s+by\s+\w+\s+from\s+group\s+sudo)");
     // sudo 권한 변경 (deluser)
@@ -185,6 +188,15 @@ AnalysisResult AnalyzeSudoGroupChangeLog(const LogEntry& entry, const std::deque
         std::string user = match[1];
         result.isMalicious = true;
         result.username = InferChanger(recentLogs, { "usermod" });
+        result.type = "T1098.007";
+        result.description = "사용자 " + user + "가 sudo 그룹에 추가됨";
+        return result;
+    }
+
+    if (std::regex_search(entry.message, match, sudoGpasswdAddRegex)) {
+        std::string user = match[1];
+        result.isMalicious = true;
+        result.username = InferChanger(recentLogs, { "gpasswd" });
         result.type = "T1098.007";
         result.description = "사용자 " + user + "가 sudo 그룹에 추가됨";
         return result;
@@ -284,7 +296,10 @@ AnalysisResult AnalyzeGroupMemberChangeLog(const LogEntry& entry, const std::deq
     AnalysisResult result{ false, "", "", "unknown" };
     std::smatch match;
 
+    // 그룹 멤버 추가 (usermod)
     std::regex addMemberRegex(R"(add\s+'(\w+)'\s+to\s+group\s+'(\w+)')");
+    // 그룹 멤버 추가 (gpasswd)
+    std::regex gpasswdAddRegex(R"(user\s+(\w+)\s+added\s+by\s+\w+\s+to\s+group\s+(\w+))");
     // 그룹 멤버 제거 (gpasswd)
     std::regex groupRemovedByRegex(R"(user\s+(\w+)\s+removed\s+by\s+\w+\s+from\s+group\s+(\w+))");
     // 그룹 멤버 제거 (deluser)
@@ -299,6 +314,20 @@ AnalysisResult AnalyzeGroupMemberChangeLog(const LogEntry& entry, const std::deq
 
         result.isMalicious = true;
         result.username = InferChanger(recentLogs, { "usermod" });
+        result.type = "T1098.007";
+        result.description = "사용자 " + user + "가 그룹 '" + group + "'에 추가됨";
+        return result;
+    }
+
+    if (std::regex_search(entry.message, match, gpasswdAddRegex)) {
+        std::string user = match[1];
+        std::string group = match[2];
+
+        if (group == "sudo")
+            return result;
+
+        result.isMalicious = true;
+        result.username = InferChanger(recentLogs, { "gpasswd" });
         result.type = "T1098.007";
         result.description = "사용자 " + user + "가 그룹 '" + group + "'에 추가됨";
         return result;
