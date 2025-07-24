@@ -1,8 +1,10 @@
 #include "CommandReceiver.h"
 #include "Paths.h"
-#include "CommandExecutor.h"
 #include "SocketOStream.h"
 #include "ServerDaemon.h" 
+#include "CommandReceiver.h"
+#include "CommandBus.h"
+#include "RegisterCommands.h"
 
 #include <filesystem>
 #include <cstring>
@@ -89,29 +91,40 @@ void CommandReceiver::Run()
     ::unlink(PATH_SOCKET);
 }
 
+
 void CommandReceiver::handleClient(int clientFd)
 {
     char buffer[1024];
     ssize_t len = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
-    if (len <= 0) return;
+    if (len <= 0) 
+    {
+        return;
+    }
 
     buffer[len] = '\0';
     std::string commandStr(buffer);
     std::vector<std::string> tokens = parseCommand(commandStr);
 
     SocketOStream out(clientFd);
-    CommandExecutor executor;
+
     if (!tokens.empty() && tokens[0] == "stop") 
     {
         out.flush();
         shutdown(clientFd, SHUT_WR);
-        mpServerDaemon->Stop();   // 데몬 전체 종료 요청
+        mpServerDaemon->Stop();
         return;
     }
-    else 
+
+    static CommandBus bus;
+    static bool initialized = false;
+    if (!initialized) 
     {
-        executor.Execute(tokens, out);
+        RegisterCommands(bus);
+        initialized = true;
     }
+
+    bus.Dispatch(tokens, out);
+
     out.flush();
     shutdown(clientFd, SHUT_WR);
 }
