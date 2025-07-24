@@ -45,8 +45,8 @@
 // 예약검사 설정파일
 #define PATH_SCHEDUL_CONFIG_INI "/root/ManLab/conf/ScanSchedul.ini"
 
-// 로그 리포트 설정파일
-# define PATH_LOG_REPORT_INI  "/root/ManLab/conf/ReportConfig.ini"
+// 리포트 설정파일
+# define PATH_REPORT_INI  "/root/ManLab/conf/ReportConfig.ini"
 
 // rules 디렉토리
 #define PATH_RULES "/root/ManLab/rules"

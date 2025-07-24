@@ -78,8 +78,8 @@ void ScheduleWatcher::Run()
 
         // 리포트 조건 체크
         {
-            spdlog::debug("리포트 설정 파일 로딩 중: {}", PATH_LOG_REPORT_INI);
-            INIReader reader(PATH_LOG_REPORT_INI);
+            spdlog::debug("리포트 설정 파일 로딩 중: {}", PATH_REPORT_INI);
+            INIReader reader(PATH_REPORT_INI);
             if (reader.ParseError() != 0)
             {
                 spdlog::warn("리포트 INI 파싱 실패");

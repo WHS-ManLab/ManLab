@@ -17,7 +17,7 @@ using namespace manlab::utils;
 
 bool ReportService::loadEmailSettings()
 {
-    INIReader reader(PATH_LOG_REPORT_INI);
+    INIReader reader(PATH_REPORT_INI);
     if (reader.ParseError() != 0)
     {
         spdlog::warn("리포트 INI 파싱 실패");
@@ -130,7 +130,7 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Malicious Behavior Report</title>
+    <title>ManLab Regular Report</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <style>
@@ -138,21 +138,38 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         table { border-collapse: collapse; width: 100%; }
         th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
+        tr:target {
+            background-color: #ffff99;
+            transition : background-color 0.3s ease;
+        }
+        tr.highlight {
+            background-color: #ffff99;
+        }
+        h1 {
+            text-align: center;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
 <h1>Malicious Behavior Report</h1>
-<p>Report period: )";
+<p style="text-align: right;">Report period: )";
 
     html << mStartTime << " ~ " << mEndTime  << "</p>\n";
 
-    html << R"(
+    if (!events.empty())
+    {
+        html << R"(
 <h2>Detected Malicious Behavior Types Overview</h2>)";
-    html << R"(<canvas id="typeDonutChart" width="400" height="400"></canvas>)";
+        html << R"(<canvas id="typeDonutChart" width="400" height="400"></canvas>)";
+    }
 
     html << R"(
 <h2>Detected Malicious Behavior Details</h2>
-<table>
+<table id="LogDetailTable">
     <thead>
         <tr>
             <th>Event ID</th>
@@ -180,14 +197,14 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     else
     {
         std::map<std::string, int> typeCounts;
-        int id = 1;
+        int id = 0;
 
         for (const auto &e : events)
         {
             typeCounts[e.type]++;
-
+            id++;
             html << "<tr>";
-            html << "<td>" << id++ << "</td>";
+            html << "<td><a href=\"#raw-" << id << "\">" << id << "</a></td>";
             html << "<td>" << e.type << "</td>";
             html << "<td>" << e.description << "</td>";
             html << "<td>" << e.timestamp << "</td>";
@@ -213,7 +230,7 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         id = 1;
         for (const auto &e : events)
         {
-            html << "<tr>";
+            html << "<tr id=\"raw-" << id << "\">";
             html << "<td>" << id++ << "</td>";
             html << "<td>" << e.rawLine << "</td>";
             html << "</tr>\n";
@@ -244,8 +261,26 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
 
         html << R"(
 <script>
+function highlightRow(type) {
+    console.log("highlightRow called with type:", type);
+
+    document.querySelectorAll('table tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    document.querySelectorAll('#LogDetailTable tbody tr').forEach(tr => {
+        const td = tr.querySelector('td:nth-child(2)');
+        if (td) {
+            const cellText = td.textContent.trim();
+            if (cellText === type) {
+                tr.classList.add('highlight');
+                tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+}
 const ctx = document.getElementById('typeDonutChart').getContext('2d');
-new Chart(ctx, {
+const logTypeChart = new Chart(ctx, {
     type: 'doughnut',
     data: {
         labels: [)";
@@ -268,6 +303,15 @@ new Chart(ctx, {
                 color : '#000',
                 font: { weight: 'bold' },
                 formatter: (value) => value
+            }
+        },
+        onClick: (evt) => {
+            const points = logTypeChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const index = points[0].index;
+                const label = logTypeChart.data.labels[index];
+                console.log("Clicked label:", label);
+                highlightRow(label);
             }
         }
     },
@@ -380,7 +424,6 @@ html << R"(</tbody>
     // -------------------------------------------------------
     html << R"(
 <h1>Malware Scan Report</h1>
-<p>Scan records from )" << mStartTime << " to " << mEndTime << R"(</p>
 <table>
     <thead>
         <tr>
