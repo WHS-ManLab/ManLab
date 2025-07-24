@@ -200,11 +200,11 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
 
                     out << "\033[u"
                         << "\033[1A"
+                        << "\033[2K" 
                         << "\r";
                     bar.set_progress(++processed * 100.0f / total_files);
                     out << "\033[1B"
-                        << "\r"
-                        << "\033[2K" 
+                        << "\033[2K\r" 
                         << fp << "\n";
                 }
             }
@@ -216,8 +216,8 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
     
     //파일 경로 삭제
     out << "\033[1A"
-            << "\033[2K"
-            << "\r";
+        << "\033[2K"
+        << "\r";
 
     //완료 후 요약 정보 출력
     out << "\n[SUCCESS] Baseline 생성 완료\n";
@@ -226,13 +226,13 @@ void BaselineGenerator::parse_ini_and_store(std::ostream& out) {
     out << "\n";
 
     out << "대상 경로:\n";
-    for (const auto& tp : target_paths)
-        out << "  - " << tp << "\n";
-        out << "\n";
+    for (const auto& tp : target_paths){
+        out << "  - " << tp << "\n";}
         
+    out << "\n";
     out << "제외 경로:\n";
-    for (const auto& ep : exclude_paths)
-        out << "  - " << ep << "\n";
+    for (const auto& ep : exclude_paths){
+        out << "  - " << ep << "\n";}
 
 }
 
