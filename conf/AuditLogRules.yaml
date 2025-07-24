@@ -1,4 +1,5 @@
-- key: apt_exec
+- type: T1546.016
+  key: apt_exec
   description: proxychains 패키지 설치
   conditions:
     - field: exe
@@ -10,7 +11,8 @@
     - field: "*"
       value: "proxychains"
       match_type: contains
-- key: apt_exec
+- type: T1546.016
+  key: apt_exec
   description: netcat 패키지 설치
   conditions:
     - field: exe
@@ -22,7 +24,8 @@
     - field: "*"
       value: "netcat"
       match_type: contains
-- key: apt_exec
+- type: T1546.016
+  key: apt_exec
   description: nmap 패키지 설치
   conditions:
     - field: exe
@@ -34,7 +37,8 @@
     - field: "*"
       value: "nmap"
       match_type: contains
-- key: apt_exec
+- type: T1546.016
+  key: apt_exec
   description: tshark 패키지 설치
   conditions:
     - field: exe
@@ -46,7 +50,8 @@
     - field: "*"
       value: "tshark"
       match_type: contains
-- key: apt_exec
+- type: T1546.016
+  key: apt_exec
   description: wireshark 패키지 설치
   conditions:
     - field: exe
@@ -58,7 +63,8 @@
     - field: "*"
       value: "wireshark"
       match_type: contains
-- key: apt_exec
+- type: T1546.016
+  key: apt_exec
   description: openconnect 패키지 설치
   conditions:
     - field: exe
@@ -70,7 +76,8 @@
     - field: "*"
       value: "openconnect"
       match_type: contains
-- key: cron_exec
+- type: T1053.003
+  key: cron_exec
   description: "cron 작업 조회"
   conditions:
     - field: exe
@@ -79,7 +86,8 @@
     - field: "*"
       value: "-l"
       match_type: contains
-- key: cron_exec
+- type: T1053.003
+  key: cron_exec
   description: "cron 작업 편집"
   conditions:
     - field: exe
@@ -88,7 +96,8 @@
     - field: "*"
       value: "-e"
       match_type: contains
-- key: cron_exec
+- type: T1053.003
+  key: cron_exec
   description: "cron 작업 삭제"
   conditions:
     - field: exe
@@ -97,13 +106,15 @@
     - field: "*"
       value: "-r"
       match_type: contains
-- key: cron_daemon
+- type: T1053.003
+  key: cron_daemon
   description: "cron 데몬 실행"
   conditions:
     - field: exe
       value: /usr/sbin/cron
       match_type: equals
-- key: cron_exec
+- type: T1053.003
+  key: cron_exec
   description: "root가 아닌 사용자의 crontab 명령어 실행"
   conditions:
     - field: exe
@@ -112,7 +123,8 @@
     - field: auid
       value: "0"
       match_type: notequals
-- key: cron_file_change
+- type: T1053.003
+  key: cron_file_change
   description: "/etc/cron.d/ 디렉터리 내 파일 생성"
   conditions:
     - field: name
@@ -121,7 +133,8 @@
     - field: syscall
       value: "257" 
       match_type: equals
-- key: cron_file_change
+- type: T1053.003
+  key: cron_file_change
   description: "/etc/cron.d/ 디렉터리 내 파일 삭제"
   conditions:
     - field: name
@@ -130,7 +143,8 @@
     - field: syscall
       value: "263" 
       match_type: equals
-- key: cron_file_change
+- type: T1053.003
+  key: cron_file_change
   description: "cron.allow 파일 수정(cron 허용 사용자 변경)"
   conditions:
     - field: name
@@ -139,7 +153,8 @@
     - field: syscall
       value: "257"
       match_type: equals
-- key: useradd_cmd
+- type: T1136.001
+  key: useradd_cmd
   description: "시스템 계정 생성"
   conditions:
     - field: comm
@@ -148,25 +163,8 @@
     - field: "*"
       value: -r
       match_type: contains
-- key: gorup_mod
-  description: "sudo 그룹에 계정 추가"
-  conditions:
-    - field: exe
-      value: "/usr/sbin/usermod"
-      match_type: equals
-    - field: "*"
-      value: "sudo"
-      match_type: contains
-- key: gorup_mod
-  description: "sudo 그룹에 계정 추가"
-  conditions:
-    - field: exe
-      value: "/usr/bin/gpasswd"
-      match_type: equals
-    - field: "*"
-      value: "sudo"
-      match_type: contains
-- key: tmp_exec
+- type: T1059
+  key: tmp_exec
   description: "/tmp 디렉터리 내 파일 실행"
   conditions:
     - field: "*"
@@ -175,7 +173,8 @@
     - field: syscall
       value: "59"
       match_type: equals
-- key: sudoers_change
+- type: T1548.003
+  key: sudoers_change
   description: "sudoers 설정 변경"
   conditions:
     - field: exe
@@ -184,7 +183,8 @@
     - field: syscall
       value: "82"
       match_type: equals
-- key: setuid_exec
+- type: T1548
+  key: setuid_exec
   description: "권한 상승 시도(실제 ID, 유효 ID 불일치)"
   conditions:
     - field: euid
@@ -193,7 +193,8 @@
     - field: uid 
       value: "0"
       match_type: notequals
-- key: perm_changes
+- type: T1548.003
+  key: perm_changes
   description: "권한 상승 시도(setuid 비트 설정)"
   conditions:
     - field: exe
@@ -202,7 +203,8 @@
     - field: mode
       value: "47"
       match_type: contains
-- key: perm_changes
+- type: T1548.003
+  key: perm_changes
   description: "권한 상승 시도(setgid 비트 설정)"
   conditions:
     - field: exe
@@ -211,7 +213,8 @@
     - field: mode
       value: "27"
       match_type: contains
-- key: owner_changes
+- type: T1548
+  key: owner_changes
   description: "권한 상승 시도(파일 소유자 또는 그룹 변경)"
   conditions:
     - field: exe
@@ -220,7 +223,8 @@
     - field: syscall
       value: "260"
       match_type: equals
-- key: owner_changes
+- type: T1548
+  key: owner_changes
   description: "권한 상승 시도(파일 소유자 또는 그룹 변경)"
   conditions:
     - field: exe
@@ -229,7 +233,8 @@
     - field: syscall
       value: "260"
       match_type: equals
-- key: usb_file_access
+- type: T1052.001
+  key: usb_file_access
   description: "이동식 저장장치 내 파일 복사"
   conditions:
     - field: exe
