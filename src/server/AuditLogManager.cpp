@@ -18,6 +18,38 @@ void AuditLogManager::Init(std::atomic<bool>& shouldRun)
     mpShouldRun = &shouldRun;
 }
 
+const std::vector<std::string> shmScenario = {"shm_cp", "shm_chmod", "shm_exec", "shm_rm"};
+
+bool AuditLogManager::checkScenarioMatch(const std::string& username, time_t currentTime)
+{
+    std::vector<std::string> matched;
+
+    for (const DetectionEvent& ev : recentEvents)
+    {
+        if (ev.username != username)
+        {
+            continue;
+        }
+            
+        if (difftime(currentTime, ev.timestamp) > 300)
+        {
+            continue;
+        }
+        
+        if (matched.size() < shmScenario.size() &&ev.key == shmScenario[matched.size()])
+        {
+            matched.push_back(ev.key);
+        }
+
+        if (matched.size() == shmScenario.size())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // 로그 라인에서 msg=audit(...) 내부 숫자 추출 (msgId)
 string AuditLogManager::ExtractMsgId(const string& line) const
 {
@@ -326,6 +358,32 @@ void AuditLogManager::Run()
                         lar.rawLine = record.RawLine;
 
                         manager.Run(lar, true);
+
+                        time_t now = time(nullptr);
+                        recentEvents.push_back({rule.Key, lar.username, now});
+
+                        // 시나리오 매칭 여부 확인
+                        if (checkScenarioMatch(lar.username, now))
+                        {
+                            LogAnalysisResult scenarioLar;
+                            scenarioLar.type = "scenario";
+                            scenarioLar.description = "의심스러운 경로에 위치한 파일에 대한 권한 부여 및 삭제";
+                            scenarioLar.username = lar.username;
+                            scenarioLar.timestamp = to_string(now);
+                            scenarioLar.originalLogPath = PATH_AUDITLOG;
+                            scenarioLar.rawLine = " ";
+
+                            manager.Run(scenarioLar, true); 
+
+                            recentEvents.erase(remove_if(
+                                                   recentEvents.begin(), recentEvents.end(),
+                                                   [&](const DetectionEvent &ev)
+                                                   {
+                                                       return ev.username == lar.username &&
+                                                              difftime(now, ev.timestamp) <= 300;
+                                                   }),
+                                               recentEvents.end());
+                        }
                     }
                 }
 
