@@ -22,16 +22,11 @@ void RsyslogManager::Init(std::atomic<bool>& shouldRun)
 }
 
 // 로그 분석을 위한 timestamp 변환
-time_t RsyslogManager::ParseTime(const std::string& timestamp) {
+time_t RsyslogManager::ParseTime(const std::string& timestamp)
+{
+    std::string trimmed = timestamp.substr(0, 19); // 필요없는 부분 자르기
     struct tm tm{};
-    strptime(timestamp.c_str(), "%b %d %H:%M:%S", &tm);
-    
-    // 연도, 월 기본값 보정 (옵션)
-    time_t now = time(nullptr);
-    struct tm* now_tm = localtime(&now);
-    tm.tm_year = now_tm->tm_year;
-    tm.tm_mon = now_tm->tm_mon;
-
+    strptime(trimmed.c_str(), "%Y-%m-%dT%H:%M:%S", &tm);
     return mktime(&tm);
 }
 
@@ -73,7 +68,7 @@ std::optional<LogEntry> RsyslogManager::parseLogLine(const std::string& line)
 
     if (std::regex_match(line, match, oldFmt) || std::regex_match(line, match, newFmt))
     {
-        return LogEntry{ match[1], match[2], match[3], match[4], line };
+        return LogEntry{ match[1], match[2], "unknown", match[3], match[4], line };
     }
 
     return std::nullopt;
@@ -104,24 +99,34 @@ void RsyslogManager::Run()
                 mRecentLogs.push_back(*entry);
 
                 // 개수 기준으로 오래된 로그 삭제 (10개 초과 시 제거)
-                if (mRecentLogs.size() > MAX_RECENT_LOGS) {
+                if (mRecentLogs.size() > MAX_RECENT_LOGS)
+                {
                     mRecentLogs.pop_front();
                 }
 
-                AnalysisResult result{false, "", ""};
-                std::vector<std::function<AnalysisResult()>> analyzers = {
+                std::vector<std::function<AnalysisResult()>> analyzers =
+                {
                     [&] { return AnalyzePasswordFailureLog(*entry); },
                     [&] { return AnalyzeSudoLog(*entry, mRsyslogRuleSet["sudousers"]); },
                     [&] { return AnalyzePasswdChangeLog(*entry, mRecentLogs, mRsyslogRuleSet["passwdchangers"]); },
-                    [&] { return AnalyzeSudoGroupChangeLog(*entry); },
-                    [&] { return AnalyzeUserChangeLog(*entry); },
-                    [&] { return AnalyzeGroupChangeLog(*entry); },
-                    [&] { return AnalyzeGroupMemberChangeLog(*entry); }
+                    [&] { return AnalyzeSudoGroupChangeLog(*entry, mRecentLogs); },
+                    [&] { return AnalyzeUserChangeLog(*entry, mRecentLogs); },
+                    [&] { return AnalyzeGroupChangeLog(*entry, mRecentLogs); },
+                    [&] { return AnalyzeGroupMemberChangeLog(*entry, mRecentLogs); }
                 };
 
-                for (const auto& analyzer : analyzers) {
+                AnalysisResult result;
+                for (const auto& analyzer : analyzers)
+                {
                     result = analyzer();
-                    if (result.isMalicious) break;
+                    if (result.isMalicious)
+                    {
+                        if (!result.username.empty())
+                        {
+                            entry->username = result.username;
+                        }
+                        break;
+                    }
                 }
 
                 if (result.isMalicious)
@@ -133,7 +138,7 @@ void RsyslogManager::Run()
                     lar.type = result.type;
                     lar.description = result.description;
                     lar.timestamp = entry->timestamp;
-                    lar.username = entry->hostname;
+                    lar.username = entry->username;
                     lar.originalLogPath = mLogPath;
                     lar.rawLine = entry->raw;
                     manager.Run(lar,false);

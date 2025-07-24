@@ -4,9 +4,31 @@
 #include <iostream>
 #include <regex>
 
+// 명령어 사용자 추적을 위한 함수 sudo 사용자 -> sudo 사용자, 아닐 경우 root
+std::string InferChanger(const std::deque<LogEntry>& recentLogs, const std::vector<std::string>& targetCmds)
+{
+    for (auto it = recentLogs.rbegin(); it != recentLogs.rend(); ++it) {
+        const LogEntry& log = *it;
+        if (log.process == "sudo" &&
+            log.message.find("COMMAND=") != std::string::npos) {
+
+            for (const auto& cmd : targetCmds) {
+                if (log.message.find(cmd) != std::string::npos) {
+                    std::smatch match;
+                    std::regex sudoRegex(R"((\w+)\s+:\s.*COMMAND=)");
+                    if (std::regex_search(log.message, match, sudoRegex)) {
+                        return match[1];
+                    }
+                }
+            }
+        }
+    }
+    return "root"; // fallback
+}
+
 AnalysisResult AnalyzeSudoLog(const LogEntry& entry, const std::unordered_set<std::string>& rsyslogRuleSet)
 {
-    AnalysisResult result{ false, "", "" };
+    AnalysisResult result{ false, "", "", "" };
 
     if (entry.process.find("sudo") == std::string::npos || entry.message.find("COMMAND=") == std::string::npos)
     {
@@ -30,7 +52,8 @@ AnalysisResult AnalyzeSudoLog(const LogEntry& entry, const std::unordered_set<st
         if (rsyslogRuleSet.find(user) == rsyslogRuleSet.end())
         {
             result.isMalicious = true;
-            result.type = "unauthorized_sudo";
+            result.username = user;
+            result.type = "T1548.003";
             result.description = "비인가 사용자 " + user + "가 sudo 명령 사용 : " + command;
         }
     }
@@ -39,7 +62,7 @@ AnalysisResult AnalyzeSudoLog(const LogEntry& entry, const std::unordered_set<st
 
 AnalysisResult AnalyzePasswdChangeLog(const LogEntry& entry, const std::deque<LogEntry>& recentLogs, const std::unordered_set<std::string>& rsyslogRuleSet)
 {
-    AnalysisResult result{ false, "", "" };
+    AnalysisResult result{ false, "", "", "" };
     std::regex regex(R"(pam_unix\(passwd:chauthtok\): password changed for (\w+))");
     std::smatch match;
 
@@ -48,28 +71,13 @@ AnalysisResult AnalyzePasswdChangeLog(const LogEntry& entry, const std::deque<Lo
         std::regex_search(entry.message, match, regex))
     {
         std::string targetUser = match[1];
-        std::string changer = "unknown";
-
-        // recentLogs를 역순 탐색하여 sudo 로그에서 passwd 실행자를 찾는다
-        for (auto it = recentLogs.rbegin(); it != recentLogs.rend(); ++it) {
-            const LogEntry& log = *it;
-            if (log.process.find("sudo") != std::string::npos &&
-                log.message.find("COMMAND=") != std::string::npos &&
-                log.message.find("passwd " + targetUser) != std::string::npos)
-            {
-                std::smatch sudoMatch;
-                std::regex sudoRegex(R"((\w+)\s+:\s.*COMMAND=(.+))");
-                if (std::regex_search(log.message, sudoMatch, sudoRegex)) {
-                    changer = sudoMatch[1];
-                    break;
-                }
-            }
-        }
+        std::string changer = InferChanger(recentLogs, { "passwd " + targetUser });
 
         if (rsyslogRuleSet.find(changer) == rsyslogRuleSet.end())
         {
             result.isMalicious = true;
-            result.type = "unauthorized_passwd_change";
+            result.username = changer;
+            result.type = "T1098";
             result.description = changer + " (추정 사용자)가 '" + targetUser + "'의 비밀번호를 변경함";
         }
     }
@@ -77,11 +85,12 @@ AnalysisResult AnalyzePasswdChangeLog(const LogEntry& entry, const std::deque<Lo
     return result;
 }
 
-AnalysisResult AnalyzePasswordFailureLog(const LogEntry& entry) {
+AnalysisResult AnalyzePasswordFailureLog(const LogEntry& entry)
+{
+    AnalysisResult result{ false, "", "", "" };
     static std::unordered_map<std::string, std::pair<int, time_t>> failureMap;
     const int PASSWORD_FAIL_THRESHOLD = 3;
     const int PASSWORD_FAIL_TIME_WINDOW = 60;
-    AnalysisResult result{ false, "", "" };
 
     // 1. sudo: N incorrect password attempts
     std::regex sudoPattern(R"((\w+)\s+:\s+(\d+)\s+incorrect password attempts)");
@@ -91,9 +100,9 @@ AnalysisResult AnalyzePasswordFailureLog(const LogEntry& entry) {
 
     // 3. GUI 첫번째 실패 이후 탐지 "message repeated N times: [ pam_unix(...) ]""
     std::regex guiPattern(R"(message repeated (\d+) times: \[ pam_unix\([^\)]+:(?:auth|account)\): authentication failure;.*user=([a-zA-Z0-9_\-]+)\])");
- 
+
     // 4. pam_unix 인증 실패 (su/gdm/ssh 등 콘솔은 제외)
-    std::regex pamPattern(R"(pam_unix\((?!login:)[^\)]+:(?:auth|account)\): authentication failure;.*user=([a-zA-Z0-9_\-]+))");
+    std::regex pamPattern(R"(pam_unix\((?!login:)[^\)]+:(?:auth|account)\): authentication failure;.*ruser=([a-zA-Z0-9_\-]+).*user=([a-zA-Z0-9_\-]+))");
 
     std::smatch match;
     bool matched = false;
@@ -123,14 +132,15 @@ AnalysisResult AnalyzePasswordFailureLog(const LogEntry& entry) {
 
     // 4. pam_unix
     else if (std::regex_search(entry.message, match, pamPattern) && entry.process != "login") {
-        username = match[1];
+        username = match[2];
         failCount = 1;
         matched = true;
     }
 
     // 실패한 사용자 감지 안 되면 종료
-    if (!matched || username.empty())
+    if (!matched || username.empty()){
         return result;
+    }
 
     // 실패 누적 처리
     time_t now = RsyslogManager::ParseTime(entry.timestamp);
@@ -146,15 +156,23 @@ AnalysisResult AnalyzePasswordFailureLog(const LogEntry& entry) {
     if (count >= PASSWORD_FAIL_THRESHOLD) {
         count = 0;  // 리셋
         result.isMalicious = true;
-        result.type = "brute_force_password_failure";
+        result.type = "T1110.001";
         result.description = "1분 내 " + std::to_string(PASSWORD_FAIL_THRESHOLD) + "회 이상 인증 실패: 사용자 '" + username + "'";
+        // sudo와 pam 로그인일 경우에만 실행한 유저명의 나오므로 저장.
+        if (entry.process == "sudo") {
+            result.username = username;
+        }
+        else if (std::regex_search(entry.message, match, pamPattern) && entry.process != "login"){
+            result.username = match[1];
+        }
     }
 
     return result;
 }
 
-AnalysisResult AnalyzeSudoGroupChangeLog(const LogEntry& entry) {
-    AnalysisResult result{ false, "", "" };
+AnalysisResult AnalyzeSudoGroupChangeLog(const LogEntry& entry, const std::deque<LogEntry>& recentLogs)
+{
+    AnalysisResult result{ false, "", "", "unknown" };
     std::smatch match;
 
     std::regex sudoAddRegex(R"(add\s+'(\w+)'\s+to\s+group\s+'sudo')");
@@ -166,7 +184,8 @@ AnalysisResult AnalyzeSudoGroupChangeLog(const LogEntry& entry) {
     if (std::regex_search(entry.message, match, sudoAddRegex)) {
         std::string user = match[1];
         result.isMalicious = true;
-        result.type = "privileged_user_created";
+        result.username = InferChanger(recentLogs, { "usermod" });
+        result.type = "T1098.007";
         result.description = "사용자 " + user + "가 sudo 그룹에 추가됨";
         return result;
     }
@@ -174,7 +193,8 @@ AnalysisResult AnalyzeSudoGroupChangeLog(const LogEntry& entry) {
     if (std::regex_search(entry.message, match, sudoRemovedByRegex)) {
         std::string user = match[1];
         result.isMalicious = true;
-        result.type = "privileged_user_deleted";
+        result.username = InferChanger(recentLogs, { "gpasswd" });
+        result.type = "T1098.007";
         result.description = "사용자 " + user + "가 sudo 그룹에서 제거됨";
         return result;
     }
@@ -182,7 +202,8 @@ AnalysisResult AnalyzeSudoGroupChangeLog(const LogEntry& entry) {
     if (std::regex_search(entry.message, match, sudoSetRegex)) {
         std::string members = match[1];
         result.isMalicious = true;
-        result.type = "privileged_user_deleted";
+        result.username = InferChanger(recentLogs, { "deluser" });
+        result.type = "T1098.007";
 
         if (members.empty()) {
             result.description = "sudo 그룹의 모든 구성원이 제거됨";
@@ -196,8 +217,9 @@ AnalysisResult AnalyzeSudoGroupChangeLog(const LogEntry& entry) {
     return result;
 }
 
-AnalysisResult AnalyzeUserChangeLog(const LogEntry& entry) {
-    AnalysisResult result{ false, "", "" };
+AnalysisResult AnalyzeUserChangeLog(const LogEntry& entry, const std::deque<LogEntry>& recentLogs)
+{
+    AnalysisResult result{ false, "", "", "unknown" };
     std::smatch match;
 
     std::regex userAddRegex(R"(new user: name=(\w+))");
@@ -206,7 +228,8 @@ AnalysisResult AnalyzeUserChangeLog(const LogEntry& entry) {
     if (std::regex_search(entry.message, match, userAddRegex)) {
         std::string user = match[1];
         result.isMalicious = true;
-        result.type = "user_created";
+        result.username = InferChanger(recentLogs, { "useradd", "adduser" });
+        result.type = "T1136.001";
         result.description = "사용자 " + user + "가 생성됨";
         return result;
     }
@@ -214,7 +237,8 @@ AnalysisResult AnalyzeUserChangeLog(const LogEntry& entry) {
     if (std::regex_search(entry.message, match, userDelRegex)) {
         std::string user = match[1];
         result.isMalicious = true;
-        result.type = "user_deleted";
+        result.username = InferChanger(recentLogs, { "userdel", "deluser" });
+        result.type = "T1531";
         result.description = "사용자 " + user + "가 삭제됨";
         return result;
     }
@@ -222,8 +246,9 @@ AnalysisResult AnalyzeUserChangeLog(const LogEntry& entry) {
     return result;
 }
 
-AnalysisResult AnalyzeGroupChangeLog(const LogEntry& entry) {
-    AnalysisResult result{ false, "", "" };
+AnalysisResult AnalyzeGroupChangeLog(const LogEntry& entry, const std::deque<LogEntry>& recentLogs)
+{
+    AnalysisResult result{ false, "", "", "unknown" };
     std::smatch match;
 
     std::regex groupAddRegex(R"(new group: name=(\w+))");
@@ -232,7 +257,8 @@ AnalysisResult AnalyzeGroupChangeLog(const LogEntry& entry) {
     if (std::regex_search(entry.message, match, groupAddRegex)) {
         std::string group = match[1];
         result.isMalicious = true;
-        result.type = "group_created";
+        result.username = InferChanger(recentLogs, { "groupadd", "addgroup" });
+        result.type = "T1098";
         result.description = "그룹 " + group + "가 생성됨";
         return result;
     }
@@ -244,7 +270,8 @@ AnalysisResult AnalyzeGroupChangeLog(const LogEntry& entry) {
         }
         std::string group = match[1];
         result.isMalicious = true;
-        result.type = "group_deleted";
+        result.username = InferChanger(recentLogs, { "groupdel", "delgroup" });
+        result.type = "T1098";
         result.description = "그룹 " + group + "가 삭제됨";
         return result;
     }
@@ -252,8 +279,9 @@ AnalysisResult AnalyzeGroupChangeLog(const LogEntry& entry) {
     return result;
 }
 
-AnalysisResult AnalyzeGroupMemberChangeLog(const LogEntry& entry) {
-    AnalysisResult result{ false, "", "" };
+AnalysisResult AnalyzeGroupMemberChangeLog(const LogEntry& entry, const std::deque<LogEntry>& recentLogs)
+{
+    AnalysisResult result{ false, "", "", "unknown" };
     std::smatch match;
 
     std::regex addMemberRegex(R"(add\s+'(\w+)'\s+to\s+group\s+'(\w+)')");
@@ -263,27 +291,29 @@ AnalysisResult AnalyzeGroupMemberChangeLog(const LogEntry& entry) {
     std::regex groupSetRegex(R"(members of group (\w+)\s+set by \w+\s+to\s*(.*))");
 
     if (std::regex_search(entry.message, match, addMemberRegex)) {
-        result.isMalicious = true;
         std::string user = match[1];
         std::string group = match[2];
 
         if (group == "sudo")
             return result;
 
-        result.type = "group_member_created";
+        result.isMalicious = true;
+        result.username = InferChanger(recentLogs, { "usermod" });
+        result.type = "T1098.007";
         result.description = "사용자 " + user + "가 그룹 '" + group + "'에 추가됨";
         return result;
     }
 
     if (std::regex_search(entry.message, match, groupRemovedByRegex)) {
-        result.isMalicious = true;
         std::string user = match[1];
         std::string group = match[2];
 
         if (group == "sudo")
             return result;
 
-        result.type = "group_member_deleted";
+        result.isMalicious = true;
+        result.username = InferChanger(recentLogs, { "gpasswd" });
+        result.type = "T1098.007";
         result.description = "사용자 " + user + "가 그룹 '" + group + "'에서 제거됨";
 
         return result;
@@ -291,14 +321,15 @@ AnalysisResult AnalyzeGroupMemberChangeLog(const LogEntry& entry) {
 
 
     if (std::regex_search(entry.message, match, groupSetRegex)) {
-        result.isMalicious = true;
         std::string group = match[1];
         std::string members = match[2];
 
         if (group == "sudo")
             return result;
 
-        result.type = "group_member_deleted";
+        result.isMalicious = true;
+        result.username = InferChanger(recentLogs, { "deluser" });
+        result.type = "T1098.007";
 
         if (members.empty()) {
             result.description = "그룹 '" + group + "'의 모든 구성원이 제거됨";
