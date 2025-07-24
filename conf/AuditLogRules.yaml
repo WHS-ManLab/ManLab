@@ -139,7 +139,7 @@
   conditions:
     - field: name
       value: "/etc/cron.d/"
-      match_type: equals
+      match_type: contains
     - field: syscall
       value: "263" 
       match_type: equals
@@ -243,3 +243,55 @@
     - field: "*"
       value: "/media/"
       match_type: contains
+- type: scenario
+  key: shm_cp
+  description: "/dev/shm 경로로 복사"
+  conditions:
+    - field: exe
+      value: "/usr/bin/cp"
+      match_type: equals
+    - field: name
+      value: "/dev/shm"
+      match_type: contains
+    - field: syscall
+      value: "257"
+      match_type: equals
+- type: scenario
+  key: shm_chmod
+  description: "/dev/shm 실행 권한 부여"
+  conditions:
+    - field: exe
+      value: "/usr/bin/chmod"
+      match_type: equals
+    - field: name
+      value: "/dev/shm"
+      match_type: contains
+    - field: syscall
+      value: "268"
+      match_type: equals
+- type: scenario
+  key: shm_exec
+  description: "/dev/shm 내 파일 실행"
+  conditions:
+    - field: "*"
+      value: "/dev/shm"
+      match_type: contains
+    - field: exe
+      value: "/usr/bin/bash"
+      match_type: equals
+    - field: syscall
+      value: "59"
+      match_type: equals
+- type: scenario
+  key: shm_rm
+  description: "/dev/shm 내 파일 삭제"
+  conditions:
+    - field: exe
+      value: "/usr/bin/rm"
+      match_type: contains
+    - field: name
+      value: "/dev/shm"
+      match_type: contains
+    - field: syscall
+      value: "263"
+      match_type: equals
