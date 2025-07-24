@@ -74,6 +74,7 @@ void ServerDaemon::Stop()
 
     // 예약 검사 조건 변수 해제
     mScheduleCondVar.notify_all();
+    mReportCondVar.notify_all();
 }
 
 void ServerDaemon::cleanup()

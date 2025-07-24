@@ -12,6 +12,7 @@ struct LogEntry
 {
     std::string timestamp;
     std::string hostname;
+    std::string username;
     std::string process;
     std::string message;
     std::string raw;
@@ -23,6 +24,7 @@ struct AnalysisResult
     bool isMalicious;
     std::string type;
     std::string description;
+    std::string username;
 };
 
 class RsyslogManager

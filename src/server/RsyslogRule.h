@@ -8,7 +8,7 @@
 AnalysisResult AnalyzeSudoLog(const LogEntry& entry, const std::unordered_set<std::string>& rsyslogRuleSet);
 AnalysisResult AnalyzePasswdChangeLog(const LogEntry& entry, const std::deque<LogEntry>& recentLogs, const std::unordered_set<std::string>& rsyslogRuleSet);
 AnalysisResult AnalyzePasswordFailureLog(const LogEntry& entry);
-AnalysisResult AnalyzeSudoGroupChangeLog(const LogEntry& entry);
-AnalysisResult AnalyzeUserChangeLog(const LogEntry& entry);
-AnalysisResult AnalyzeGroupChangeLog(const LogEntry& entry);
-AnalysisResult AnalyzeGroupMemberChangeLog(const LogEntry& entry);
+AnalysisResult AnalyzeSudoGroupChangeLog(const LogEntry& entry, const std::deque<LogEntry>& recentLogs);
+AnalysisResult AnalyzeUserChangeLog(const LogEntry& entry, const std::deque<LogEntry>& recentLogs);
+AnalysisResult AnalyzeGroupChangeLog(const LogEntry& entry, const std::deque<LogEntry>& recentLogs);
+AnalysisResult AnalyzeGroupMemberChangeLog(const LogEntry& entry, const std::deque<LogEntry>& recentLogs);

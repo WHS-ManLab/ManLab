@@ -19,6 +19,8 @@ SERVICE_PATH="/etc/systemd/system/${SERVICE_UNIT}"
 SERVICE_TMPL="./.deploy/${SERVICE_UNIT}"  
 RSYSLOG_CONF="/etc/rsyslog.d/50-manlab.conf"
 RSYSLOG_SRC="./.deploy/50-manlab.conf"
+AUDITD_DST="/etc/audit/rules.d/manlab.rules"
+AUDITD_SRC="./.deploy/manlab.rules"
 
 MALHASH_SRC="malhash/malware_hashes.txt"
 MALHASH_DST="$MALWARE_DIR/malware_hashes.txt"
@@ -65,11 +67,14 @@ systemctl enable "$SERVICE_UNIT"
 echo "[INFO] Copying malware_hashes.txt..."
 cp -v "$MALHASH_SRC" "$MALHASH_DST"
 
-# 7. auditd 설치
-echo "[INFO] Installing auditd..."
+# 7. auditd 설정
+echo "[INFO] Setting up auditd..."
 apt install -y auditd
 systemctl enable auditd
 systemctl start auditd
+cp -v "$AUDITD_SRC" "$AUDITD_DST"
+chmod 640 "$AUDITD_DST"
+augenrules --load > /dev/null 2>&1
 
 # 8. spdlog 설치
 echo "[INFO] Installing spdlog..."

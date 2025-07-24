@@ -17,7 +17,7 @@ using namespace manlab::utils;
 
 bool ReportService::loadEmailSettings()
 {
-    INIReader reader(PATH_LOG_REPORT_INI);
+    INIReader reader(PATH_REPORT_INI);
     if (reader.ParseError() != 0)
     {
         spdlog::warn("리포트 INI 파싱 실패");
@@ -126,11 +126,13 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         return false;
     }
 
+    // --------------------------------------------------
+    // LOG 팀 리포트
     html << R"(<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Malicious Behavior Report</title>
+    <title>ManLab Regular Report</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <style>
@@ -138,21 +140,38 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         table { border-collapse: collapse; width: 100%; }
         th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
+        tr:target {
+            background-color: #ffff99;
+            transition : background-color 0.3s ease;
+        }
+        tr.highlight {
+            background-color: #ffff99;
+        }
+        h1 {
+            text-align: center;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
 <h1>Malicious Behavior Report</h1>
-<p>Report period: )";
+<p style="text-align: right;">Report period: )";
 
     html << mStartTime << " ~ " << mEndTime  << "</p>\n";
 
-    html << R"(
+    if (!events.empty())
+    {
+        html << R"(
 <h2>Detected Malicious Behavior Types Overview</h2>)";
-    html << R"(<canvas id="typeDonutChart" width="400" height="400"></canvas>)";
+        html << R"(<canvas id="typeDonutChart" width="400" height="400"></canvas>)";
+    }
 
     html << R"(
 <h2>Detected Malicious Behavior Details</h2>
-<table>
+<table id="LogDetailTable">
     <thead>
         <tr>
             <th>Event ID</th>
@@ -180,14 +199,14 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     else
     {
         std::map<std::string, int> typeCounts;
-        int id = 1;
+        int id = 0;
 
         for (const auto &e : events)
         {
             typeCounts[e.type]++;
-
+            id++;
             html << "<tr>";
-            html << "<td>" << id++ << "</td>";
+            html << "<td><a href=\"#raw-" << id << "\">" << id << "</a></td>";
             html << "<td>" << e.type << "</td>";
             html << "<td>" << e.description << "</td>";
             html << "<td>" << e.timestamp << "</td>";
@@ -213,7 +232,7 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         id = 1;
         for (const auto &e : events)
         {
-            html << "<tr>";
+            html << "<tr id=\"raw-" << id << "\">";
             html << "<td>" << id++ << "</td>";
             html << "<td>" << e.rawLine << "</td>";
             html << "</tr>\n";
@@ -244,8 +263,26 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
 
         html << R"(
 <script>
+function highlightRow(type) {
+    console.log("highlightRow called with type:", type);
+
+    document.querySelectorAll('table tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    document.querySelectorAll('#LogDetailTable tbody tr').forEach(tr => {
+        const td = tr.querySelector('td:nth-child(2)');
+        if (td) {
+            const cellText = td.textContent.trim();
+            if (cellText === type) {
+                tr.classList.add('highlight');
+                tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+}
 const ctx = document.getElementById('typeDonutChart').getContext('2d');
-new Chart(ctx, {
+const logTypeChart = new Chart(ctx, {
     type: 'doughnut',
     data: {
         labels: [)";
@@ -269,6 +306,15 @@ new Chart(ctx, {
                 font: { weight: 'bold' },
                 formatter: (value) => value
             }
+        },
+        onClick: (evt) => {
+            const points = logTypeChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const index = points[0].index;
+                const label = logTypeChart.data.labels[index];
+                console.log("Clicked label:", label);
+                highlightRow(label);
+            }
         }
     },
     plugins: [ChartDataLabels]
@@ -279,32 +325,39 @@ new Chart(ctx, {
 
     // -------------------------------------------------------
     // FIM 팀 리포트
+    // 수동검사
     html << R"(
-<h1>File Integrity Monitoring Report</h1>
+<h1>📂 File Integrity Monitoring Report</h1>
+
 <h2>Modified Files (Manual Scan Results)</h2>
 <p>List of files with changed MD5 hashes detected during manual scans:</p>
+<canvas id="manualScanChart" width="400" height="400"></canvas>
 <table>
     <thead>
         <tr>
             <th>Path</th>
             <th>Current MD5 Hash</th>
+            <th>Permission</th>
+            <th>UID</th>
+            <th>GID</th>
+            <th>CTime</th>
+            <th>MTime</th>
+            <th>Size</th>
         </tr>
     </thead>
     <tbody>
 )";
 
-auto& modifiedStorage = DBManager::GetInstance().GetModifiedStorage();
+// 수동검사 데이터 수집
 std::vector<ModifiedEntry> modifiedRecords;
-
 try {
+    auto& modifiedStorage = DBManager::GetInstance().GetModifiedStorage();
     modifiedRecords = modifiedStorage.get_all<ModifiedEntry>();
 } catch (const std::exception& e) {
-    html << R"(<tr>
-        <td colspan="2" style="text-align: center; font-style: italic; color: red;">
-        Failed to load manual scan data: )" << e.what() << R"(</td></tr>
-    )";
-    modifiedRecords.clear();
+    html << "<tr><td colspan='2' style='color:red;'>Error: " << e.what() << "</td></tr>";
 }
+
+std::map<std::string, int> manualTypeCounts;
 
 if (modifiedRecords.empty()) {
     html << R"(<tr>
@@ -318,17 +371,24 @@ if (modifiedRecords.empty()) {
         html << "<tr>";
         html << "<td>" << record.path << "</td>";
         html << "<td>" << record.current_md5 << "</td>";
+        html << "<td>" << record.current_permission << "</td>";
+        html << "<td>" << record.current_uid << "</td>";
+        html << "<td>" << record.current_gid << "</td>";
+        html << "<td>" << record.current_ctime << "</td>";
+        html << "<td>" << record.current_mtime << "</td>";
+        html << "<td>" << record.current_size << "</td>";
         html << "</tr>\n";
+        std::string ext = record.path.substr(record.path.find_last_of('.') + 1);
+        manualTypeCounts[ext]++;
     }
 }
+html << R"(</tbody></table>)";
 
-html << R"(</tbody>
-</table>
-)";
-
+// 실시간 검사
 html << R"(
 <h2>Real-time Monitoring Events</h2>
-<p>Real-time monitoring records from )" << mStartTime << " to " << mEndTime << R"(</p>
+<p>Events from )" << mStartTime << " to " << mEndTime << R"(</p>
+<canvas id="realtimeChart" width="400" height="400"></canvas>
 <table>
     <thead>
         <tr>
@@ -341,18 +401,16 @@ html << R"(
     <tbody>
 )";
 
-auto& realTimeStorage = DBManager::GetInstance().GetRealTimeMonitorStorage();
+// 실시간 검사 데이터 수집
 std::vector<RealtimeEventLog> realTimeRecords;
+std::map<std::string, int> eventTypeCounts;
 
 try {
+    auto& realTimeStorage = DBManager::GetInstance().GetRealTimeMonitorStorage();
     realTimeRecords = realTimeStorage.get_all<RealtimeEventLog>(
-        sqlite_orm::where(sqlite_orm::between(&RealtimeEventLog::timestamp,  mStartTime, mEndTime)));
+        sqlite_orm::where(sqlite_orm::between(&RealtimeEventLog::timestamp, mStartTime, mEndTime)));
 } catch (const std::exception& e) {
-    html << R"(<tr>
-        <td colspan="4" style="text-align: center; font-style: italic; color: red;">
-        Failed to load real-time monitoring data: )" << e.what() << R"(</td></tr>
-    )";
-    realTimeRecords.clear();
+    html << "<tr><td colspan='4' style='color:red;'>Error: " << e.what() << "</td></tr>";
 }
 
 if (realTimeRecords.empty()) {
@@ -364,23 +422,110 @@ if (realTimeRecords.empty()) {
 )";
 } else {
     for (const auto& record : realTimeRecords) {
-        html << "<tr>";
-        html << "<td>" << record.id << "</td>";
-        html << "<td>" << record.path << "</td>";
-        html << "<td>" << record.eventType << "</td>";
-        html << "<td>" << record.timestamp << "</td>";
-        html << "</tr>\n";
+        html << "<tr><td>" << record.id << "</td><td>" << record.path
+             << "</td><td>" << record.eventType << "</td><td>" << record.timestamp << "</td></tr>";
+        eventTypeCounts[record.eventType]++;
     }
 }
+html << R"(</tbody></table>)";
 
-html << R"(</tbody>
-</table>
+// 시각화용 스크립트 추가
+// 수동검사 차트
+html << R"(
+<script>
+const manualCtx = document.getElementById('manualScanChart').getContext('2d');
+new Chart(manualCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [)";
+bool first = true;
+for (const auto& [ext, _] : manualTypeCounts) {
+    if (!first) html << ", ";
+    html << "\"" << ext << "\"";
+    first = false;
+}
+html << R"(],
+        datasets: [{
+            data: [)";
+first = true;
+for (const auto& [_, count] : manualTypeCounts) {
+    if (!first) html << ", ";
+    html << count;
+    first = false;
+}
+html << R"(],
+            backgroundColor: [)";
+for (size_t i = 0; i < manualTypeCounts.size(); ++i) {
+    if (i > 0) html << ", ";
+    html << "\"" << ReportService::generateColor(i) << "\"";
+}
+html << R"(]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+// 실시간 검사 차트
+const rtCtx = document.getElementById('realtimeChart').getContext('2d');
+new Chart(rtCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [)";
+first = true;
+for (const auto& [type, _] : eventTypeCounts) {
+    if (!first) html << ", ";
+    html << "\"" << type << "\"";
+    first = false;
+}
+html << R"(],
+        datasets: [{
+            data: [)";
+first = true;
+for (const auto& [_, count] : eventTypeCounts) {
+    if (!first) html << ", ";
+    html << count;
+    first = false;
+}
+html << R"(],
+            backgroundColor: [)";
+for (size_t i = 0; i < eventTypeCounts.size(); ++i) {
+    if (i > 0) html << ", ";
+    html << "\"" << ReportService::generateColor(i) << "\"";
+}
+html << R"(]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+</script>
 )";
 
     // -------------------------------------------------------
+    // SIG 팀 리포트
     html << R"(
 <h1>Malware Scan Report</h1>
-<p>Scan records from )" << mStartTime << " to " << mEndTime << R"(</p>
 <table>
     <thead>
         <tr>
