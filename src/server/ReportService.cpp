@@ -4,16 +4,78 @@
 #include "GmailClient.h"
 #include "Paths.h"
 #include "DBManager.h"
+#include "ScheduleParser.h"
 
 #include <sstream>    // istringstream
 #include <fstream>    // ofstream
 #include <cstdlib>    // close, system
 #include <chrono>     // system_clock 등
 #include <thread>     // sleep
+#include <map>
 #include <spdlog/spdlog.h>
 
 using namespace std::chrono;
 using namespace manlab::utils;
+
+// "YYYY-MM-DD HH:MM:SS" -> "YYYYMMDD_HHMMSS" 형식으로 변환 (QuarantineMetadata 쿼리에 필요)
+std::string convertToQuarantineDateFormat(const std::string& dateTimeStr)
+{
+    if (dateTimeStr.length() != 19)
+    {
+        return dateTimeStr;
+    }
+
+    std::string year = dateTimeStr.substr(0, 4);
+    std::string month = dateTimeStr.substr(5, 2);
+    std::string day = dateTimeStr.substr(8, 2);
+    std::string hour = dateTimeStr.substr(11, 2);
+    std::string minute = dateTimeStr.substr(14, 2);
+    std::string second = dateTimeStr.substr(17, 2);
+
+    return year + month + day + "_" + hour + minute + second;
+}
+
+// 파일 경로에서 파일 이름만 추출하는 함수
+std::string getFileNameFromPath(const std::string& filePath)
+{
+    size_t lastSlashPos = filePath.find_last_of("/\\");
+    if (std::string::npos != lastSlashPos)
+    {
+        return filePath.substr(lastSlashPos + 1);
+    }
+    return filePath;
+}
+
+std::string generalizeReason(const std::string& quarantineReason)
+{
+    if (quarantineReason == "md5" || quarantineReason == "sha1" || quarantineReason == "sha256")
+    {
+        return "Hash";
+    }
+    else if (quarantineReason == "yara")
+    {
+        return "YARA";
+    }
+    return quarantineReason;
+}
+
+// QuarantineDate ("YYYYMMDD_HHMMSS")를 "yyyy-mm-dd hh:mm:ss" 형식으로 변환하는 함수
+std::string formatQuarantineDateForDisplay(const std::string& quarantineDate)
+{
+    if (quarantineDate.length() != 15)
+    {
+        return quarantineDate; 
+    }
+
+    std::string year = quarantineDate.substr(0, 4);
+    std::string month = quarantineDate.substr(4, 2);
+    std::string day = quarantineDate.substr(6, 2);
+    std::string hour = quarantineDate.substr(9, 2);
+    std::string minute = quarantineDate.substr(11, 2);
+    std::string second = quarantineDate.substr(13, 2);
+
+    return year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + second;
+}
 
 bool ReportService::loadEmailSettings()
 {
@@ -526,50 +588,125 @@ html << R"(]
     // SIG 팀 리포트
     html << R"(
 <h1>Malware Scan Report</h1>
+<p>Scan records from )" << mStartTime << " to " << mEndTime << "</p>\n";
+
+    auto& scanStorage = DBManager::GetInstance().GetScanReportStorage();
+    auto scanReports = scanStorage.get_all<ScanReport>
+    (
+        sqlite_orm::where(sqlite_orm::between(&ScanReport::date, mStartTime, mEndTime))
+    );
+
+    int detectedCount = 0;
+    int notDetectedCount = 0;
+
+    if (!scanReports.empty())
+    {
+        for (const auto& report : scanReports)
+        {
+            if (report.detected)
+            {
+                detectedCount++;
+            }
+            else
+            {
+                notDetectedCount++;
+            }
+        }
+    }
+    html << R"(<h2>Malware Scan Detection Overview</h2>
+<canvas id="malwareScanDonutChart" width="400" height="400"></canvas>
+
+<script>
+const scanCtx = document.getElementById('malwareScanDonutChart').getContext('2d');
+new Chart(scanCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Detected', 'Not Detected'],
+        datasets: [{
+            data: [)" << detectedCount << ", " << notDetectedCount << R"(],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.6)', // Detected (Red)
+                'rgba(75, 192, 192, 0.6)'  // Not Detected (Cyan)
+            ]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+</script>
+
+<h2>Scan Details</h2>
 <table>
     <thead>
         <tr>
-            <th>ID</th>
-            <th>Type</th>
             <th>Date</th>
-            <th>Detected</th>
+            <th>ID</th>
+            <th>File Path</th>
+            <th>File Name</th>
+            <th>Reason</th>
+            <th>Malware Name / Rule</th>
+            <th>Quarantine Success Status</th>
         </tr>
     </thead>
     <tbody>
 )";
 
-    auto& scanStorage = DBManager::GetInstance().GetScanReportStorage();
-    auto scanReports = scanStorage.get_all<ScanReport>(
-        sqlite_orm::where(sqlite_orm::between(&ScanReport::date, mStartTime, mEndTime)));
+    // QuarantineDB에서 데이터를 가져와 Scan Details 표를 채웁니다.
+    auto& quarantineStorage = DBManager::GetInstance().GetQuarantineStorage();
 
-    if (scanReports.empty()) {
+    std::string convertedStartTimeForQuarantine = convertToQuarantineDateFormat(mStartTime);
+    std::string convertedEndTimeForQuarantine = convertToQuarantineDateFormat(mEndTime);
+
+    auto quarantineEntries = quarantineStorage.get_all<QuarantineMetadata>
+    (
+        sqlite_orm::where(
+            sqlite_orm::between(
+                &QuarantineMetadata::QuarantineDate, 
+                                    convertedStartTimeForQuarantine, 
+                                    convertedEndTimeForQuarantine
+                                )
+                        )
+    );
+
+    if (quarantineEntries.empty())
+    {
         html << R"(<tr>
-            <td colspan="4" style="text-align: center; font-style: italic;">
-            No scan data found during this period.
+            <td colspan="7" style="text-align: center; font-style: italic;">
+            No quarantined files found during this period.
             </td>
         </tr>
     </tbody>
 </table>
 )";
-    } else {
-        for (const auto& report : scanReports) {
+    }
+    else
+    {
+        int id_counter = 1; // ID 순번을 위한 카운터
+        for (const auto& entry : quarantineEntries)
+        {
             html << "<tr>";
-            html << "<td>" << report.id << "</td>";
-            html << "<td>" << report.type << "</td>";
-            html << "<td>" << report.date << "</td>";
-            html << "<td>" << (report.detected ? "Yes" : "No") << "</td>";
+            html << "<td>" << formatQuarantineDateForDisplay(entry.QuarantineDate) << "</td>"; // Date
+            html << "<td>" << id_counter++ << "</td>"; // ID 순번 표시
+            html << "<td>" << entry.OriginalPath << "</td>";
+            html << "<td>" << getFileNameFromPath(entry.OriginalPath) << "</td>"; // OriginalPath에서 파일 이름 추출
+            html << "<td>" << generalizeReason(entry.QuarantineReason) << "</td>"; // generalizeReason 사용
+            html << "<td>" << entry.MalwareNameOrRule << "</td>"; // Malware Name / Rule
+            html << "<td>" << "Yes" << "</td>"; // QuarantineMetadata에 있으면 성공으로 간주
             html << "</tr>\n";
         }
         html << R"(</tbody>
 </table>
-<h2>Full Report Texts</h2>
 )";
-
-        for (const auto& report : scanReports) {
-            html << "<pre style=\"background:#f9f9f9; padding:10px; border:1px solid #ccc;\">\n";
-            html << report.report;
-            html << "\n</pre>\n";
-        }
     }
 
     html << R"(
