@@ -1,7 +1,6 @@
 -a always,exit -F arch=b64 -S execve -F exe=/usr/bin/apt -F key=apt_exec
 -a always,exit -F arch=b64 -S execve -F exe=/usr/bin/apt-get -F key=apt_exec
 -a always,exit -F arch=b64 -S execve -F exe=/usr/bin/crontab -F key=cron_exec
--w /var/spool/cron -p wa -k cron_files
 -a always,exit -F arch=b64 -S execve -F exe=/usr/sbin/cron -F key=cron_daemon
 -w /etc/cron.d -p wa -k cron_file_change
 -w /var/spool/cron/crontabs -p wa -k cron_file_change
