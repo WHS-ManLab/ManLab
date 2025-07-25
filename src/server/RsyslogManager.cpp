@@ -2,6 +2,7 @@
 #include "RsyslogRule.h"
 #include "LogStorageManager.h"
 #include "Paths.h"
+#include "UserNotifier.h"
 
 #include <iostream>
 #include <fstream>
@@ -144,6 +145,11 @@ void RsyslogManager::Run()
                     lar.originalLogPath = mLogPath;
                     lar.rawLine = entry->raw;
                     manager.Run(lar,false);
+
+                    std::string title = "ManLab 의심 행위 탐지";
+                    std::string message = result.description;
+                    UserNotifier::NotifyAllUrgent(title, message);
+
                 }
                 else 
                 {

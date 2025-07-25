@@ -1,6 +1,7 @@
 #include "AuditLogManager.h"
 #include "LogStorageManager.h"
 #include "Paths.h"
+#include "UserNotifier.h"
 
 #include <iostream>
 #include <sstream>
@@ -359,6 +360,10 @@ void AuditLogManager::Run()
 
                         manager.Run(lar, true);
 
+                        string title = "ManLab 의심 행위 탐지";
+                        string message = rule.Description;
+                        UserNotifier::NotifyAllUrgent(title, message);
+
                         time_t now = time(nullptr);
                         recentEvents.push_back({rule.Key, lar.username, now});
 
@@ -374,6 +379,10 @@ void AuditLogManager::Run()
                             scenarioLar.rawLine = " ";
 
                             manager.Run(scenarioLar, true); 
+
+                            string title = "ManLab 의심 행위 탐지";
+                            string message = scenarioLar.description;
+                            UserNotifier::NotifyAllUrgent(title, message);
 
                             recentEvents.erase(remove_if(
                                                    recentEvents.begin(), recentEvents.end(),
