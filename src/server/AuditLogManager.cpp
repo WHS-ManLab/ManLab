@@ -358,11 +358,11 @@ void AuditLogManager::Run()
                         lar.originalLogPath = PATH_AUDITLOG;
                         lar.rawLine = record.RawLine;
 
+                        manager.Run(lar, true);
+
                         string title = "ManLab 의심 행위 탐지";
                         string message = rule.Description;
                         UserNotifier::NotifyAllUrgent(title, message);
-
-                        manager.Run(lar, true);
 
                         time_t now = time(nullptr);
                         recentEvents.push_back({rule.Key, lar.username, now});
@@ -378,11 +378,11 @@ void AuditLogManager::Run()
                             scenarioLar.originalLogPath = PATH_AUDITLOG;
                             scenarioLar.rawLine = " ";
 
+                            manager.Run(scenarioLar, true); 
+
                             string title = "ManLab 의심 행위 탐지";
                             string message = scenarioLar.description;
                             UserNotifier::NotifyAllUrgent(title, message);
-
-                            manager.Run(scenarioLar, true); 
 
                             recentEvents.erase(remove_if(
                                                    recentEvents.begin(), recentEvents.end(),
