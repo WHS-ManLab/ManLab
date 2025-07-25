@@ -359,7 +359,7 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
                 auto it = mRecentModifiedInodes.find(inode);
                 if (it != mRecentModifiedInodes.end())
                 {
-                    std::string md5hash = BaselineGenerator::compute_md5(fullPath);
+                    std::string md5hash = BaselineGenerator::ComputeMd5(fullPath);
                     spdlog::get("RealTime_logger")->info("[Event Type] = MODIFY         [Path] = {}  [MD5] = {}", fullPath, md5hash);
                     spdlog::get("RealTime_logger")->flush();
                     mRecentModifiedInodes.erase(it);
@@ -368,7 +368,7 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
 
             if ((metadata->mask & FAN_ATTRIB))
             {
-                std::string md5hash = BaselineGenerator::compute_md5(fullPath);
+                std::string md5hash = BaselineGenerator::ComputeMd5(fullPath);
                 spdlog::get("RealTime_logger")->info("[Event Type] = ATTRIB CHANGE  [Path] = {} [Path] = {}  [MD5] = {}", fullPath, md5hash);
                 spdlog::get("RealTime_logger")->flush();
             }
@@ -397,7 +397,7 @@ void RealTimeMonitor::processInotifyEvents(std::ostream& out)
         // 생성 이벤트
         if ((mask & IN_CREATE) && ShouldDisplayEvent(path, IN_CREATE) && !IsExcludedFile(path) && !isTemporaryOrFile(path))
         {
-            std::string md5hash = BaselineGenerator::compute_md5(path);
+            std::string md5hash = BaselineGenerator::ComputeMd5(path);
             spdlog::get("RealTime_logger")->info("[Event Type] = CREATE         [Path] = {}  [MD5] = {}", normalizePath(path), md5hash);
             spdlog::get("RealTime_logger")->flush();
         }
@@ -421,7 +421,7 @@ void RealTimeMonitor::processInotifyEvents(std::ostream& out)
             auto it = renameMap.find(event->cookie);
             if (it != renameMap.end()) 
             {
-                std::string md5hash = BaselineGenerator::compute_md5(path);
+                std::string md5hash = BaselineGenerator::ComputeMd5(path);
                 spdlog::get("RealTime_logger")->info("[Event Type] = RENAME         [From] = {} -> [To] = {}  [MD5] = {}", normalizePath(it->second) , normalizePath(path), md5hash);
                 spdlog::get("RealTime_logger")->flush();
                 renameMap.erase(it);
