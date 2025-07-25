@@ -76,8 +76,11 @@ void ScanWatchThread::loadWatchConfig()
 
     const std::vector<std::string> systemExcludes = 
     {
-        "/proc", "/sys", "/dev", "/run", "/tmp",
-        "/var/tmp", "/var/run", "/var/cache"
+        "/proc", "/sys", "/dev", "/run",
+        "/tmp", "/var/run", "/var/tmp",
+        "/boot", "/mnt", "/media", "/lost+found",
+        "/lib", "/lib64", "/usr/lib", "/usr/lib64",
+        "/root/ManLab"  // ManLab 자체 디렉터리 (설정, 로그, 바이너리 등)
     };
 
     mExcludeDirs.insert(mExcludeDirs.end(), systemExcludes.begin(), systemExcludes.end());
@@ -188,7 +191,7 @@ bool ScanWatchThread::InitFanotify()
         }
         else
         {
-            spdlog::info("감시 등록: {}", path);
+            //spdlog::info("감시 등록: {}", path);
         }
 
         // 하위 디렉토리 탐색

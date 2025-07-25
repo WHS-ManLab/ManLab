@@ -7,6 +7,7 @@
 #include <openssl/evp.h>
 #include <openssl/aes.h>
 #include <sys/xattr.h>
+#include <spdlog/spdlog.h>
 
 namespace fs = std::filesystem;
 
@@ -95,7 +96,7 @@ void RestoreManager::Run()
 
     if (!found)
     {
-        // TODO : 에러 리포트
+        spdlog::error("복구 실패: DB에서 격리 파일 메타데이터를 찾을 수 없음: {}", mQuarantinedFileName);
         return;
     }
 
@@ -107,6 +108,7 @@ void RestoreManager::Run()
     mbSuccess = false;
     try
     {
+        spdlog::info("격리 파일 복호화 시작: {}", srcPath.string());
         if (aesDecryptFile(srcPath.string(), tempDecryptedPath.string())) // 임시 파일로 복호화
         {
             // 복호화된 임시 파일에 저장된 원본 권한을 적용
@@ -114,21 +116,30 @@ void RestoreManager::Run()
             if (restored_perms != fs::perms::unknown) 
             {
                 fs::permissions(tempDecryptedPath, restored_perms);
+                spdlog::debug("복원 파일 권한 적용 완료: {:o}", static_cast<int>(restored_perms));
             }
 
             fs::rename(tempDecryptedPath, dstPath); // 원본 경로로 이동(복원)
+            spdlog::info("복호화 및 복원 완료: {}", dstPath.string());
+
             fs::remove(srcPath); // 격리된 원본 파일 삭제
+            spdlog::debug("격리 파일 삭제 완료: {}", srcPath.string());
+
             mbSuccess = true;
         }
         else
         {
-             if(fs::exists(tempDecryptedPath)) fs::remove(tempDecryptedPath);
-             // TODO : 에러 리포트(복호화 실패)
+            spdlog::error("복호화 실패: {}", srcPath.string());
+            if(fs::exists(tempDecryptedPath)) 
+            {
+                fs::remove(tempDecryptedPath);
+                spdlog::debug("임시 복호화 파일 삭제 완료: {}", tempDecryptedPath.string());
+            }
         }
     }
     catch (const fs::filesystem_error& e)
     {
-        // TODO : 에러 리포트( 파일 이동 중 오류 발생)
+        spdlog::error("복구 중 파일 시스템 오류 발생: {} - {}", dstPath.string(), e.what());
         mbSuccess = false;
     }
 }

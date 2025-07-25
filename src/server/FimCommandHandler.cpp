@@ -21,7 +21,7 @@ void FimCommandHandler::IntScan(std::ostream& out)
     }
     catch (const std::exception& e)
     {
-        spdlog::error("무결성 검사 중 오류 발생: {}", e.what());
+        spdlog::warn("무결성 검사 중 오류 발생: {}", e.what());
         out << "[ERROR] 무결성 검사 중 오류 발생: " << e.what() << std::endl;
     }
 }
@@ -43,7 +43,7 @@ void FimCommandHandler::BaselineGen(std::ostream& out)
     catch (const std::exception& e)
     {
         out << "[ERROR] Baseline 생성 실패: " << e.what() << '\n';
-        spdlog::error("Baseline 생성 실패: {}", e.what());
+        spdlog::warn("Baseline 생성 실패: {}", e.what());
     }
 }
 
@@ -81,7 +81,7 @@ void FimCommandHandler::PrintBaseline(std::ostream& out)
     catch (const std::exception& e)
     {
         out << "[ERROR] DB 조회 중 오류 발생: " << e.what() << std::endl;
-        spdlog::error("Baseline DB 조회 중 오류 발생: {}", e.what());
+        spdlog::warn("Baseline DB 조회 중 오류 발생: {}", e.what());
     }
 }
 
@@ -104,7 +104,7 @@ void FimCommandHandler::PrintIntegscan(std::ostream& out)
         else
         {
             out << "\n[ALERT] 변조된 파일 목록:\n";
-            spdlog::warn("{}개의 변조된 파일 발견!", modifiedEntries.size());
+            spdlog::info("{}개의 변조된 파일 발견!", modifiedEntries.size());
             for (const auto& entry : modifiedEntries)
             {
                 out << "Path: " << entry.path << "\n"
@@ -124,6 +124,6 @@ void FimCommandHandler::PrintIntegscan(std::ostream& out)
     catch (const std::exception& e)
     {
         out << "[ERROR] modifiedhash.db 조회 실패: " << e.what() << std::endl;
-        spdlog::error("modifiedhash.db 조회 실패: {}", e.what());
+        spdlog::warn("modifiedhash.db 조회 실패: {}", e.what());
     }
 }

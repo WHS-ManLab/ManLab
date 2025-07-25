@@ -8,7 +8,7 @@
 #include <regex>
 #include <thread>
 #include <chrono>
-
+#include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
 RsyslogManager::RsyslogManager()
@@ -81,7 +81,7 @@ void RsyslogManager::Run()
 
     if (!file.is_open())
     {
-        std::cerr << "[ERROR] Failed to open log file: " << mLogPath << std::endl;
+        spdlog::error("로그 파일 열기 실패: {}", mLogPath);
         return;
     }
 
@@ -131,6 +131,8 @@ void RsyslogManager::Run()
 
                 if (result.isMalicious)
                 {
+                    spdlog::warn("악성 로그 탐지됨: [{}] {} - {}", 
+                                 result.type, result.username, result.description);
                     //DB 저장
                     LogStorageManager manager;
                     
@@ -143,6 +145,14 @@ void RsyslogManager::Run()
                     lar.rawLine = entry->raw;
                     manager.Run(lar,false);
                 }
+                else 
+                {
+                    spdlog::debug("정상 로그 처리됨: {}", entry->raw);
+                }
+            }
+            else
+            {
+                spdlog::debug("로그 파싱 실패 또는 무시됨: {}", line);
             }
         }
         else
@@ -154,7 +164,7 @@ void RsyslogManager::Run()
             }
             else
             {
-                std::cerr << "[ERROR] Log file read error\n";
+                spdlog::error("로그 파일 읽기 중 오류 발생");
                 break;
             }
         }

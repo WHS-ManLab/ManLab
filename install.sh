@@ -80,5 +80,15 @@ augenrules --load > /dev/null 2>&1
 echo "[INFO] Installing spdlog..."
 sudo apt install libspdlog-dev
 
-echo "[OK] ManLab installation completed."
-systemctl start "$SERVICE_UNIT"
+# 9. 사용자에게 제품 실행 여부 확인
+read -p "[PROMPT] 지금 ManLab 서비스를 실행하시겠습니까? [Y/n]: " user_input
+user_input=${user_input,,}  # 소문자로 변환
+
+if [[ "$user_input" == "y" || "$user_input" == "" ]]; then
+  echo "[INFO] ManLab 서비스를 시작합니다..."
+  systemctl start "$SERVICE_UNIT"
+  echo "[OK] ManLab 서비스가 실행되었습니다."
+else
+  echo "[INFO] ManLab 서비스를 실행하지 않았습니다. 나중에 다음 명령어로 시작할 수 있습니다:"
+  echo "       sudo systemctl start $SERVICE_UNIT"
+fi
