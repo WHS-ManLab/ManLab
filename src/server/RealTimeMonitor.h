@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Paths.h"
+#include "FIMBaselineGenerator.h"
 #include <algorithm>
 #include <iostream>
 #include <cstring>
@@ -20,6 +21,8 @@
 #include <chrono>
 #include <unordered_set>
 #include <sys/stat.h>
+#include <openssl/md5.h>
+#include <fstream>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
@@ -31,6 +34,7 @@ enum CustomEvent : uint64_t {
     ATTRIB  = 0x08,
     RENAME  = 0x10 //리네임추가
 };
+
 
 constexpr size_t BUF_SIZE = 4096;
 std::vector<std::pair<std::string, uint64_t>> parsePathsFromIni(const std::string& iniPath, std::ostream& err);

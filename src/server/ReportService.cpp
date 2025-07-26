@@ -609,7 +609,7 @@ new Chart(rtCtx, {
 )";
     }
 
-    // SIG Chart Script
+    // SIG 차트 
     html << R"(
 <script>
 const scanCtx = document.getElementById('malwareScanDonutChart').getContext('2d');
@@ -748,7 +748,7 @@ new Chart(scanCtx, {
             firstLogChartItem = false;
         }
 
-        // LOG Chart Script
+        // LOG 차트 스
         html << R"(
 <script>
 function highlightRow(type) {

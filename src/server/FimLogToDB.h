@@ -13,6 +13,7 @@ private:
     std::string eventType;
     std::string path;     
     std::string newName;  
+    std::string md5;    
 };
 
     // 로그 한 줄을 파싱해서 ParsedLog 구조체에 저장하는 함수
