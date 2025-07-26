@@ -141,33 +141,9 @@ std::string CommandHandler::GetCommandString()
     {
         return "stop";
     }
-
-    // [malreport] 지금까지의 검사 내역 보여주는 명령어
-    else if (command == "malreport")
+    else if (command == "check_malreport")
     {
-        if (mArgs.size() < 2)
-        {
-            throw std::invalid_argument("Missing subcommand for malreport (expected 'list' or 'view <id>')");
-        }
-
-        const std::string& subcmd = mArgs[1];
-
-        if (subcmd == "list")
-        {
-            return "malreport list";
-        }
-        else if (subcmd == "view")
-        {
-            if (mArgs.size() < 3)
-            {
-                throw std::invalid_argument("Missing <id> for malreport view");
-            }
-            return "malreport view " + mArgs[2];
-        }
-        else
-        {
-            throw std::invalid_argument("Unknown malreport subcommand: " + subcmd);
-        }
+        return "check_malreport";
     }
 
     // 명령어 집합에 존재하지 않는 경우
