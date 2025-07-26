@@ -49,7 +49,8 @@ SERVER_SRCS = \
     $(SERVER_DIR)/ScanQueue.cpp \
     $(SERVER_DIR)/ScanWatchThread.cpp \
     $(SERVER_DIR)/AuditLogManager.cpp \
-    $(SERVER_DIR)/FimLogToDB.cpp
+    $(SERVER_DIR)/FimLogToDB.cpp \
+    $(SERVER_DIR)/CommandHelp.cpp
 
 # 클라이언트 소스
 CLI_SRCS = \

@@ -71,3 +71,9 @@
 
 // ManLab 전체 config 파일
 #define PATH_MANLAB_CONFIG_INI "/root/ManLab/conf/ManLabconf.ini"
+
+// ManLab 전체 logger 파일
+#define PATH_MANLAB_LOG "/root/ManLab/log/manlab.log"
+
+// FIM logger 파일
+#define PATH_MANLAB_FIM_LOG "/root/ManLab/log/RealTimeMonitor.log"

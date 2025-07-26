@@ -1,5 +1,5 @@
 #pragma once
-
+#include "CommandBus.h"
 #include <atomic>
 #include <string>
 #include <vector>
@@ -20,4 +20,5 @@ private:
 
     ServerDaemon* mpServerDaemon = nullptr;
     std::atomic<bool>* mpShouldRun = nullptr;
+    CommandBus mCommandBus;
 };

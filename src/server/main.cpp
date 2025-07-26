@@ -7,13 +7,14 @@
 #include "INIReader.h"
 #include "Paths.h"
 
-//std::shared_ptr<spdlog::logger> RealTime_logger = nullptr;
-
 void InitLogger() 
 {
+    // 로그 패턴 설정 (로거 이름 제거, TID 표시)
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [tid : %t] [%^%l%$] %v");
+
     // 최대 5MB, 최대 3개 파일 보관 (manlab.log, manlab.log.1, manlab.log.2)
     auto logger = spdlog::rotating_logger_mt(
-        "manlab_logger", "/root/ManLab/log/manlab.log",
+        "manlab_logger", PATH_MANLAB_LOG,
         1024 * 1024 * 5,  // 5MB
         3                 // 파일 개수
     );
@@ -24,14 +25,13 @@ void InitLogger()
 
     //FIM 실시간 검사 로깅 선언
     auto RealTime_logger = spdlog::rotating_logger_mt(
-        "RealTime_logger", "/root/ManLab/log/RealTimeMonitor.log",
+        "RealTime_logger", PATH_MANLAB_FIM_LOG,
         1024 * 1024 * 5, // 최대 파일 크기 5MB
         3                // 최대 파일 개수 3개
     );
     
     RealTime_logger->set_level(spdlog::level::info);
     RealTime_logger->flush_on(spdlog::level::info);
-
 }
 
 int main(int argc, char* argv[])
@@ -40,20 +40,19 @@ int main(int argc, char* argv[])
     INIReader reader(PATH_MANLAB_CONFIG_INI);
     bool shouldRun = reader.GetBoolean("Startup", "EnableManLab", true);
 
-    if (!shouldRun) 
+    if (!shouldRun)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
     {
-        spdlog::info("=== ManLab disable ===");
+        spdlog::info("EnableManLab=false in {}", PATH_MANLAB_CONFIG_INI);
         return 0;
     }
 
     
-    spdlog::info("=== ManLab Daemon Starting ===");
+    spdlog::info("ManLab 시작");
     ServerDaemon daemon;
     daemon.Run();
-    spdlog::info("=== ManLab Daemon Exited ===");
+    spdlog::info("ManLab 종료");
 
     spdlog::shutdown();
 
     return 0;
 }
-

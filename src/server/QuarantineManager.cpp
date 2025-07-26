@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <openssl/evp.h>
 #include <openssl/aes.h>
+#include <spdlog/spdlog.h>
 
 namespace fs = std::filesystem;
 
@@ -122,12 +123,16 @@ void QuarantineManager::Run()
         fs::path quarantinedPath = fs::path(PATH_QUARANTINE) / qName;
         fs::path tempEncryptedPath = quarantinedPath.string() + ".enc";
 
+        spdlog::info("격리 시작: {}", originalPath.string());
+
         // DB 저장을 위해, 원본 파일의 권한 획득
         fs::perms original_perms = fs::perms::unknown;
-        try {
+        try 
+        {
             original_perms = fs::status(originalPath).permissions();
-        } catch (const fs::filesystem_error& e) {
-            // 권한 획득 실패
+        } catch (const fs::filesystem_error& e) 
+        {
+            spdlog::warn("권한 정보 조회 실패: {} - {}", originalPath.string(), e.what());
         }
 
         QuarantineMetadata meta{
@@ -144,6 +149,7 @@ void QuarantineManager::Run()
         try
         {
             fs::rename(originalPath, quarantinedPath); // 격리 폴더로 파일 이동
+            spdlog::debug("파일 이동 완료 → {}", quarantinedPath.string());
 
             // 원본 파일을 읽어서 암호화 후 암호화된 임시 파일 생성
             if (aesEncryptFile(quarantinedPath.string(), tempEncryptedPath.string()))
@@ -156,19 +162,22 @@ void QuarantineManager::Run()
                 fs::rename(tempEncryptedPath, quarantinedPath); // 암호화된 파일을 최종 이름으로 변경
                 success = true;
             }
-            else {
-                 fs::rename(quarantinedPath, originalPath); // 암호화 실패 시 원위치
+            else 
+            {
+                fs::rename(quarantinedPath, originalPath); // 암호화 실패 시 원위치
+                spdlog::error("암호화 실패 → 파일 원복됨: {}", originalPath.string());
             }
         }
         catch (const fs::filesystem_error& e)
         {
-            //TODO : 파일시스템 오류
+            spdlog::error("파일 격리 도중 오류 발생: {} - {}", originalPath.string(), e.what());
         }
 
         if(success)
         {
             mIsQuarantineSuccess[i] = true;
             mStorage->insert(meta);
+            spdlog::debug("격리 메타데이터 DB 삽입 완료: {}", qName);
         }
         else
         {
