@@ -11,14 +11,11 @@ bool FimLogToDB::parseLogLine(const std::string& line, ParsedLog& outLog)
 {
     std::smatch match;
 
-    // RENAME 로그
-    std::regex renamePattern(R"(\[(.*?)\]\s+\[RealTime_logger\]\s+\[info\]\s+\[Event Type\]\s*=\s*RENAME\s+\[From\]\s*=\s*(.*?)\s*->\s*\[To\]\s*=\s*(.*?)\s+\[MD5\]\s*=\s*([a-fA-F0-9]{32}))");
+    std::regex generalPattern(R"(\[\s*(.*?)\s*\]\s*\[\s*tid\s*:\s*\d+\s*\]\s*\[\s*info\s*\]\s*\[\s*Event\s*Type\s*\]\s*=\s*(\w+)\s*\[\s*Path\s*\]\s*=\s*(.*?)\s*\[\s*MD5\s*\]\s*=\s*(\S+))");
 
-    std::regex generalPattern(R"(\[(.*?)\]\s+\[RealTime_logger\]\s+\[info\]\s+\[Event Type\]\s*=\s*(\w+)\s+\[Path\]\s*=\s*(\S+)\s+\[MD5\]\s*=\s*(.*))");
+    std::regex renamePattern(R"(\[\s*(.*?)\s*\]\s*\[\s*tid\s*:\s*\d+\s*\]\s*\[\s*info\s*\]\s*\[\s*Event\s*Type\s*\]\s*=\s*RENAME\s*\[\s*From\s*\]\s*=\s*(.*?)\s*->\s*\[\s*To\s*\]\s*=\s*(.*?)\s*\[\s*MD5\s*\]\s*=\s*(\S+))");
 
-
-
-    if (std::regex_match(line, match, renamePattern)) 
+    if (std::regex_match(line, match, renamePattern))
     {
         outLog.timestamp = match[1].str();
         outLog.eventType = "RENAME";
