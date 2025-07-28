@@ -188,35 +188,17 @@ bool RealTimeMonitor::ShouldDisplayEvent(const std::string& path, uint64_t actua
 {
     uint64_t matched = mapActualMaskToCustomMask(actualMask);
 
-    bool eventMatches = false;
     for (const auto& [dir, customMask] : mUserEventFilters)
     {
         if (path == dir || (path.find(dir) == 0 && path[dir.size()] == '/'))
         {
             if ((matched & customMask) != 0)
             {
-                eventMatches = true;
-                break;
+                return true;
             }
         }
     }
-    if (!eventMatches) {
-        return false;
-    }
-
-    for (const auto& [exDir, excludeSet] : excludeFilesByPath)
-    {
-        if (path == exDir || (path.find(exDir) == 0 && path[exDir.size()] == '/'))
-        {
-            std::string fileName = path.substr(path.find_last_of('/') + 1);
-            if (excludeSet.find(fileName) != excludeSet.end())
-            {
-                return false;
-            }
-        }
-    }
-
-    return true;
+    return false;
 }
 
 //파일 핸들이 속한 mountFD를 찾기
@@ -369,7 +351,7 @@ void RealTimeMonitor::processFanotifyEvents(struct fanotify_event_metadata* meta
             if ((metadata->mask & FAN_ATTRIB))
             {
                 std::string md5hash = BaselineGenerator::ComputeMd5(fullPath);
-                spdlog::get("RealTime_logger")->info("[Event Type] = ATTRIB CHANGE  [Path] = {} [Path] = {}  [MD5] = {}", fullPath, md5hash);
+                spdlog::get("RealTime_logger")->info("[Event Type] = ATTRIB CHANGE  [Path] = {}  [MD5] = {}", fullPath, md5hash);
                 spdlog::get("RealTime_logger")->flush();
             }
         }
