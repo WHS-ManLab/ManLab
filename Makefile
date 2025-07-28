@@ -1,125 +1,104 @@
-# Makefile
-# 1. 바이너리 실행
-# 2. 루트 디렉토리 하위에 /ManLab 폴더 생성
-# 
-# 4. 루트 디렉토리 하위에 /ManLab/db 폴더 생성
-#    추후 init를 실행함으로서 db 테이블 생성 및 초기화
-# 5. 루트 디렉토리 하위에 /ManLab/rules 폴더 생성
-#    git 디렉토리의 /ManLab/rulse 데이터 복사
-# 6. 루트 디렉토리 하위에 /ManLab/conf 폴더 생성
-#	 git 디렉토리의 /ManLab/conf 데이터 복사
-# -- 제거 -- 7. Manlab에 init를 인자로 전달해 줌으로서 초기화 로직 실행
-# 8. Manlab systemd 서비스 유닛 파일을 생성‧설치
-#    해당 서비스 파일의 내용은 git 기준 ManLab/.deploy 하위에 존재
-#	 PC를 부팅한 후 운영체제가 ManLab 바이너리에 boot_check 를 인자로 전달
-
-# 컴파일러 설정
+# 컴파일러 및 옵션
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wno-unused-local-typedefs \
-           -I. -I./src -I./lib -I./utils -isystem ./include
+           -I./src/server -I./src/cli -I./src/shared -I./lib -I./utils -isystem ./include
 
-# 디렉토리 및 타겟
-SRC_DIR = src
+LDLIBS = -lyaml-cpp -lsqlite3 -lyara -lssl -lcrypto -lpthread -lsystemd -lcurl
+
+# 디렉토리
+SERVER_DIR = src/server
+CLI_DIR = src/cli
+SHARED_DIR = src/shared
 LIB_DIR = lib
 UTILS_DIR = utils
-TARGET = ManLab
+BUILD_DIR = build
 
-INSTALL_DIR = /ManLab
-BIN_DIR = $(INSTALL_DIR)/bin
-DB_DIR = $(INSTALL_DIR)/db
-HASH_DB = $(DB_DIR)/hash.db
-QUARANTINE_DB = $(DB_DIR)/quarantine.db
-LOG_ANALYSIS_RESULT_DB = $(DB_DIR)/logAnalysisResult.db
-BASELINE_DB = $(DB_DIR)/baseline.db
-CONF_SRC_DIR = conf
-CONF_DST_DIR = $(INSTALL_DIR)/conf
-RULE_SRC_DIR = rules
-RULE_DST_DIR = $(INSTALL_DIR)/rules
-RSYSLOG_CONF = /etc/rsyslog.d/50-manlab.conf
-RSYSLOG_SRC = ./.deploy/50-manlab.conf
+# 타겟
+SERVER_TARGET = ManLab
+CLI_TARGET = ManLab-cli
 
-SERVICE_NAME   = manlab-init
-SERVICE_UNIT   = $(SERVICE_NAME).service
-SERVICE_PATH   = /etc/systemd/system/$(SERVICE_UNIT)
-SERVICE_TMPL   = ./.deploy/$(SERVICE_UNIT).tmpl
+# 서버 소스 목록
+SERVER_SRCS = \
+    $(SERVER_DIR)/main.cpp \
+    $(SERVER_DIR)/ServerDaemon.cpp \
+    $(SERVER_DIR)/DaemonUtils.cpp \
+    $(SERVER_DIR)/CommandReceiver.cpp \
+    $(SERVER_DIR)/CommandBus.cpp \
+    $(SERVER_DIR)/RegisterCommands.cpp \
+    $(SERVER_DIR)/RealtimeMonitorDaemon.cpp \
+    $(SERVER_DIR)/RealTimeMonitor.cpp \
+    $(SERVER_DIR)/ScheduleWatcher.cpp \
+    $(SERVER_DIR)/ScheduledScanExecutor.cpp \
+    $(SERVER_DIR)/MalwareScan.cpp \
+    $(SERVER_DIR)/QuarantineManager.cpp \
+    $(SERVER_DIR)/LogStorageManager.cpp \
+    $(SERVER_DIR)/RestoreManager.cpp \
+    $(SERVER_DIR)/RsyslogManager.cpp \
+    $(SERVER_DIR)/RsyslogRule.cpp \
+    $(SERVER_DIR)/ScheduledScan.cpp \
+    $(SERVER_DIR)/FIMBaselineGenerator.cpp \
+    $(SERVER_DIR)/FIMIntegScan.cpp \
+    $(SERVER_DIR)/UserNotifier.cpp \
+    $(SERVER_DIR)/FimCommandHandler.cpp \
+    $(SERVER_DIR)/SigCommandHandler.cpp \
+    $(SERVER_DIR)/DBManager.cpp \
+    $(SERVER_DIR)/ReportService.cpp \
+    $(SERVER_DIR)/GmailClient.cpp \
+    $(SERVER_DIR)/ScheduledReportExecutor.cpp \
+    $(SERVER_DIR)/RealTimeScanWorker.cpp \
+    $(SERVER_DIR)/ScanQueue.cpp \
+    $(SERVER_DIR)/ScanWatchThread.cpp \
+    $(SERVER_DIR)/AuditLogManager.cpp \
+    $(SERVER_DIR)/FimLogToDB.cpp \
+    $(SERVER_DIR)/CommandHelp.cpp
 
-# 소스 파일 직접 나열
-SRCS = $(SRC_DIR)/main.cpp \
-       $(SRC_DIR)/CommandHandler.cpp \
-       $(SRC_DIR)/DaemonBase.cpp \
-       $(SRC_DIR)/DBManager.cpp \
-       $(SRC_DIR)/FimCommandHandler.cpp \
-       $(SRC_DIR)/SigCommandHandler.cpp \
-       $(SRC_DIR)/LogDaemon.cpp \
-       $(SRC_DIR)/RealtimeMonitorDaemon.cpp \
-	   $(SRC_DIR)/RealTimeMonitor.cpp \
-       $(SRC_DIR)/ScheduledScanDaemon.cpp \
-       $(SRC_DIR)/MalwareScan.cpp \
-       $(SRC_DIR)/QuarantineManager.cpp \
-	   $(SRC_DIR)/LogStorageManager.cpp \
-	   $(SRC_DIR)/RestoreManager.cpp \
-	   $(SRC_DIR)/DaemonUtils.cpp \
-	   $(SRC_DIR)/RsyslogManager.cpp \
-	   $(SRC_DIR)/RsyslogRule.cpp \
-	   $(UTILS_DIR)/StringUtils.cpp \
-	   $(SRC_DIR)/FIMBaselineGenerator.cpp \
-	   $(SRC_DIR)/FIMIntegScan.cpp \
-       $(LIB_DIR)/INIReader.cpp \
-	   $(LIB_DIR)/ini.c
+# 클라이언트 소스
+CLI_SRCS = \
+    $(CLI_DIR)/main.cpp \
+    $(CLI_DIR)/CommandHandler.cpp
 
-# 빌드 대상
-.PHONY: all install initialize_db copy_conf copy_rules install_service install_rsyslog deps clean 
+# 유틸/라이브러리 소스
+UTIL_SRCS = \
+     $(UTILS_DIR)/StringUtils.cpp \
+     $(UTILS_DIR)/ScheduleParser.cpp
 
-all: deps install_rsyslog $(TARGET) install initialize_db copy_conf copy_rules install_service
-	rm -f $(TARGET)
-	@echo "[INFO] ManLab 설치가 완료되었습니다. 데이터베이스 초기화를 위해 수동으로 아래 명령어를 실행하세요:"
-	@echo "       sudo ManLab init"
+LIB_SRCS = $(LIB_DIR)/INIReader.cpp $(LIB_DIR)/ini.c
 
-$(TARGET): $(SRCS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS) -lyaml-cpp -lsqlite3 -lyara -lssl -lcrypto -lpthread
+# 오브젝트 파일 변환
+SERVER_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(SERVER_SRCS))
+CLI_OBJS    = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(CLI_SRCS))
+UTIL_OBJS   = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(UTIL_SRCS))
+LIB_OBJS_CPP = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(filter %.cpp, $(LIB_SRCS)))
+LIB_OBJS_C   = $(patsubst %.c, $(BUILD_DIR)/%.o, $(filter %.c, $(LIB_SRCS)))
 
-install:
-	@echo "[INFO] /ManLab/bin 경로 생성 중..."
-	sudo mkdir -p $(BIN_DIR)
-	sudo cp $(TARGET) $(BIN_DIR)/$(TARGET)
-	sudo ln -sf $(BIN_DIR)/$(TARGET) /usr/local/bin/$(TARGET)
+ALL_SERVER_OBJS = $(SERVER_OBJS) $(UTIL_OBJS) $(LIB_OBJS_CPP) $(LIB_OBJS_C)
+ALL_CLI_OBJS    = $(CLI_OBJS) $(UTIL_OBJS) $(LIB_OBJS_CPP) $(LIB_OBJS_C)
 
-install_rsyslog:
-	@echo "[INFO] rsyslog 설치 및 설정 적용 중..."
-	sudo apt install -y rsyslog
-	sudo cp -v $(RSYSLOG_SRC) $(RSYSLOG_CONF)
-	sudo systemctl restart rsyslog
+.PHONY: all clean
 
-initialize_db:
-	@echo "[INFO] /ManLab/db 경로 생성 중..."
-	sudo mkdir -p $(DB_DIR)
+# 전체 빌드
+all: $(SERVER_TARGET) $(CLI_TARGET)
+	@echo "[OK] Build completed"
 
-copy_conf:
-	@echo "[INFO] /ManLab/conf 경로 생성 중..."
-	sudo mkdir -p $(CONF_DST_DIR)
-	sudo cp -v $(CONF_SRC_DIR)/*.ini $(CONF_DST_DIR)/
-	sudo cp -v $(CONF_SRC_DIR)/*.yaml $(CONF_DST_DIR)/
+# 서버 타겟 빌드
+$(SERVER_TARGET): $(ALL_SERVER_OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
 
-copy_rules:
-	@echo "[INFO] /ManLab/rules 경로 생성 중..."
-	sudo mkdir -p $(RULE_DST_DIR)
-	sudo cp -v $(RULE_SRC_DIR)/*.yar $(RULE_DST_DIR)/
+# 클라이언트 타겟 빌드
+$(CLI_TARGET): $(ALL_CLI_OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
 
-install_service: $(SERVICE_TMPL)
-	@echo "[INFO] systemd 서비스 유닛 설치..."
-	sudo sed "s|__MANLAB_BIN__|$(BIN_DIR)/$(TARGET)|" $< | sudo tee $(SERVICE_PATH) > /dev/null
-	sudo systemctl daemon-reload
-	sudo systemctl enable $(SERVICE_UNIT)
-	
+# cpp → o
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# c → o
+$(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) -std=c99 -Wall -I./lib -c $< -o $@
+
+# 정리
 clean:
-	@echo "[INFO] /ManLab 전체 삭제 중..."
-	sudo rm -rf /ManLab
-
-	@echo "[INFO] systemd 서비스 제거 중..."
-	sudo systemctl disable $(SERVICE_NAME).service || true
-	sudo rm -f /etc/systemd/system/$(SERVICE_NAME).service
-	sudo systemctl daemon-reload
-
-deps:
-	@echo "[INFO] 필수 라이브러리를 설치합니다..."
-	sudo apt-get install -y libyaml-cpp-dev libsqlite3-dev libssl-dev libyara-dev
+	rm -rf $(SERVER_TARGET) $(CLI_TARGET) $(BUILD_DIR)
+	@echo "[INFO] Binaries cleaned"
