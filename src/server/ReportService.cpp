@@ -13,6 +13,8 @@
 #include <thread>     // sleep
 #include <map>
 #include <spdlog/spdlog.h>
+#include <numeric>
+#include <iomanip>
 
 using namespace std::chrono;
 using namespace manlab::utils;
@@ -229,7 +231,11 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
 
 <h2>• Modified Files (Manual Scan Results)</h2>
 <div style="display: flex; justify-content: space-between;">
-    <canvas id="manualScanExtChart" width="400" height="400"></canvas>
+    <div style="display: flex; align-items: center;">
+        <canvas id="manualScanExtChart" width="400" height="400"></canvas>
+        <div id="manualScanExtLegend" style="margin-left: 20px;"></div>
+    </div>
+
     <canvas id="manualScanReasonChart" width="400" height="400"></canvas>
     <canvas id="manualScanTimeChart"   width="400" height="400"></canvas>
 </div>
@@ -397,7 +403,7 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     html << R"(
 <script>
 const extCtx = document.getElementById('manualScanExtChart').getContext('2d');
-new Chart(extCtx, {
+const extChart = new Chart(extCtx, {
     type: 'doughnut',
     data: {
         labels: [)";
@@ -441,8 +447,33 @@ new Chart(extCtx, {
             }
         }
     },
-    plugins: [ChartDataLabels]
+    plugins: [ChartDataLabels] 
 });
+
+//도넛 요약 차트 표
+
+(function() {
+    const data = extChart.data;
+    const total = data.datasets[0].data.reduce((sum, v) => sum + v, 0);
+    let htmlLegend = '<table style="border-collapse: collapse; text-align: right;">';
+    data.labels.forEach((label, i) => {
+        const count = data.datasets[0].data[i];
+        const pct   = ((count/total)*100).toFixed(2) + '%';
+        const color = data.datasets[0].backgroundColor[i];
+        htmlLegend += `
+            <tr>
+              <td style="padding:4px;">
+                <span style="display:inline-block;width:12px;height:12px;
+                          background-color:${color};margin-right:8px;"></span>
+                ${label}
+              </td>
+              <td style="padding:4px;">${count}</td>
+              <td style="padding:4px;">${pct}</td>
+            </tr>`;
+    });
+    htmlLegend += '</table>';
+    document.getElementById('manualScanExtLegend').innerHTML = htmlLegend;
+})();
 
 const reasonCtx = document.getElementById('manualScanReasonChart').getContext('2d');
 new Chart(reasonCtx, {
