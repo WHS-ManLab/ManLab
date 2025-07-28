@@ -358,7 +358,10 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
 
     html << R"(
 <h2>• Real-time Monitoring Events</h2>
-<canvas id="realtimeChart" width="400" height="400"></canvas>
+<div style="display: flex; justify-content: space-between;">
+    <canvas id="realtimeChart"     width="400" height="400"></canvas>
+    <canvas id="realtimeTimeChart" width="400" height="400"></canvas>
+</div>
 <table>
     <thead>
         <tr>
@@ -398,6 +401,46 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         }
     }
     html << R"(</tbody></table>)";
+
+    // 3시간 단위 리얼타임 이벤트 통계 계산 시작
+    std::map<std::string,int> realTimeTimeBuckets;
+    for (const auto& rec : realTimeRecords) {
+        std::tm tm{};
+        std::istringstream ss(rec.timestamp);
+        ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+        if (!ss.fail()) {
+            int bucket = (tm.tm_hour / 3) * 3;
+            char buf[32];
+            std::snprintf(buf, sizeof(buf), "%s %02d:00",
+                          rec.timestamp.substr(0, 10).c_str(),
+                          bucket);
+            realTimeTimeBuckets[buf]++;
+        }
+    }
+
+    std::vector<std::string> eventTimeLabels;
+    std::vector<int>         eventTimeCounts;
+    {
+        std::tm t0{}, t1{};
+        std::istringstream(mStartTime) >> std::get_time(&t0, "%Y-%m-%d %H:%M:%S");
+        std::istringstream(mEndTime)   >> std::get_time(&t1, "%Y-%m-%d %H:%M:%S");
+        auto start = std::mktime(&t0);
+        auto end   = std::mktime(&t1);
+
+        t0 = *std::localtime(&start);
+        t0.tm_hour = (t0.tm_hour / 3) * 3;
+        t0.tm_min = t0.tm_sec = 0;
+        start = std::mktime(&t0);
+
+        for (auto tt = start; tt <= end; tt += 3 * 3600) {
+            std::tm tb = *std::localtime(&tt);
+            char lblBuf[32];
+            std::strftime(lblBuf, sizeof(lblBuf), "%Y-%m-%d %H:00", &tb);
+            std::string lbl(lblBuf);
+            eventTimeLabels.push_back(lbl);
+            eventTimeCounts.push_back(realTimeTimeBuckets[lbl]);
+        }
+    }
 
     // FIM 차트 스크립트
     html << R"(
@@ -640,6 +683,63 @@ new Chart(rtCtx, {
                     stepSize: 1,
                     precision: 0
                 }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+const rtTimeCtx = document.getElementById('realtimeTimeChart').getContext('2d');
+new Chart(rtTimeCtx, {
+    type: 'bar',
+    data: {
+        labels: [)";
+for (size_t i = 0; i < eventTimeLabels.size(); ++i) {
+    if (i) html << ", ";
+    html << "\"" << eventTimeLabels[i] << "\"";
+}
+html << R"(],
+        datasets: [{
+            label: 'Events by Time',
+            data: [)";
+for (size_t i = 0; i < eventTimeCounts.size(); ++i) {
+    if (i) html << ", ";
+    html << eventTimeCounts[i];
+}
+html << R"(],
+            backgroundColor: [)";
+for (size_t i = 0; i < eventTimeCounts.size(); ++i) {
+    if (i) html << ", ";
+    html << "\"" << ReportService::generateColor(i) << "\"";
+}
+html << R"(
+            ]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            title: {
+                display: true,
+                text: 'Events by Time'
+            },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top',
+                formatter: (value) => value
+            }
+        },
+        scales: {
+            x: {
+                grid: { display: true, drawBorder: true },
+                ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 }
+            },
+            y: {
+                beginAtZero: true,
+                grid: { display: true }
             }
         }
     },
