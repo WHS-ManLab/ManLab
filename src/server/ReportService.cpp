@@ -306,6 +306,36 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     }
     html << R"(</tbody></table>)";
 
+    // [추가] Modified Time (3-hour) 차트용 캔버스 추가
+html << R"(
+<h2>• Modified Files by Time (3-hour)</h2>
+<canvas id="modifiedMtimeChart" width="600" height="400"></canvas>
+)";
+
+// [추가] current_mtime 기준 3시간 단위 집계 코드
+std::map<std::string, int> mtime3hBins;
+std::tm tmStart{};
+std::istringstream ss(mStartTime);
+ss >> std::get_time(&tmStart, "%Y-%m-%d %H:%M:%S");
+auto startEpoch = std::mktime(&tmStart);
+
+for (const auto& record : modifiedRecords)
+{
+    std::tm tmCurr{};
+    std::istringstream ts(record.current_mtime);
+    ts >> std::get_time(&tmCurr, "%Y-%m-%d %H:%M:%S");
+    auto currentEpoch = std::mktime(&tmCurr);
+
+    int hourDiff = static_cast<int>(difftime(currentEpoch, startEpoch)) / 3600;
+    int binIndex = hourDiff / 3;
+
+    std::time_t binTime = startEpoch + binIndex * 3 * 3600;
+    std::tm* binTm = std::localtime(&binTime);
+    char buf[20];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", binTm);
+    mtime3hBins[buf]++;
+}
+
     html << R"(
 <h2>• Real-time Monitoring Events</h2>
 <canvas id="realtimeChart" width="400" height="400"></canvas>
@@ -512,8 +542,73 @@ new Chart(rtCtx, {
     },
     plugins: [ChartDataLabels]
 });
+
+// 추가 
+
+const mtimeCtx = document.getElementById('modifiedMtimeChart').getContext('2d');
+new Chart(mtimeCtx, {
+    type: 'bar',
+    data: {
+        labels: [)";
+firstChartItem = true;
+for (const auto& [label, _] : mtime3hBins) {
+    if (!firstChartItem) html << ", ";
+    html << "\"" << label << "\"";
+    firstChartItem = false;
+}
+html << R"(],
+        datasets: [{
+            label: 'Number of Events',
+            data: [)";
+firstChartItem = true;
+for (const auto& [_, count] : mtime3hBins) {
+    if (!firstChartItem) html << ", ";
+    html << count;
+    firstChartItem = false;
+}
+html << R"(],
+            backgroundColor: "rgba(255, 99, 132, 0.5)"
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top',
+                formatter: (value) => value
+            },
+            title: {
+                display: true,
+                text: "By Time (3-hour)",
+                font: {size: 16, weight: 'bold' }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1,
+                    precision: 0
+                }
+            },
+            x: {
+                ticks: {
+                    autoSkip: false,
+                    maxRotation: 45,
+                    minRotation: 45
+                }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
 </script>
 )";
+
 
     // -------------------------------------------------------
     // SIG팀 리포트
