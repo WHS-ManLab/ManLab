@@ -370,8 +370,8 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
 
     html << R"(
 <h2>• Real-time Monitoring Events</h2>
-<div style="display: flex; justify-content: space-between;">
-    <canvas id="realtimeChart"     width="400" height="400"></canvas>
+<div style="display: flex; justify-content: center;">
+    <canvas id="realtimeChart" style="margin-right: 10px;" width="400" height="400"></canvas>
     <canvas id="realtimeTimeChart" width="400" height="400"></canvas>
 </div>
 <table>
@@ -458,6 +458,8 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     // FIM 차트 스크립트
     html << R"(
 <script>
+
+// File Extension 도넛
 const extCtx = document.getElementById('manualScanExtChart').getContext('2d');
 const extChart = new Chart(extCtx, {
     type: 'doughnut',
@@ -531,6 +533,7 @@ const extChart = new Chart(extCtx, {
     document.getElementById('manualScanExtLegend').innerHTML = htmlLegend;
 })();
 
+//File Change Reasons 막대 그래프
 const reasonCtx = document.getElementById('manualScanReasonChart').getContext('2d');
 new Chart(reasonCtx, {
     type: 'bar',
@@ -575,7 +578,8 @@ html << R"(]
             title: {
                 display: true,
                 text: "File Change Reasons",
-                font: {size: 18, weight: 'bold' }
+                font: {size: 18, weight: 'bold' },
+                padding: { bottom : 20}
             }
         },
         scales: {
@@ -591,12 +595,14 @@ html << R"(]
     plugins: [ChartDataLabels]
 });
 
+//Modification By Time
 const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
     new Chart(timeCtx, {
         type: 'bar',
         data: {
             labels: [)";
 
+    // 수정된 파일 갯수
     for (size_t i = 0; i < allTimeLabels.size(); ++i) {
         if (i) html << ", ";
         html << "\"" << allTimeLabels[i] << "\"";
@@ -625,11 +631,12 @@ const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
             legend: { display: false },
             title: {
                 display: true,
-                text: ' Modification By Time'
+                text: ' Modification By Time',
+                font: {size: 18, weight: 'bold' }
             },
             datalabels: {
                 color: '#000',
-                font: { size : 18, weight: 'bold' },
+                font: { weight: 'bold' },
                 anchor: 'end',
                 align: 'top',
                 formatter: (v) => v
@@ -638,17 +645,36 @@ const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
         scales: {
             x: {
                 grid: { display: true, drawBorder: true },
-                ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 }
+                ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 },
+                title : {
+                    display : true,
+                    text : 'Time Interval (3hours)',
+                    font: {
+                        size : 13,
+                        weight: 'bold'
+                    },
+                    padding: {top : 10},
+                }
             },
             y: {
                 beginAtZero: true,
-                grid: { display: true }
+                grid: { display: true },
+                title: {
+                    display: true,
+                    text: 'Number of Events',
+                    font: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    padding: { bottom: 10 },
+                }
             }
         }
     },
     plugins: [ChartDataLabels]
 });
 
+//Events By Type 막대 그래프
 const rtCtx = document.getElementById('realtimeChart').getContext('2d');
 new Chart(rtCtx, {
     type: 'bar',
@@ -683,6 +709,11 @@ new Chart(rtCtx, {
         responsive: false,
         plugins: {
             legend: { position: 'bottom' },
+            title: {
+                display: true,
+                text: ' Events By Type',
+                font: {size: 18, weight: 'bold' }
+            },
             datalabels: {
                 color : '#000',
                 font: { weight: 'bold' },
@@ -702,6 +733,7 @@ new Chart(rtCtx, {
     plugins: [ChartDataLabels]
 });
 
+//Events by Time 시간 막대 그래프
 const rtTimeCtx = document.getElementById('realtimeTimeChart').getContext('2d');
 new Chart(rtTimeCtx, {
     type: 'bar',
@@ -735,7 +767,8 @@ html << R"(
             legend: { display: false },
             title: {
                 display: true,
-                text: 'Events by Time'
+                text: 'Events by Time',
+                font: {size: 18, weight: 'bold' }
             },
             datalabels: {
                 color: '#000',
@@ -748,11 +781,29 @@ html << R"(
         scales: {
             x: {
                 grid: { display: true, drawBorder: true },
-                ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 }
+                ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 },
+                title : {
+                    display : true,
+                    text : 'Time Interval (3hours)',
+                    font: {
+                        size : 13,
+                        weight: 'bold'
+                    },
+                    padding: {top : 10},
+                }
             },
             y: {
                 beginAtZero: true,
-                grid: { display: true }
+                grid: { display: true },
+                title: {
+                    display: true,
+                    text: 'Number of Events',
+                    font: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    padding: { bottom: 10 },
+                }
             }
         }
     },
