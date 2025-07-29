@@ -19,6 +19,53 @@
 using namespace std::chrono;
 using namespace manlab::utils;
 
+//3시간 단위로 시간 분리
+std::string get3HourBucketLabel(const std::string& datetimeStr)
+{
+    std::tm tm = {};
+    std::istringstream ss(datetimeStr);
+    ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+
+    if (ss.fail()) return "";  // 파싱 실패 시 빈 문자열 반환
+
+    int bucketStart = (tm.tm_hour / 3) * 3;
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%s %02d:00",
+                  datetimeStr.substr(0,10).c_str(),  // 날짜
+                  bucketStart);                     // 3시간 단위로 내림
+    return std::string(buf);
+}
+
+//Time 차트용 함수 (x축 라벨과 y축 라벨 자동으로 채워줌)
+ void generate3HourLabels(const std::string& startTime, const std::string& endTime,
+                         std::vector<std::string>& labels, std::vector<int>& counts,
+                         const std::map<std::string, int>& bucketMap)
+{
+    labels.clear();
+    counts.clear();
+
+    std::tm t0 = {}, t1 = {};
+    std::istringstream(startTime) >> std::get_time(&t0, "%Y-%m-%d %H:%M:%S");
+    std::istringstream(endTime)   >> std::get_time(&t1, "%Y-%m-%d %H:%M:%S");
+    auto start = std::mktime(&t0);
+    auto end   = std::mktime(&t1);
+
+    t0 = *std::localtime(&start);
+    t0.tm_hour = (t0.tm_hour / 3) * 3;
+    t0.tm_min = t0.tm_sec = 0;
+    start = std::mktime(&t0);
+
+    for (auto tt = start; tt <= end; tt += 3 * 3600)
+    {
+        std::tm tb = *std::localtime(&tt);
+        char buf[32];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:00", &tb);
+        std::string lbl(buf);
+        labels.push_back(lbl);
+        counts.push_back(bucketMap.count(lbl) ? bucketMap.at(lbl) : 0);
+    }
+}
+
 // "YYYY-MM-DD HH:MM:SS" -> "YYYYMMDD_HHMMSS" 형식으로 변환 (QuarantineMetadata 쿼리에 필요)
 std::string convertToQuarantineDateFormat(const std::string& dateTimeStr)
 {
@@ -268,8 +315,10 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     std::vector<ModifiedEntry> modifiedRecords;
     std::map<std::string, int> manualTypeCounts;
     std::map<std::string, int> manualReasonCounts;
-    std::map<std::string, int> manualTimeBuckets; // 추가된 시간대별 통계
-
+    // [추가] 추가된 시간대별 통계
+    std::map<std::string, int> manualTimeBuckets;
+    std::vector<std::string> allTimeLabels;
+    std::vector<int>         allTimeCounts; 
     try {
         auto& modifiedStorage = DBManager::GetInstance().GetModifiedStorage();
         modifiedRecords = modifiedStorage.get_all<ModifiedEntry>(
@@ -322,47 +371,14 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
                 if (record.current_mtime != baseline.mtime) manualReasonCounts["MTime 변경"]++;
                 if (record.current_size != baseline.size) manualReasonCounts["크기 변경"]++;
             }
-            // [추가] 3시간 단위 시간대별 통계 처리 시작
-            {
-                std::tm tm = {};
-                std::istringstream ssTime(record.current_mtime);
-                ssTime >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
-                if (!ssTime.fail()) {
-                    int bucketStart = (tm.tm_hour / 3) * 3;
-                    char bufTime[32];
-                    // "YYYY-MM-DD HH:MM" 형식의 라벨 생성
-                    std::snprintf(bufTime, sizeof(bufTime), "%s %02d:00",
-                                record.current_mtime.substr(0,10).c_str(),
-                                bucketStart);
-                    manualTimeBuckets[bufTime]++;
-                }
+            //[추가] 3시간 단위 시간 라벨 추출
+            std::string timeLabel = get3HourBucketLabel(record.current_mtime);
+            if (!timeLabel.empty()) {
+            manualTimeBuckets[timeLabel]++;
             }
         }
-    }
-    std::vector<std::string> allTimeLabels;
-    std::vector<int>         allTimeCounts;
-    {
-        std::tm t0 = {}, t1 = {};
-        std::istringstream(mStartTime) >> std::get_time(&t0, "%Y-%m-%d %H:%M:%S");
-        std::istringstream(mEndTime)   >> std::get_time(&t1, "%Y-%m-%d %H:%M:%S");
-        auto start = std::mktime(&t0);
-        auto end   = std::mktime(&t1);
-
-        // 시작 시각을 가장 가까운 3시간 경계로 내림
-        t0 = *std::localtime(&start);
-        t0.tm_hour = (t0.tm_hour / 3) * 3;
-        t0.tm_min = t0.tm_sec = 0;
-        start = std::mktime(&t0);
-
-        // start부터 end까지 3시간씩 레이블과 카운트(없으면 0) 채움
-        for (auto tt = start; tt <= end; tt += 3 * 3600) {
-            std::tm tb = *std::localtime(&tt);
-            char buf[32];
-            std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:00", &tb);
-            std::string lbl(buf);
-            allTimeLabels.push_back(lbl);
-            allTimeCounts.push_back(manualTimeBuckets[lbl]);
-        }
+         // [추가]최종 라벨/카운트 배열 생성
+        generate3HourLabels(mStartTime, mEndTime, allTimeLabels, allTimeCounts, manualTimeBuckets);
     }
     html << R"(</tbody></table>)";
 
@@ -414,46 +430,18 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         }
     }
     html << R"(</tbody></table>)";
-
-    // 3시간 단위 리얼타임 이벤트 통계 계산 시작
-    std::map<std::string,int> realTimeTimeBuckets;
-    for (const auto& rec : realTimeRecords) {
-        std::tm tm{};
-        std::istringstream ss(rec.timestamp);
-        ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
-        if (!ss.fail()) {
-            int bucket = (tm.tm_hour / 3) * 3;
-            char buf[32];
-            std::snprintf(buf, sizeof(buf), "%s %02d:00",
-                          rec.timestamp.substr(0, 10).c_str(),
-                          bucket);
-            realTimeTimeBuckets[buf]++;
+    //시간 차트 추가
+    std::map<std::string, int> realTimeTimeBuckets;
+    for (const auto& record : realTimeRecords) {
+        std::string timeLabel = get3HourBucketLabel(record.timestamp);
+        if (!timeLabel.empty()) {
+            realTimeTimeBuckets[timeLabel]++;
         }
     }
-
     std::vector<std::string> eventTimeLabels;
-    std::vector<int>         eventTimeCounts;
-    {
-        std::tm t0{}, t1{};
-        std::istringstream(mStartTime) >> std::get_time(&t0, "%Y-%m-%d %H:%M:%S");
-        std::istringstream(mEndTime)   >> std::get_time(&t1, "%Y-%m-%d %H:%M:%S");
-        auto start = std::mktime(&t0);
-        auto end   = std::mktime(&t1);
+    std::vector<int> eventTimeCounts;
+    generate3HourLabels(mStartTime, mEndTime, eventTimeLabels, eventTimeCounts, realTimeTimeBuckets);
 
-        t0 = *std::localtime(&start);
-        t0.tm_hour = (t0.tm_hour / 3) * 3;
-        t0.tm_min = t0.tm_sec = 0;
-        start = std::mktime(&t0);
-
-        for (auto tt = start; tt <= end; tt += 3 * 3600) {
-            std::tm tb = *std::localtime(&tt);
-            char lblBuf[32];
-            std::strftime(lblBuf, sizeof(lblBuf), "%Y-%m-%d %H:00", &tb);
-            std::string lbl(lblBuf);
-            eventTimeLabels.push_back(lbl);
-            eventTimeCounts.push_back(realTimeTimeBuckets[lbl]);
-        }
-    }
 
     // FIM 차트 스크립트
     html << R"(
