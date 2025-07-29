@@ -11,9 +11,9 @@ bool FimLogToDB::parseLogLine(const std::string& line, ParsedLog& outLog)
 {
     std::smatch match;
 
-    std::regex generalPattern(R"(\[\s*(.*?)\s*\]\s*\[\s*tid\s*:\s*\d+\s*\]\s*\[\s*info\s*\]\s*\[\s*Event\s*Type\s*\]\s*=\s*(\w+)\s*\[\s*Path\s*\]\s*=\s*(.*?)\s*\[\s*MD5\s*\]\s*=\s*(\S+))");
+    std::regex renamePattern(R"(\[\s*(.*?)\s*\]\s*\[\s*tid\s*:\s*\d+\s*\]\s*\[\s*info\s*\]\s*\[\s*Event\s*Type\s*\]\s*=\s*RENAME\s*\[\s*From\s*\]\s*=\s*(.*?)\s*->\s*\[\s*To\s*\]\s*=\s*(.*?)\s*\[\s*MD5\s*\]\s*=\s*([a-fA-F0-9\-]+))");
 
-    std::regex renamePattern(R"(\[\s*(.*?)\s*\]\s*\[\s*tid\s*:\s*\d+\s*\]\s*\[\s*info\s*\]\s*\[\s*Event\s*Type\s*\]\s*=\s*RENAME\s*\[\s*From\s*\]\s*=\s*(.*?)\s*->\s*\[\s*To\s*\]\s*=\s*(.*?)\s*\[\s*MD5\s*\]\s*=\s*(\S+))");
+std::regex generalPattern(R"(\[\s*(.*?)\s*\]\s*\[\s*tid\s*:\s*\d+\s*\]\s*\[\s*info\s*\]\s*\[\s*Event\s*Type\s*\]\s*=\s*([\w\s]+)\s*\[\s*Path\s*\]\s*=\s*(.*?)\s*\[\s*MD5\s*\]\s*=\s*([a-fA-F0-9\-]*)\s*)");
 
     if (std::regex_match(line, match, renamePattern))
     {
