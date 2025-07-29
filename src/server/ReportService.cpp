@@ -230,19 +230,28 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
 <h1>📂 File Integrity Monitoring Report</h1>
 
 <h2>• Modified Files (Manual Scan Results)</h2>
-<div style="display: flex; justify-content: space-between;">
+<div style="display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+    <!-- 확장자별 차트 + 범례 -->
     <div style="display: flex; align-items: center;">
         <canvas id="manualScanExtChart" width="400" height="400"></canvas>
         <div id="manualScanExtLegend" style="margin-left: 20px;"></div>
     </div>
 
-    <canvas id="manualScanReasonChart" width="400" height="400"></canvas>
-    <canvas id="manualScanTimeChart"   width="400" height="400"></canvas>
+    <!-- 변경 사유별 차트 -->
+    <div>
+        <canvas id="manualScanReasonChart" width="400" height="400"></canvas>
+    </div>
+
+    <!-- 시간대별 차트 -->
+    <div>
+        <canvas id="manualScanTimeChart" width="400" height="400"></canvas>
+    </div>
 </div>
 
 <table>
     <thead>
         <tr>
+            <th>ID</th>
             <th>Path</th>
             <th>Current MD5 Hash</th>
             <th>Permission</th>
@@ -281,9 +290,12 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     } else {
 
         auto& baselineStorage = DBManager::GetInstance().GetBaselineStorage();
+
+        int rowId = 1;
         
         for (const auto& record : modifiedRecords) {
             html << "<tr>";
+            html << "<td>" << rowId++ << "</td>";
             html << "<td>" << record.path << "</td>";
             html << "<td>" << record.current_md5 << "</td>";
             html << "<td>" << record.current_permission << "</td>";
@@ -394,8 +406,9 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         </tr>
 )";
     } else {
+        int rowId = 1;
         for (const auto& record : realTimeRecords) {
-            html << "<tr><td>" << record.id << "</td><td>" << record.path
+            html << "<tr><td>" << rowId++ << "</td><td>" << record.path
                  << "</td><td>" << record.eventType << "</td><td>" << record.newName << "</td><td>" << record.timestamp << "</td></tr>";
             eventTypeCounts[record.eventType]++;
         }
@@ -486,7 +499,7 @@ const extChart = new Chart(extCtx, {
             title: {
                 display: true,
                 text: "File Extension",
-                font: {size: 16, weight: 'blod' }
+                font: {size: 18, weight: 'bold' }
             }
         }
     },
@@ -562,7 +575,7 @@ html << R"(]
             title: {
                 display: true,
                 text: "File Change Reasons",
-                font: {size: 16, weight: 'blod' }
+                font: {size: 18, weight: 'bold' }
             }
         },
         scales: {
@@ -612,11 +625,11 @@ const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
             legend: { display: false },
             title: {
                 display: true,
-                text: 'by time events'
+                text: ' Modification By Time'
             },
             datalabels: {
                 color: '#000',
-                font: { weight: 'bold' },
+                font: { size : 18, weight: 'bold' },
                 anchor: 'end',
                 align: 'top',
                 formatter: (v) => v
@@ -700,7 +713,7 @@ for (size_t i = 0; i < eventTimeLabels.size(); ++i) {
 }
 html << R"(],
         datasets: [{
-            label: 'Events by Time',
+            label: 'Events By Time',
             data: [)";
 for (size_t i = 0; i < eventTimeCounts.size(); ++i) {
     if (i) html << ", ";

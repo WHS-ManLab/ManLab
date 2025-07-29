@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ManLab Regular Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:target {
+            background-color: #ffff99;
+            transition : background-color 0.3s ease;
+        }
+        tr.highlight {
+            background-color: #ffff99;
+        }
+        h1 {
+            text-align: center;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+        .chart-row {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .chart-box {
+            flex: 1 1 30%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+<h1 style="text-align: center;">ManLab Regular Security Report</h1>
+<p style="text-align: right;">Report period: 2025-07-27 22:15:28 ~ 2025-07-28 22:15:28</p>
+
+<hr/>
+<h1>📂 File Integrity Monitoring Report</h1>
+
+<h2>• Modified Files (Manual Scan Results)</h2>
+<div style="display: flex; justify-content: space-between;">
+    <div style="display: flex; align-items: center;">
+        <canvas id="manualScanExtChart" width="400" height="400"></canvas>
+        <div id="manualScanExtLegend" style="margin-left: 20px;"></div>
+    </div>
+
+    <canvas id="manualScanReasonChart" width="400" height="400"></canvas>
+    <canvas id="manualScanTimeChart"   width="400" height="400"></canvas>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Path</th>
+            <th>Current MD5 Hash</th>
+            <th>Permission</th>
+            <th>UID</th>
+            <th>GID</th>
+            <th>CTime</th>
+            <th>MTime</th>
+            <th>Size</th>
+        </tr>
+    </thead>
+    <tbody>
+<tr><td>/etc/audit/rules.d/manlab.rules</td><td>876618cf387096c220dda9153a82674b</td><td>rw-r-----</td><td>0</td><td>0</td><td>2025-07-28 22:13:18</td><td>2025-07-28 22:13:18</td><td>1241</td></tr>
+<tr><td>/etc/rsyslog.d/50-manlab.conf</td><td>82b0b46e3cda59358689540940a8940a</td><td>rw-r--r--</td><td>0</td><td>0</td><td>2025-07-28 22:13:13</td><td>2025-07-28 22:13:13</td><td>166</td></tr>
+<tr><td>/etc/mtab</td><td>622e424b114680c2068b704505090fd6</td><td>r--r--r--</td><td>0</td><td>0</td><td>2025-07-28 22:13:36</td><td>2025-07-28 22:13:36</td><td>0</td></tr>
+<tr><td>/etc/systemd/system/multi-user.target.wants/manlab-init.service</td><td>ee4dc95e2db434c0ddf2f7e8e4884a72</td><td>rw-r--r--</td><td>0</td><td>0</td><td>2025-07-28 22:13:13</td><td>2025-07-28 22:13:13</td><td>190</td></tr>
+<tr><td>/etc/systemd/system/manlab-init.service</td><td>ee4dc95e2db434c0ddf2f7e8e4884a72</td><td>rw-r--r--</td><td>0</td><td>0</td><td>2025-07-28 22:13:13</td><td>2025-07-28 22:13:13</td><td>190</td></tr>
+<tr><td>/etc/cups/subscriptions.conf</td><td>06d293ef415f85a91dce20c2efe9ad68</td><td>rw-r-----</td><td>0</td><td>7</td><td>2025-07-28 22:00:09</td><td>2025-07-28 22:00:09</td><td>676</td></tr>
+<tr><td>/etc/cups/subscriptions.conf.O</td><td>ae9e569c00e4db02d8eebb17a7b2a24f</td><td>rw-r-----</td><td>0</td><td>7</td><td>2025-07-28 22:00:09</td><td>2025-07-28 21:59:38</td><td>968</td></tr>
+<tr><td>/etc/t.txt</td><td>5c9597f3c8245907ea71a89d9d39d08e</td><td>rw-r--r--</td><td>0</td><td>0</td><td>2025-07-28 16:48:40</td><td>2025-07-28 16:48:40</td><td>4</td></tr>
+<tr><td>/etc/g.txt</td><td>0e2faf3ffdf79f2775ba46d15559f4b6</td><td>rw-r--r--</td><td>0</td><td>0</td><td>2025-07-28 16:48:46</td><td>2025-07-28 16:48:46</td><td>6</td></tr>
+<tr><td>/etc/test.txt</td><td>fb69f0e0830695a2684cbf9b73a26d68</td><td>rwxrwxrwx</td><td>100</td><td>100</td><td>2025-07-28 16:22:48</td><td>2025-07-28 16:21:59</td><td>14</td></tr>
+</tbody></table>
+<h2>• Real-time Monitoring Events</h2>
+<div style="display: flex; justify-content: space-between;">
+    <canvas id="realtimeChart"     width="400" height="400"></canvas>
+    <canvas id="realtimeTimeChart" width="400" height="400"></canvas>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Path</th>
+            <th>Event Type</th>
+            <th>New Name</th>
+            <th>Timestamp</th>
+        </tr>
+    </thead>
+    <tbody>
+<tr><td>8</td><td>/etc/g.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:03:36.155</td></tr><tr><td>9</td><td>/etc/g.txt</td><td>MODIFY</td><td>-</td><td>2025-07-28 14:03:49.067</td></tr><tr><td>10</td><td>/etc/g.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:03:49.067</td></tr><tr><td>11</td><td>/etc/h.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:20:23.433</td></tr><tr><td>12</td><td>/etc/h.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:20:34.678</td></tr><tr><td>20</td><td>/etc/g.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:03:36.155</td></tr><tr><td>21</td><td>/etc/g.txt</td><td>MODIFY</td><td>-</td><td>2025-07-28 14:03:49.067</td></tr><tr><td>22</td><td>/etc/g.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:03:49.067</td></tr><tr><td>23</td><td>/etc/h.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:20:23.433</td></tr><tr><td>24</td><td>/etc/h.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:20:34.678</td></tr><tr><td>25</td><td>/etc/test.txt</td><td>MODIFY</td><td>-</td><td>2025-07-28 16:21:59.991</td></tr><tr><td>33</td><td>/etc/g.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:03:36.155</td></tr><tr><td>34</td><td>/etc/g.txt</td><td>MODIFY</td><td>-</td><td>2025-07-28 14:03:49.067</td></tr><tr><td>35</td><td>/etc/g.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:03:49.067</td></tr><tr><td>36</td><td>/etc/h.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:20:23.433</td></tr><tr><td>37</td><td>/etc/h.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:20:34.678</td></tr><tr><td>38</td><td>/etc/test.txt</td><td>MODIFY</td><td>-</td><td>2025-07-28 16:21:59.991</td></tr><tr><td>39</td><td>/etc/t.txt</td><td>MODIFY</td><td>-</td><td>2025-07-28 16:48:40.235</td></tr><tr><td>40</td><td>/etc/t.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 16:48:40.235</td></tr><tr><td>41</td><td>/etc/g.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 16:48:46.890</td></tr><tr><td>49</td><td>/etc/g.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:03:36.155</td></tr><tr><td>50</td><td>/etc/g.txt</td><td>MODIFY</td><td>-</td><td>2025-07-28 14:03:49.067</td></tr><tr><td>51</td><td>/etc/g.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:03:49.067</td></tr><tr><td>52</td><td>/etc/h.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:20:23.433</td></tr><tr><td>53</td><td>/etc/h.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 14:20:34.678</td></tr><tr><td>54</td><td>/etc/test.txt</td><td>MODIFY</td><td>-</td><td>2025-07-28 16:21:59.991</td></tr><tr><td>55</td><td>/etc/t.txt</td><td>MODIFY</td><td>-</td><td>2025-07-28 16:48:40.235</td></tr><tr><td>56</td><td>/etc/t.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 16:48:40.235</td></tr><tr><td>57</td><td>/etc/g.txt</td><td>CREATE</td><td>-</td><td>2025-07-28 16:48:46.890</td></tr></tbody></table>
+<script>
+const extCtx = document.getElementById('manualScanExtChart').getContext('2d');
+const extChart = new Chart(extCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ["/etc/mtab", "O", "conf", "rules", "service", "txt"],
+        datasets: [{
+            data: [1, 1, 2, 1, 2, 3],
+            backgroundColor: ["rgba(255, 99, 132, 0.6)", "rgba(54, 162, 235, 0.6)", "rgba(255, 206, 86, 0.6)", "rgba(75, 192, 192, 0.6)", "rgba(153, 102, 255, 0.6)", "rgba(255, 159, 64, 0.6)"]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            },
+            title: {
+                display: true,
+                text: "File Extension",
+                font: {size: 16, weight: 'blod' }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+(function() {
+    const data = extChart.data;
+    const total = data.datasets[0].data.reduce((sum, v) => sum + v, 0);
+    let htmlLegend = '<table style="border-collapse: collapse; text-align: right;">';
+    data.labels.forEach((label, i) => {
+        const count = data.datasets[0].data[i];
+        const pct   = ((count/total)*100).toFixed(2) + '%';
+        const color = data.datasets[0].backgroundColor[i];
+        htmlLegend += `
+            <tr>
+              <td style="padding:4px;">
+                <span style="display:inline-block;width:12px;height:12px;
+                          background-color:${color};margin-right:8px;"></span>
+                ${label}
+              </td>
+              <td style="padding:4px;">${count}</td>
+              <td style="padding:4px;">${pct}</td>
+            </tr>`;
+    });
+    htmlLegend += '</table>';
+    document.getElementById('manualScanExtLegend').innerHTML = htmlLegend;
+})();
+
+const reasonCtx = document.getElementById('manualScanReasonChart').getContext('2d');
+new Chart(reasonCtx, {
+    type: 'bar',
+    data: {
+        labels: ["CTime 변경", "GID 변경", "MTime 변경", "UID 변경", "크기 변경", "해시값 변경"],
+        datasets: [{
+            label: '변경된 파일 수',
+            data: [10, 1, 10, 1, 5, 5],
+            backgroundColor: ["rgba(255, 99, 132, 0.6)", "rgba(54, 162, 235, 0.6)", "rgba(255, 206, 86, 0.6)", "rgba(75, 192, 192, 0.6)", "rgba(153, 102, 255, 0.6)", "rgba(255, 159, 64, 0.6)"]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top',
+                formatter: (value) => value
+            },
+            title: {
+                display: true,
+                text: "File Change Reasons",
+                font: {size: 16, weight: 'blod' }
+            }
+        },
+        scales: {
+            y:{
+                beginAtZero: true,
+                ticks:{
+                    stepSize: 1,
+                    precision: 0
+                }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
+    new Chart(timeCtx, {
+        type: 'bar',
+        data: {
+            labels: ["2025-07-27 21:00", "2025-07-28 00:00", "2025-07-28 03:00", "2025-07-28 06:00", "2025-07-28 09:00", "2025-07-28 12:00", "2025-07-28 15:00", "2025-07-28 18:00", "2025-07-28 21:00"],
+        datasets: [{
+            label: '이벤트 수',
+            data: [0, 0, 0, 0, 0, 0, 3, 0, 7],
+            backgroundColor: ["rgba(255, 99, 132, 0.6)", "rgba(54, 162, 235, 0.6)", "rgba(255, 206, 86, 0.6)", "rgba(75, 192, 192, 0.6)", "rgba(153, 102, 255, 0.6)", "rgba(255, 159, 64, 0.6)", "rgba(44, 224, 148, 0.6)", "rgba(94, 48, 2, 0.6)", "rgba(144, 128, 112, 0.6)"]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            title: {
+                display: true,
+                text: 'by time events'
+            },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top',
+                formatter: (v) => v
+            }
+        },
+        scales: {
+            x: {
+                grid: { display: true, drawBorder: true },
+                ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 }
+            },
+            y: {
+                beginAtZero: true,
+                grid: { display: true }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+const rtCtx = document.getElementById('realtimeChart').getContext('2d');
+new Chart(rtCtx, {
+    type: 'bar',
+    data: {
+        labels: ["CREATE", "MODIFY"],
+        datasets: [{
+            label: 'Event Count',
+            data: [20, 9],
+            backgroundColor: ["rgba(255, 99, 132, 0.6)", "rgba(54, 162, 235, 0.6)"]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            }
+        },
+        scales: {
+            y:{
+                beginAtZero: true,
+                ticks:{
+                    stepSize: 1,
+                    precision: 0
+                }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+const rtTimeCtx = document.getElementById('realtimeTimeChart').getContext('2d');
+new Chart(rtTimeCtx, {
+    type: 'bar',
+    data: {
+        labels: ["2025-07-27 21:00", "2025-07-28 00:00", "2025-07-28 03:00", "2025-07-28 06:00", "2025-07-28 09:00", "2025-07-28 12:00", "2025-07-28 15:00", "2025-07-28 18:00", "2025-07-28 21:00"],
+        datasets: [{
+            label: 'Events by Time',
+            data: [0, 0, 0, 0, 0, 25, 13, 0, 0],
+            backgroundColor: ["rgba(255, 99, 132, 0.6)", "rgba(54, 162, 235, 0.6)", "rgba(255, 206, 86, 0.6)", "rgba(75, 192, 192, 0.6)", "rgba(153, 102, 255, 0.6)", "rgba(255, 159, 64, 0.6)", "rgba(44, 224, 148, 0.6)", "rgba(94, 48, 2, 0.6)", "rgba(144, 128, 112, 0.6)"
+            ]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            title: {
+                display: true,
+                text: 'Events by Time'
+            },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top',
+                formatter: (value) => value
+            }
+        },
+        scales: {
+            x: {
+                grid: { display: true, drawBorder: true },
+                ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 }
+            },
+            y: {
+                beginAtZero: true,
+                grid: { display: true }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+</script>
+
+<hr/>
+<h1>Malware Scan Report</h1>
+<p>Scan records from 2025-07-28 11:15:16 to 2025-07-29 11:15:16</p>
+<style>
+        .chart-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .chart-item {
+            width: 420px; /* 400px canvas + 2*10px padding = 420px */
+            box-sizing: border-box;
+            padding: 10px;
+            text-align: center;
+        }
+        @media (max-width: 768px) {
+            .chart-item {
+                width: 48%;
+            }
+        }
+        @media (max-width: 480px) {
+            .chart-item {
+                width: 98%;
+            }
+        }
+    </style><div class="chart-container">
+    <div class="chart-item">
+        <p>총 <b>7</b>회의 스캔이 진행되었습니다.</p>
+        <canvas id="malwareScanDonutChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
+    </div>
+    <div class="chart-item">
+        <p>총 <b>5</b>개의 악성코드가 탐지되었습니다.</p>
+        <canvas id="hashYaraDonutChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
+    </div>
+    <div class="chart-item">
+        <p>시간대별 악성코드 탐지 현황</p>
+        <canvas id="hourlyDetectionBarChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
+    </div>
+</div>
+
+
+
+<script>
+// (SIG Team Chart JS START)
+
+function highlightScanRows(type) {
+    document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    if (type === 'Detected') {
+        document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+            if (!tr.classList.contains('no-detection-row')) {
+                tr.classList.add('highlight');
+            }
+        });
+    } else if (type === 'Not Detected') {
+        const noDetectionRow = document.querySelector('#ScanDetailsTable .no-detection-row');
+        if (noDetectionRow) {
+            noDetectionRow.classList.add('highlight');
+        }
+    }
+    const firstHighlightedRow = document.querySelector('#ScanDetailsTable .highlight');
+    if (firstHighlightedRow) {
+        firstHighlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// Hash/YARA 도넛 차트 클릭 시 하이라이팅
+function highlightReasonRows(reasonType) {
+    document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+    document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+        if (tr.dataset.reason === reasonType) {
+            tr.classList.add('highlight');
+        }
+    });
+    const firstHighlightedRow = document.querySelector('#ScanDetailsTable .highlight');
+    if (firstHighlightedRow) {
+        firstHighlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// 시간대별/Hash/YARA 하이라이팅 (새로 추가된 기능)
+function highlightHourlyReasonRows(reasonType, hourSlot) {
+    document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    // 00:00 -> 00, 03:00 -> 03 ... 21:00 -> 21
+    const targetHourStr = String(hourSlot).padStart(2, '0'); // 시간 슬롯을 두 자리 문자열로 변환 (예: 3 -> "03")
+
+    document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+        const trReason = tr.dataset.reason;
+        const trHour = tr.dataset.quarantineHour; // "data-quarantine-hour" 속성 사용
+
+        // Reason이 일치하고, 시간 슬롯 범위 내에 있는지 확인
+        // 예: targetHourStr이 "03"이면, 03시, 04시, 05시까지의 기록을 포함
+        const trHourInt = parseInt(trHour, 10);
+        const hourSlotInt = parseInt(targetHourStr, 10);
+
+        if (trReason === reasonType && 
+            trHourInt >= hourSlotInt && 
+            trHourInt < (hourSlotInt + 3)) {
+            tr.classList.add('highlight');
+        }
+    });
+    const firstHighlightedRow = document.querySelector('#ScanDetailsTable .highlight');
+    if (firstHighlightedRow) {
+        firstHighlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+
+const scanCtx = document.getElementById('malwareScanDonutChart').getContext('2d');
+const malwareScanDonutChart = new Chart(scanCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Detected', 'Not Detected'],
+        datasets: [{
+            data: [3, 4],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.6)', // Detected (Red)
+                'rgba(75, 192, 192, 0.6)'  // Not Detected (Cyan)
+            ]
+        }]
+    },
+    options: {
+        responsive: false, // 다른 팀 코드와 동일하게 false
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            },
+            title: { // SIG 팀 첫 번째 원형 그래프 제목
+                display: true,
+                text: "Malware Scan Detection", // 제목 텍스트
+                font: { size: 16, weight: 'bold' } // 다른 팀 코드와 동일한 크기
+            }
+        }
+        // 이 그래프에는 onClick 하이라이팅 없음 - 요청 반영
+    },
+    plugins: [ChartDataLabels]
+});
+
+// Hash vs YARA 탐지율 도넛 차트
+const hashYaraCtx = document.getElementById('hashYaraDonutChart').getContext('2d');
+new Chart(hashYaraCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Hash', 'YARA'],
+        datasets: [{
+            data: [3, 2],
+            backgroundColor: [
+                'rgba(255, 159, 64, 0.6)',  // Hash (Orange)
+                'rgba(153, 102, 255, 0.6)'  // YARA (Purple)
+            ]
+        }]
+    },
+    options: {
+        responsive: false, // 다른 팀 코드와 동일하게 false
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            },
+            title: { // SIG 팀 두 번째 원형 그래프 제목
+                display: true,
+                text: "Detection by Type", // 제목 텍스트
+                font: { size: 16, weight: 'bold' } // 다른 팀 코드와 동일한 크기
+            }
+        },
+        onClick: (evt) => {
+            const points = hashYaraCtx.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const index = points[0].index;
+                const label = hashYaraCtx.data.labels[index];
+                highlightReasonRows(label);
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+
+// 시간대별 막대 그래프 데이터 준비
+const hourlyLabels = [];
+const hashData = [];
+const yaraData = [];
+const barChartColors = {
+    'Hash': 'rgba(255, 159, 64, 0.7)', // Orange for Hash
+    'YARA': 'rgba(153, 102, 255, 0.7)' // Purple for YARA
+};
+
+hourlyLabels.push('2025-07-28 00:00');
+hashData.push(0);
+yaraData.push(0);
+hourlyLabels.push('03:00');
+hashData.push(0);
+yaraData.push(0);
+hourlyLabels.push('06:00');
+hashData.push(0);
+yaraData.push(0);
+hourlyLabels.push('09:00');
+hashData.push(3);
+yaraData.push(2);
+hourlyLabels.push('12:00');
+hashData.push(0);
+yaraData.push(0);
+hourlyLabels.push('15:00');
+hashData.push(0);
+yaraData.push(0);
+hourlyLabels.push('18:00');
+hashData.push(0);
+yaraData.push(0);
+hourlyLabels.push('2025-07-29 21:00');
+hashData.push(0);
+yaraData.push(0);
+
+const barCtx = document.getElementById('hourlyDetectionBarChart').getContext('2d');
+const hourlyDetectionBarChart = new Chart(barCtx, { // Chart 객체 변수 추가
+    type: 'bar',
+    data: {
+        labels: hourlyLabels,
+        datasets: [
+            {
+                label: 'Hash Detections',
+                data: hashData,
+                backgroundColor: barChartColors['Hash'],
+                borderColor: barChartColors['Hash'].replace('0.7', '1'),
+                borderWidth: 1
+            },
+            {
+                label: 'YARA Detections',
+                data: yaraData,
+                backgroundColor: barChartColors['YARA'],
+                borderColor: barChartColors['YARA'].replace('0.7', '1'),
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: false, // 다른 팀 코드와 동일하게 false
+        scales: {
+            x: {
+                stacked: true,
+                title: {
+                    display: true,
+                    text: 'Time Interval'
+                }
+            },
+            y: {
+                stacked: true,
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1 // Y축 단위를 1로 설정
+                },
+                title: {
+                    display: true,
+                    text: 'Number of Detections'
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            datalabels: { // 막대 그래프에 데이터 레이블 비활성화 (지저분해질 수 있음)
+                display: false
+            },
+            title: { // SIG 팀 막대 그래프 제목
+                display: true,
+                text: "Hourly Malware Detections", // 제목 텍스트
+                font: { size: 16, weight: 'bold' } // 다른 팀 코드와 동일한 크기
+            }
+        },
+        onClick: (evt) => { // 막대 그래프 onClick 이벤트 추가
+            const points = hourlyDetectionBarChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const datasetIndex = points[0].datasetIndex; // Hash인지 YARA인지 (0 또는 1)
+                const elementIndex = points[0].index;      // 시간 슬롯 인덱스 (0~7)
+
+                const reasonType = (datasetIndex === 0) ? 'Hash' : 'YARA';
+                const hourSlot = elementIndex * 3; // 시간 슬롯 인덱스를 실제 시간으로 변환 (예: 0->0, 1->3, 7->21)
+                
+                highlightHourlyReasonRows(reasonType, hourSlot);
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+</script>
+
+<h2>Scan Details</h2>
+<table id="ScanDetailsTable">
+    <thead>
+        <tr>
+            <th>Scan ID</th>
+            <th>Reason</th>
+            <th>Malware Name / Rule</th>
+            <th>File Path</th>
+            <th>File Name</th>
+            <th>Date</th>
+            <th>Quarantine Success Status</th>
+        </tr>
+    </thead>
+    <tbody>
+<tr data-scan-id="1" data-reason="Hash" data-quarantine-hour="11"><td>1</td><td>Hash</td><td>MalwareScan_Test_File</td><td>/home/user/Desktop/dd</td><td>dd</td><td>2025-07-29 11:10:52</td><td>Yes</td></tr>
+<tr data-scan-id="1" data-reason="YARA" data-quarantine-hour="11"><td>1</td><td>YARA</td><td>malware_Test_Rule</td><td>/home/user/Desktop/ni3d</td><td>ni3d</td><td>2025-07-29 11:10:53</td><td>Yes</td></tr>
+<tr data-scan-id="2" data-reason="Hash" data-quarantine-hour="11"><td>2</td><td>Hash</td><td>MalwareScan_Test_File</td><td>/home/user/Desktop/3p3pd</td><td>3p3pd</td><td>2025-07-29 11:12:01</td><td>Yes</td></tr>
+<tr data-scan-id="3" data-reason="YARA" data-quarantine-hour="11"><td>3</td><td>YARA</td><td>malware_Test_Rule</td><td>/home/user/Desktop/3dd</td><td>3dd</td><td>2025-07-29 11:13:35</td><td>Yes</td></tr>
+<tr data-scan-id="3" data-reason="Hash" data-quarantine-hour="11"><td>3</td><td>Hash</td><td>MalwareScan_Test_File</td><td>/home/user/Desktop/mdld</td><td>mdld</td><td>2025-07-29 11:13:35</td><td>Yes</td></tr>
+</tbody>
+</table>
+
+<script>
+const scanCtx = document.getElementById('malwareScanDonutChart').getContext('2d');
+new Chart(scanCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Detected', 'Not Detected'],
+        datasets: [{
+            data: [0, 0],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.6)', // Detected (Red)
+                'rgba(75, 192, 192, 0.6)'  // Not Detected (Cyan)
+            ]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+</script>
+
+<hr/>
+<h1>Malicious Behavior Report</h1>
+<p style="text-align: right;">Report period: 2025-07-25 02:24:27 ~ 2025-07-26 02:24:27</p>
+
+<h2 style="text-align:center;">Malicious Behavior Overview</h2>
+<div class="chart-row">
+    <div class="chart-box">
+        <h4 style="text-align:center;">Malicious Behavior by Type</h4>
+        <canvas id="typeDonutChart" width="400" height="400"></canvas>
+    </div>
+    <div class="chart-box">
+        <h4 style="text-align:center;">Malicious Behavior by Username</h4>
+        <canvas id="userBarChart" width="400" height="400"></canvas>
+    </div>
+    <div class="chart-box">
+        <h4 style="text-align:center;">Time-Based Malicious Activity (3-hour Bins)</h4>
+        <canvas id="timeHistogram" width="400" height="400"></canvas>
+    </div>
+</div>
+
+<h2>Detected Malicious Behavior Details</h2>
+<table id="LogDetailTable">
+    <thead>
+        <tr>
+            <th>Event ID</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Timestamp</th>
+            <th>Username</th>
+            <th>Original Log Path</th>
+        </tr>
+    </thead>
+    <tbody>
+<tr><td><a href="#raw-1">1</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/bin/ls</td><td>2025-07-26 02:04:58</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-2">2</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/bin/passwd young</td><td>2025-07-26 02:05:03</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-3">3</a></td><td>T1098</td><td>young (추정 사용자)가 'young'의 비밀번호를 변경함</td><td>2025-07-26 02:05:17</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-4">4</a></td><td>T1110.001</td><td>1분 내 3회 이상 인증 실패: 사용자 'young'</td><td>2025-07-26 02:05:52</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-5">5</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/useradd test</td><td>2025-07-26 02:06:50</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-6">6</a></td><td>T1098</td><td>그룹 test가 생성됨</td><td>2025-07-26 02:06:50</td><td>root</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-7">7</a></td><td>T1136.001</td><td>사용자 test가 생성됨</td><td>2025-07-26 02:06:50</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-8">8</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/usermod -aG sudo test</td><td>2025-07-26 02:07:15</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-9">9</a></td><td>T1098.007</td><td>사용자 test가 sudo 그룹에 추가됨</td><td>2025-07-26 02:07:15</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-10">10</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/deluser sudo test</td><td>2025-07-26 02:07:22</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-11">11</a></td><td>T1531</td><td>사용자 test가 삭제됨</td><td>2025-07-26 02:08:03</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-12">12</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/useradd test2</td><td>2025-07-26 02:08:27</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-13">13</a></td><td>T1098</td><td>그룹 test2가 생성됨</td><td>2025-07-26 02:08:27</td><td>root</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-14">14</a></td><td>T1136.001</td><td>사용자 test2가 생성됨</td><td>2025-07-26 02:08:27</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-15">15</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/groupadd test2</td><td>2025-07-26 02:08:44</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-16">16</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/useradd test3</td><td>2025-07-26 02:08:56</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-17">17</a></td><td>T1098</td><td>그룹 test3가 생성됨</td><td>2025-07-26 02:08:56</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-18">18</a></td><td>T1136.001</td><td>사용자 test3가 생성됨</td><td>2025-07-26 02:08:56</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-19">19</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/groupadd testg</td><td>2025-07-26 02:09:06</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-20">20</a></td><td>T1098</td><td>그룹 testg가 생성됨</td><td>2025-07-26 02:09:07</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-21">21</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/delgroup testg</td><td>2025-07-26 02:09:18</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-22">22</a></td><td>T1098</td><td>그룹 testg가 삭제됨</td><td>2025-07-26 02:09:19</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-23">23</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/groupadd testGM</td><td>2025-07-26 02:09:35</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-24">24</a></td><td>T1098</td><td>그룹 testGM가 생성됨</td><td>2025-07-26 02:09:35</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-25">25</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/usermod -aG testGM test2</td><td>2025-07-26 02:09:57</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-26">26</a></td><td>T1098.007</td><td>사용자 test2가 그룹 'testGM'에 추가됨</td><td>2025-07-26 02:09:57</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-27">27</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/deluser testGM test2</td><td>2025-07-26 02:10:13</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-28">28</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/deluser test2 testGM</td><td>2025-07-26 02:11:03</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-29">29</a></td><td>T1098.007</td><td>그룹 'testGM'의 모든 구성원이 제거됨</td><td>2025-07-26 02:11:04</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-30">30</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/bin/sqlite3 /root/ManLab/db/logAnalysisResult</td><td>2025-07-26 02:12:19</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-31">31</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/bin/ls /root/ManLab/db</td><td>2025-07-26 02:13:02</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-32">32</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/bin/sqlite3 /root/ManLab/db/logAnalysisResult.db</td><td>2025-07-26 02:13:23</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-33">33</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/bin/apt install wireshark</td><td>2025-07-26 02:14:05</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-34">34</a></td><td>T1546.016</td><td>wireshark 패키지 설치</td><td>2025-07-26 02:14:05</td><td>young</td><td>/var/log/audit/audit.log</td></tr>
+<tr><td><a href="#raw-35">35</a></td><td>T1059</td><td>/tmp 디렉터리 내 파일 실행</td><td>2025-07-26 02:14:14</td><td>young</td><td>/var/log/audit/audit.log</td></tr>
+<tr><td><a href="#raw-36">36</a></td><td>T1098</td><td>그룹 wireshark가 생성됨</td><td>2025-07-26 02:16:40</td><td>root</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-37">37</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/useradd -r systemTest</td><td>2025-07-26 02:20:18</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-38">38</a></td><td>T1098</td><td>그룹 systemTest가 생성됨</td><td>2025-07-26 02:20:18</td><td>root</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-39">39</a></td><td>T1136.001</td><td>사용자 systemTest가 생성됨</td><td>2025-07-26 02:20:18</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-40">40</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/deluser systemTest</td><td>2025-07-26 02:20:41</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-41">41</a></td><td>T1531</td><td>사용자 systemTest가 삭제됨</td><td>2025-07-26 02:20:41</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-42">42</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/sbin/visudo</td><td>2025-07-26 02:22:32</td><td>young</td><td>/var/log/manlab.log</td></tr>
+<tr><td><a href="#raw-43">43</a></td><td>T1548.003</td><td>비인가 사용자 young가 sudo 명령 사용 : /usr/bin/vi /root/ManLab/conf/ReportConfig.ini</td><td>2025-07-26 02:23:33</td><td>young</td><td>/var/log/manlab.log</td></tr>
+</tbody>
+</table>
+
+<h2>Event Log Line by ID</h2>
+<table id="LogLineTable">
+    <thead>
+        <tr>
+            <th>Event ID</th>
+            <th>Raw Log Line</th>
+        </tr>
+    </thead>
+    <tbody>
+<tr id="raw-1"><td>1</td><td>2025-07-26T02:04:58.718558+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/bin/ls</td></tr>
+<tr id="raw-2"><td>2</td><td>2025-07-26T02:05:03.564912+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/bin/passwd young</td></tr>
+<tr id="raw-3"><td>3</td><td>2025-07-26T02:05:17.443031+09:00 Manlab passwd[24252]: pam_unix(passwd:chauthtok): password changed for young</td></tr>
+<tr id="raw-4"><td>4</td><td>2025-07-26T02:05:52.308428+09:00 Manlab sudo:    young : 3 incorrect password attempts ; TTY=pts/1 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/bin/ls</td></tr>
+<tr id="raw-5"><td>5</td><td>2025-07-26T02:06:50.309904+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/useradd test</td></tr>
+<tr id="raw-6"><td>6</td><td>2025-07-26T02:06:50.546585+09:00 Manlab useradd[24438]: new group: name=test, GID=1001</td></tr>
+<tr id="raw-7"><td>7</td><td>2025-07-26T02:06:50.546956+09:00 Manlab useradd[24438]: new user: name=test, UID=1001, GID=1001, home=/home/test, shell=/bin/sh, from=/dev/pts/0</td></tr>
+<tr id="raw-8"><td>8</td><td>2025-07-26T02:07:15.580948+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/usermod -aG sudo test</td></tr>
+<tr id="raw-9"><td>9</td><td>2025-07-26T02:07:15.586025+09:00 Manlab usermod[24763]: add 'test' to group 'sudo'</td></tr>
+<tr id="raw-10"><td>10</td><td>2025-07-26T02:07:22.273407+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/deluser sudo test</td></tr>
+<tr id="raw-11"><td>11</td><td>2025-07-26T02:08:03.369361+09:00 Manlab userdel[25410]: delete user 'test'</td></tr>
+<tr id="raw-12"><td>12</td><td>2025-07-26T02:08:27.939799+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/useradd test2</td></tr>
+<tr id="raw-13"><td>13</td><td>2025-07-26T02:08:27.947466+09:00 Manlab useradd[25720]: new group: name=test2, GID=1001</td></tr>
+<tr id="raw-14"><td>14</td><td>2025-07-26T02:08:27.947554+09:00 Manlab useradd[25720]: new user: name=test2, UID=1001, GID=1001, home=/home/test2, shell=/bin/sh, from=/dev/pts/0</td></tr>
+<tr id="raw-15"><td>15</td><td>2025-07-26T02:08:44.266516+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/groupadd test2</td></tr>
+<tr id="raw-16"><td>16</td><td>2025-07-26T02:08:56.185472+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/useradd test3</td></tr>
+<tr id="raw-17"><td>17</td><td>2025-07-26T02:08:56.200845+09:00 Manlab useradd[26565]: new group: name=test3, GID=1002</td></tr>
+<tr id="raw-18"><td>18</td><td>2025-07-26T02:08:56.201081+09:00 Manlab useradd[26565]: new user: name=test3, UID=1002, GID=1002, home=/home/test3, shell=/bin/sh, from=/dev/pts/0</td></tr>
+<tr id="raw-19"><td>19</td><td>2025-07-26T02:09:06.638229+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/groupadd testg</td></tr>
+<tr id="raw-20"><td>20</td><td>2025-07-26T02:09:07.016074+09:00 Manlab groupadd[26872]: new group: name=testg, GID=1003</td></tr>
+<tr id="raw-21"><td>21</td><td>2025-07-26T02:09:18.323968+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/delgroup testg</td></tr>
+<tr id="raw-22"><td>22</td><td>2025-07-26T02:09:19.877663+09:00 Manlab groupdel[27006]: group 'testg' removed</td></tr>
+<tr id="raw-23"><td>23</td><td>2025-07-26T02:09:35.254575+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/groupadd testGM</td></tr>
+<tr id="raw-24"><td>24</td><td>2025-07-26T02:09:35.606009+09:00 Manlab groupadd[27229]: new group: name=testGM, GID=1003</td></tr>
+<tr id="raw-25"><td>25</td><td>2025-07-26T02:09:57.159176+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/usermod -aG testGM test2</td></tr>
+<tr id="raw-26"><td>26</td><td>2025-07-26T02:09:57.167930+09:00 Manlab usermod[27682]: add 'test2' to group 'testGM'</td></tr>
+<tr id="raw-27"><td>27</td><td>2025-07-26T02:10:13.363404+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/deluser testGM test2</td></tr>
+<tr id="raw-28"><td>28</td><td>2025-07-26T02:11:03.805372+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/deluser test2 testGM</td></tr>
+<tr id="raw-29"><td>29</td><td>2025-07-26T02:11:04.479265+09:00 Manlab gpasswd[28137]: members of group testGM set by root to </td></tr>
+<tr id="raw-30"><td>30</td><td>2025-07-26T02:12:19.721226+09:00 Manlab sudo:    young : TTY=pts/1 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/bin/sqlite3 /root/ManLab/db/logAnalysisResult</td></tr>
+<tr id="raw-31"><td>31</td><td>2025-07-26T02:13:02.766101+09:00 Manlab sudo:    young : TTY=pts/1 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/bin/ls /root/ManLab/db</td></tr>
+<tr id="raw-32"><td>32</td><td>2025-07-26T02:13:23.644173+09:00 Manlab sudo:    young : TTY=pts/1 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/bin/sqlite3 /root/ManLab/db/logAnalysisResult.db</td></tr>
+<tr id="raw-33"><td>33</td><td>2025-07-26T02:14:05.871946+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/bin/apt install wireshark</td></tr>
+<tr id="raw-34"><td>34</td><td>type=SYSCALL msg=audit(1753463645.868:3212): arch=c000003e syscall=59 success=yes exit=0 a0=56148669fce8 a1=5614866a09a8 a2=56148669ab60 a3=0 items=2 ppid=28531 pid=28534 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=pts0 ses=8 comm="apt" exe="/usr/bin/apt" subj=unconfined key="apt_exec"</td></tr>
+<tr id="raw-35"><td>35</td><td>type=SYSCALL msg=audit(1753463654.448:3255): arch=c000003e syscall=59 success=yes exit=0 a0=555a3e07b610 a1=555a3e07b640 a2=555a3d9f27c0 a3=8 items=3 ppid=29007 pid=29018 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=pts0 ses=8 comm="wireshark-commo" exe="/usr/bin/dash" subj=unconfined key="tmp_exec"</td></tr>
+<tr id="raw-36"><td>36</td><td>2025-07-26T02:16:40.785937+09:00 Manlab groupadd[35828]: new group: name=wireshark, GID=136</td></tr>
+<tr id="raw-37"><td>37</td><td>2025-07-26T02:20:18.548480+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/useradd -r systemTest</td></tr>
+<tr id="raw-38"><td>38</td><td>2025-07-26T02:20:18.561618+09:00 Manlab useradd[37384]: new group: name=systemTest, GID=996</td></tr>
+<tr id="raw-39"><td>39</td><td>2025-07-26T02:20:18.561897+09:00 Manlab useradd[37384]: new user: name=systemTest, UID=998, GID=996, home=/home/systemTest, shell=/bin/sh, from=/dev/pts/0</td></tr>
+<tr id="raw-40"><td>40</td><td>2025-07-26T02:20:41.716148+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/deluser systemTest</td></tr>
+<tr id="raw-41"><td>41</td><td>2025-07-26T02:20:41.796260+09:00 Manlab userdel[37797]: delete user 'systemTest'</td></tr>
+<tr id="raw-42"><td>42</td><td>2025-07-26T02:22:32.179641+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/sbin/visudo</td></tr>
+<tr id="raw-43"><td>43</td><td>2025-07-26T02:23:33.628230+09:00 Manlab sudo:    young : TTY=pts/0 ; PWD=/home/young/ManLab ; USER=root ; COMMAND=/usr/bin/vi /root/ManLab/conf/ReportConfig.ini</td></tr>
+</tbody>
+</table>
+
+<script>
+function highlightRow(type) {
+    console.log("highlightRow called with type:", type);
+
+    document.querySelectorAll('table tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    document.querySelectorAll('#LogDetailTable tbody tr').forEach(tr => {
+        const td = tr.querySelector('td:nth-child(2)');
+        if (td) {
+            const cellText = td.textContent.trim();
+            if (cellText === type) {
+                tr.classList.add('highlight');
+                tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+}
+const logTypeDonutCtx = document.getElementById('typeDonutChart').getContext('2d');
+const logTypeChart = new Chart(logTypeDonutCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ["T1059", "T1098", "T1098.007", "T1110.001", "T1136.001", "T1531", "T1546.016", "T1548.003"],
+        datasets: [{
+            data: [1, 9, 3, 1, 4, 2, 1, 22],
+            backgroundColor: ["rgba(255, 99, 132, 0.6)", "rgba(54, 162, 235, 0.6)", "rgba(255, 206, 86, 0.6)", "rgba(75, 192, 192, 0.6)", "rgba(153, 102, 255, 0.6)", "rgba(255, 159, 64, 0.6)", "rgba(44, 224, 148, 0.6)", "rgba(94, 48, 2, 0.6)"]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            }
+        },
+        onClick: (evt) => {
+            const points = logTypeChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const index = points[0].index;
+                const label = logTypeChart.data.labels[index];
+                console.log("Clicked label:", label);
+                highlightRow(label);
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+const userBarCtx = document.getElementById('userBarChart').getContext('2d');
+const logUserChart = new Chart(userBarCtx, {
+    type: 'bar',
+    data: {
+        labels: ["young", "root"],
+        datasets: [{
+            label: 'Event Count',
+            data: [38, 5], // 각 username이 수행한 악성 이벤트 수
+            backgroundColor: 'rgba(54, 162, 235, 0.6)'
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'right'
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+const timeCtx = document.getElementById('timeHistogram').getContext('2d');
+const logTimeChart = new Chart(timeCtx, {
+    type: 'bar',
+    data: {
+        labels: [
+        "2025-07-25 02:00", "05:00", "08:00", "11:00", "14:00", "17:00", "20:00",
+        "2025-07-26 00:00"
+        ],
+        datasets: [{
+            label: 'Event Count',
+            data: [0, 0, 0, 0, 0, 0, 0, 43],
+            backgroundColor: 'rgba(255, 99, 132, 0.6)'
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top'
+            }
+        },
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: 'Time Interval (3 hours)'
+                }
+            },
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Number of Events'
+                }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+</script>
+
+</body>
+</html>
