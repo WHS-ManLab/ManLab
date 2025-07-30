@@ -20,7 +20,7 @@ void ServerDaemon::Run()
     DBManager::GetInstance().InitHashDB();
 
     // 각 데몬 Init
-    spdlog::info("데몬 초기화 시작");
+    spdlog::info("스레드 초기화 시작");
     mScheduleWatcher.Init(mShouldRun, mbScanRequested, mbReportRequested, mScheduleMutex, mScheduleCondVar, mReportMutex, mReportCondVar);
     mScheduledScanExecutor.Init(mShouldRun, mbScanRequested, mScheduleMutex, mScheduleCondVar);
     mRealTimeScanWorker.Init(mShouldRun); 
@@ -30,10 +30,10 @@ void ServerDaemon::Run()
     mCommandReceiver.Init(*this, mShouldRun);
     mScanWatchThread.Init(mShouldRun);
     mAuditLogManager.Init(mShouldRun);
-    spdlog::info("모든 데몬 초기화 완료");
+    spdlog::info("스레드 초기화 완료");
 
     // 다른 인스턴스가 실행 중이 아니면 실행
-    spdlog::info("다른 인스턴스가 실행 중인지 확인 후 실행 시도");
+    spdlog::info("다른 인스턴스가 실행 중인지 확인");
     LaunchDaemonIfNotRunning("ManLabCommandDaemon", [this]() { this->startWorkerThreads(); });
 }
 
@@ -74,6 +74,7 @@ void ServerDaemon::Stop()
 
     // 예약 검사 조건 변수 해제
     mScheduleCondVar.notify_all();
+    mReportCondVar.notify_all();
 }
 
 void ServerDaemon::cleanup()

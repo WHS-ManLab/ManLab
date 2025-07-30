@@ -31,7 +31,7 @@
 #define PATH_SCAN_REPORT_DB "/root/ManLab/db/report.db"
 
 // 해시 텍스트 초기화용 데이터
-#define PATH_HASH_INIT_TXT "/root/ManLab/malhash/malware_hashes.txt"
+#define PATH_HASH_INIT_TXT "/root/ManLab/malware/malware_hashes.txt"
 
 //FIM 수동 설정파일
 #define PATH_FIM_INTEG_INI "/root/ManLab/conf/FIMIntegScan.ini"
@@ -71,3 +71,9 @@
 
 // ManLab 전체 config 파일
 #define PATH_MANLAB_CONFIG_INI "/root/ManLab/conf/ManLabconf.ini"
+
+// ManLab 전체 logger 파일
+#define PATH_MANLAB_LOG "/root/ManLab/log/manlab.log"
+
+// FIM logger 파일
+#define PATH_MANLAB_FIM_LOG "/root/ManLab/log/RealTimeMonitor.log"

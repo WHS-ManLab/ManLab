@@ -1,0 +1,20 @@
+-a always,exit -F arch=b64 -S execve -F exe=/usr/bin/apt -F key=apt_exec
+-a always,exit -F arch=b64 -S execve -F exe=/usr/bin/apt-get -F key=apt_exec
+-a always,exit -F arch=b64 -S execve -F exe=/usr/bin/crontab -F key=cron_exec
+-a always,exit -F arch=b64 -S execve -F exe=/usr/sbin/cron -F key=cron_daemon
+-w /etc/cron.d -p wa -k cron_file_change
+-w /var/spool/cron/crontabs -p wa -k cron_file_change
+-w /etc/cron.allow -p wa -k cron_file_change
+-a always,exit -F arch=b64 -S execve -F exe=/usr/sbin/usermod -F key=group_mod
+-a always,exit -F arch=b64 -S execve -F exe=/usr/bin/gpasswd -F key=group_mod
+-a always,exit -F arch=b64 -S chmod,fchmod,fchmodat -F key=perm_changes
+-a always,exit -F arch=b64 -S chown,fchown,lchown,fchownat -F key=owner_changes
+-w /dev/shm -p rwxa -k shm_exec
+-a always,exit -S all -F dir=/dev/shm -F auid!=-1 -F key=shm_exec
+-w /etc/sudoers -p wa -k sudoers_change
+-w /usr/sbin/visudo -p x -k sudoers_change
+-a always,exit -S all -F dir=/tmp -F perm=x -F auid!=-1 -F key=tmp_exec
+-a always,exit -F arch=b64 -S execve -F exe=/bin/cp -F key=usb_file_access
+-a always,exit -F arch=b64 -S execve -F exe=/bin/mv -F key=usb_file_access
+-w /usr/sbin/useradd -p x -k useradd_exec
+-w /usr/sbin/adduser -p x -k adduser_exec

@@ -2,13 +2,14 @@
 #include "RsyslogRule.h"
 #include "LogStorageManager.h"
 #include "Paths.h"
+#include "UserNotifier.h"
 
 #include <iostream>
 #include <fstream>
 #include <regex>
 #include <thread>
 #include <chrono>
-
+#include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
 RsyslogManager::RsyslogManager()
@@ -22,16 +23,11 @@ void RsyslogManager::Init(std::atomic<bool>& shouldRun)
 }
 
 // 로그 분석을 위한 timestamp 변환
-time_t RsyslogManager::ParseTime(const std::string& timestamp) {
+time_t RsyslogManager::ParseTime(const std::string& timestamp)
+{
+    std::string trimmed = timestamp.substr(0, 19); // 필요없는 부분 자르기
     struct tm tm{};
-    strptime(timestamp.c_str(), "%b %d %H:%M:%S", &tm);
-    
-    // 연도, 월 기본값 보정 (옵션)
-    time_t now = time(nullptr);
-    struct tm* now_tm = localtime(&now);
-    tm.tm_year = now_tm->tm_year;
-    tm.tm_mon = now_tm->tm_mon;
-
+    strptime(trimmed.c_str(), "%Y-%m-%dT%H:%M:%S", &tm);
     return mktime(&tm);
 }
 
@@ -73,7 +69,7 @@ std::optional<LogEntry> RsyslogManager::parseLogLine(const std::string& line)
 
     if (std::regex_match(line, match, oldFmt) || std::regex_match(line, match, newFmt))
     {
-        return LogEntry{ match[1], match[2], match[3], match[4], line };
+        return LogEntry{ match[1], match[2], "unknown", match[3], match[4], line };
     }
 
     return std::nullopt;
@@ -86,7 +82,7 @@ void RsyslogManager::Run()
 
     if (!file.is_open())
     {
-        std::cerr << "[ERROR] Failed to open log file: " << mLogPath << std::endl;
+        spdlog::error("로그 파일 열기 실패: {}", mLogPath);
         return;
     }
 
@@ -104,28 +100,40 @@ void RsyslogManager::Run()
                 mRecentLogs.push_back(*entry);
 
                 // 개수 기준으로 오래된 로그 삭제 (10개 초과 시 제거)
-                if (mRecentLogs.size() > MAX_RECENT_LOGS) {
+                if (mRecentLogs.size() > MAX_RECENT_LOGS)
+                {
                     mRecentLogs.pop_front();
                 }
 
-                AnalysisResult result{false, "", ""};
-                std::vector<std::function<AnalysisResult()>> analyzers = {
+                std::vector<std::function<AnalysisResult()>> analyzers =
+                {
                     [&] { return AnalyzePasswordFailureLog(*entry); },
                     [&] { return AnalyzeSudoLog(*entry, mRsyslogRuleSet["sudousers"]); },
                     [&] { return AnalyzePasswdChangeLog(*entry, mRecentLogs, mRsyslogRuleSet["passwdchangers"]); },
-                    [&] { return AnalyzeSudoGroupChangeLog(*entry); },
-                    [&] { return AnalyzeUserChangeLog(*entry); },
-                    [&] { return AnalyzeGroupChangeLog(*entry); },
-                    [&] { return AnalyzeGroupMemberChangeLog(*entry); }
+                    [&] { return AnalyzeSudoGroupChangeLog(*entry, mRecentLogs); },
+                    [&] { return AnalyzeUserChangeLog(*entry, mRecentLogs); },
+                    [&] { return AnalyzeGroupChangeLog(*entry, mRecentLogs); },
+                    [&] { return AnalyzeGroupMemberChangeLog(*entry, mRecentLogs); }
                 };
 
-                for (const auto& analyzer : analyzers) {
+                AnalysisResult result;
+                for (const auto& analyzer : analyzers)
+                {
                     result = analyzer();
-                    if (result.isMalicious) break;
+                    if (result.isMalicious)
+                    {
+                        if (!result.username.empty())
+                        {
+                            entry->username = result.username;
+                        }
+                        break;
+                    }
                 }
 
                 if (result.isMalicious)
                 {
+                    spdlog::warn("악성 로그 탐지됨: [{}] {} - {}", 
+                                 result.type, result.username, result.description);
                     //DB 저장
                     LogStorageManager manager;
                     
@@ -133,11 +141,24 @@ void RsyslogManager::Run()
                     lar.type = result.type;
                     lar.description = result.description;
                     lar.timestamp = entry->timestamp;
-                    lar.username = entry->hostname;
+                    lar.username = entry->username;
                     lar.originalLogPath = mLogPath;
                     lar.rawLine = entry->raw;
                     manager.Run(lar,false);
+
+                    std::string title = "ManLab 의심 행위 탐지";
+                    std::string message = result.description;
+                    UserNotifier::NotifyAllUrgent(title, message);
+
                 }
+                else 
+                {
+                    spdlog::debug("정상 로그 처리됨: {}", entry->raw);
+                }
+            }
+            else
+            {
+                spdlog::debug("로그 파싱 실패 또는 무시됨: {}", line);
             }
         }
         else
@@ -149,7 +170,7 @@ void RsyslogManager::Run()
             }
             else
             {
-                std::cerr << "[ERROR] Log file read error\n";
+                spdlog::error("로그 파일 읽기 중 오류 발생");
                 break;
             }
         }

@@ -68,7 +68,8 @@ DBManager::DBManager()
             sqlite_orm::make_column("EVENT_TYPE", &RealtimeEventLog::eventType),
             sqlite_orm::make_column("PATH", &RealtimeEventLog::path),       
             sqlite_orm::make_column("NEW_NAME", &RealtimeEventLog::newName), 
-            sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp)))),
+            sqlite_orm::make_column("TIMESTAMP", &RealtimeEventLog::timestamp),
+            sqlite_orm::make_column("MD5", &RealtimeEventLog::md5)))),
 
       mModifiedStorage(sqlite_orm::make_storage(
         PATH_MODIFIED_DB,

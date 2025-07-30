@@ -1,18 +1,54 @@
 #include "AuditLogManager.h"
 #include "LogStorageManager.h"
 #include "Paths.h"
+#include "UserNotifier.h"
 
 #include <iostream>
 #include <sstream>
 #include <yaml-cpp/yaml.h>
 #include <thread>
 #include <chrono>
+#include <pwd.h>
+#include <unistd.h>
+#include <climits>
 
 using namespace std;
 
 void AuditLogManager::Init(std::atomic<bool>& shouldRun)
 {
     mpShouldRun = &shouldRun;
+}
+
+const std::vector<std::string> shmScenario = {"shm_cp", "shm_chmod", "shm_exec", "shm_rm"};
+
+bool AuditLogManager::checkScenarioMatch(const std::string& username, time_t currentTime)
+{
+    std::vector<std::string> matched;
+
+    for (const DetectionEvent& ev : recentEvents)
+    {
+        if (ev.username != username)
+        {
+            continue;
+        }
+            
+        if (difftime(currentTime, ev.timestamp) > 300)
+        {
+            continue;
+        }
+        
+        if (matched.size() < shmScenario.size() &&ev.key == shmScenario[matched.size()])
+        {
+            matched.push_back(ev.key);
+        }
+
+        if (matched.size() == shmScenario.size())
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // 로그 라인에서 msg=audit(...) 내부 숫자 추출 (msgId)
@@ -36,6 +72,61 @@ string AuditLogManager::ExtractMsgId(const string& line) const
     return line.substr(start, end - start);
 }
 
+// auid를 username으로 변환
+string AuditLogManager::AuidToUsername(const string& auidStr)
+{
+    if (auidStr.empty())
+    {
+        return "";
+    }
+
+    char* endptr = nullptr;
+    errno = 0;
+    long val = strtol(auidStr.c_str(), &endptr, 10);
+    if (errno != 0 || *endptr != '\0' || val < 0)
+    {
+        return "";
+    }
+        
+    uid_t auid = static_cast<uid_t>(val);
+
+    struct passwd* pw = getpwuid(auid);
+    if (pw && pw->pw_name)
+    {
+        return string(pw->pw_name);
+    }
+
+    return "";
+}
+
+map<string, string> AuditLogManager::parseKeyValue(const string& line)
+{
+    map<string, string> result;
+    std::istringstream iss(line);
+    string token;
+
+    while (iss >> token)
+    {
+        size_t eqPos = token.find('=');
+        if (eqPos == string::npos)
+        {
+            continue;
+        }
+            
+        string key = token.substr(0, eqPos);
+        string value = token.substr(eqPos + 1);
+
+        if (!value.empty() && value.front() == '"' && value.back() == '"')
+        {
+            value = value.substr(1, value.size() - 2);
+        }
+
+        result[key] = value;
+    }
+
+    return result;
+}
+
 // 로그 한 줄 파싱해서 AuditLogRecord에 필요한 정보 저장
 bool AuditLogManager::parseLogLine(const string& line, AuditLogRecord& record)
 {
@@ -50,44 +141,53 @@ bool AuditLogManager::parseLogLine(const string& line, AuditLogRecord& record)
     }
     else if (line.find("type=PATH") != string::npos)
     {
-        if (line.find("item=1") != string::npos)
+        map<string, string> tmpFields = parseKeyValue(line);
+
+        if (tmpFields.count("nametype") && tmpFields["nametype"] == "PARENT")
         {
+            return false;
+        }
+
+        int itemNum = INT_MAX;
+        if (tmpFields.count("item"))
+        {
+            itemNum = stoi(tmpFields["item"]);
+        }
+            
+        int minItem = INT_MAX;
+        if (record.Fields.count("min_path_item"))
+        {
+            minItem = stoi(record.Fields["min_path_item"]);
+        }
+
+        if (itemNum < minItem)
+        {
+            for (map<string, string>::const_iterator it = tmpFields.begin(); it != tmpFields.end(); ++it)
+            {
+                record.Fields[it->first] = it->second;
+            }
+            record.Fields["min_path_item"] = to_string(itemNum);
             record.bHasPath = true;
         }
+
+        return true;
     }
     else
     {
         return false;
     }
 
-    istringstream iss(line);
-    string token;
-
-    while (iss >> token)
+    map<string, string> parsedFields = parseKeyValue(line);
+    for (map<string, string>::const_iterator it = parsedFields.begin(); it != parsedFields.end(); ++it)
     {
-        size_t eqPos = token.find('=');
-
-        if (eqPos == string::npos)
-        {
-            continue;
-        }
-
-        string key = token.substr(0, eqPos);
-        string value = token.substr(eqPos + 1);
-
-        if (!value.empty() && value.front() == '"' && value.back() == '"')
-        {
-            value = value.substr(1, value.size() - 2);
-        }
-
-        record.Fields[key] = value;
+        record.Fields[it->first] = it->second;
     }
 
     return true;
 }
 
 // 로그 레코드가 룰 조건에 부합하는지 확인
-bool AuditLogManager::Matches(const AuditLogRecord& record, const AuditLogRule& rule) const
+bool AuditLogManager::matches(const AuditLogRecord& record, const AuditLogRule& rule) const
 {
     for (const Condition& cond : rule.Conditions)
     {
@@ -163,6 +263,7 @@ void AuditLogManager::LoadRules()
     {
         AuditLogRule rule;
 
+        rule.Type = ruleNode["type"].as<string>();
         rule.Key = ruleNode["key"].as<string>();
         rule.Description = ruleNode["description"].as<string>();
 
@@ -239,11 +340,11 @@ void AuditLogManager::Run()
             {
                 for (const AuditLogRule& rule : mRules)
                 {
-                    if (Matches(record, rule))
+                    if (matches(record, rule))
                     {
                         LogAnalysisResult lar;
 
-                        lar.type = rule.Key;
+                        lar.type = rule.Type;
                         lar.description = rule.Description;
 
                         size_t colonPos = record.MsgId.find(':');
@@ -252,11 +353,46 @@ void AuditLogManager::Run()
                         else
                             lar.timestamp = record.MsgId;
 
-                        lar.username = record.Fields.count("auid") > 0 ? record.Fields.at("auid") : "";
+                        string auidStr = record.Fields.count("auid") > 0 ? record.Fields.at("auid") : "";
+                        lar.username = AuidToUsername(auidStr);
                         lar.originalLogPath = PATH_AUDITLOG;
                         lar.rawLine = record.RawLine;
 
                         manager.Run(lar, true);
+
+                        string title = "ManLab 의심 행위 탐지";
+                        string message = rule.Description;
+                        UserNotifier::NotifyAllUrgent(title, message);
+
+                        time_t now = time(nullptr);
+                        recentEvents.push_back({rule.Key, lar.username, now});
+
+                        // 시나리오 매칭 여부 확인
+                        if (checkScenarioMatch(lar.username, now))
+                        {
+                            LogAnalysisResult scenarioLar;
+                            scenarioLar.type = "scenario";
+                            scenarioLar.description = "의심스러운 경로에 위치한 파일에 대한 권한 부여 및 삭제";
+                            scenarioLar.username = lar.username;
+                            scenarioLar.timestamp = to_string(now);
+                            scenarioLar.originalLogPath = PATH_AUDITLOG;
+                            scenarioLar.rawLine = " ";
+
+                            manager.Run(scenarioLar, true); 
+
+                            string title = "ManLab 의심 행위 탐지";
+                            string message = scenarioLar.description;
+                            UserNotifier::NotifyAllUrgent(title, message);
+
+                            recentEvents.erase(remove_if(
+                                                   recentEvents.begin(), recentEvents.end(),
+                                                   [&](const DetectionEvent &ev)
+                                                   {
+                                                       return ev.username == lar.username &&
+                                                              difftime(now, ev.timestamp) <= 300;
+                                                   }),
+                                               recentEvents.end());
+                        }
                     }
                 }
 

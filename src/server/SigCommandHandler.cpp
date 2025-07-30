@@ -7,25 +7,28 @@
 #include <chrono>
 #include <iomanip>  // std::setw
 #include <tuple>    // std::tie
+#include <spdlog/spdlog.h>
 
-namespace sig 
-{
 
-void MalScan(std::ostream& out)
+
+void SigCommandHandler::MalScan(std::ostream& out)
 {
     using namespace std;
     using namespace std::chrono;
 
-    out << "Executing malware scan..." << endl;
+    out << "악성코드 탐지 중..." << endl;
 
     MalwareScan malscan;
     malscan.Init();
     malscan.Run(&out);
+    spdlog::info("[malscan] 검사 완료, 리포트 출력 중");
     malscan.PrintReport(out);
     malscan.SaveReportToDB();
+    spdlog::info("[malscan] 검사 결과 DB 저장 완료");
 }
 
-void Restore(const std::string& filename, std::ostream& out)
+
+void SigCommandHandler::Restore(const std::string& filename, std::ostream& out) 
 {
     using namespace std;
     out << "Restoring file: " << filename << endl;
@@ -36,18 +39,19 @@ void Restore(const std::string& filename, std::ostream& out)
     if (restorer.IsSuccess())
     {
         out << "[+] 복구 성공: " << filename << endl;
+        spdlog::info("[restore] 복구 성공: {}", filename);
     }
     else
     {
         out << "[-] 복구 실패: " << filename << endl;
+        spdlog::warn("[restore] 복구 실패: {}", filename);
     }
 }
 
-void CmdListReports(std::ostream& out)
+void SigCommandHandler::CmdShowRecentReports(std::ostream& out)
 {
     using namespace std;
     auto& storage = DBManager::GetInstance().GetScanReportStorage();
-
     vector<ScanReport> allReports = storage.get_all<ScanReport>();
 
     // 최신순 정렬
@@ -55,45 +59,23 @@ void CmdListReports(std::ostream& out)
         return a.id > b.id;
     });
 
-    // 출력 헤더
-    out << " ID |        DATE & TIME        | TYPE       | DETECTED\n";
-    out << "----+---------------------------+------------+---------\n";
-
-    size_t count = std::min<size_t>(20, allReports.size());
-    for (size_t i = 0; i < count; ++i)
+    size_t count = std::min<size_t>(10, allReports.size());
+    if (count == 0)
     {
-        const auto& r = allReports[i];
-        out << std::setw(3) << r.id << " | "
-            << r.date << " | "
-            << std::setw(10) << std::left << r.type << " | "
-            << (r.detected ? "YES" : "NO") << "\n";
-    }
-
-    if (allReports.empty())
-        out << "(no scan reports found)\n";
-}
-
-void CmdShowReport(int id, std::ostream& out)
-{
-    using namespace std;
-    auto& storage = DBManager::GetInstance().GetScanReportStorage();
-    auto ptr = storage.get_pointer<ScanReport>(id);
-
-    if (!ptr)
-    {
-        out << "[!] 해당 ID(" << id << ")의 스캔 리포트가 존재하지 않습니다.\n";
+        out << "[INFO] 최근 검사 리포트가 존재하지 않습니다.\n";
         return;
     }
 
-    const ScanReport& r = *ptr;
+    for (size_t i = 0; i < count; ++i)
+    {
+        const auto& r = allReports[i];
 
-    out << "===== Scan Report #" << r.id << " =====\n";
-    out << "Date     : " << r.date << "\n";
-    out << "Type     : " << r.type << "\n";
-    out << "Detected : " << (r.detected ? "YES" : "NO") << "\n";
-    out << "------------------------------------------\n";
-    out << r.report << "\n";
-    out << "==========================================\n";
+        out << "\n\033[1m===== Scan Report #" << r.id << " =====\033[0m\n";
+        out << "Date     : " << r.date << "\n";
+        out << "Type     : " << r.type << "\n";
+        out << "Detected : " << (r.detected ? "YES" : "NO") << "\n";
+        out << "------------------------------------------\n";
+        out << r.report << "\n";
+        out << "==========================================\n";
+    }
 }
-
-} // namespace sig
