@@ -615,7 +615,7 @@ html << R"(]
     // -------------------------------------------------------
     // SIG 팀 리포트
     html << R"(
-<h1>Malware Scan Report</h1>
+<h1>🔍 Malware Scan Report</h1>
 <p>Scan records from )" << mStartTime << " to " << mEndTime << "</p>\n";
 
     auto& scanStorage = DBManager::GetInstance().GetScanReportStorage();
@@ -708,49 +708,54 @@ html << R"(]
     }
 
     html << R"(<style>
-        .chart-container {
+        .chart-row {
             display: flex;
             justify-content: space-around;
-            align-items: flex-start;
             flex-wrap: wrap;
+            gap: 30px; /* 각 차트 박스 사이의 간격 */
+            margin-bottom: 40px;
         }
-        .chart-item {
-            width: 420px; /* 400px canvas + 2*10px padding = 420px */
-            box-sizing: border-box;
-            padding: 10px;
+        .chart-box {
+            flex: 1 1 30%; /* 3개 항목이 한 줄에 */
+            max-width: 400px; /* 캔버스 크기(400px)에 맞춤 */
+            box-sizing: border-box; /* 패딩 포함한 크기 계산 */
+            padding: 10px; /* 내부 여백 */
             text-align: center;
         }
-        @media (max-width: 768px) {
-            .chart-item {
-                width: 48%;
+        /* 미디어 쿼리: 3개 차트가 나란히 들어가지 않을 때, 2열로 변경 */
+        @media (max-width: 1300px) { 
+            .chart-box {
+                flex: 1 1 45%; 
             }
         }
-        @media (max-width: 480px) {
-            .chart-item {
-                width: 98%;
+        /* 미디어 쿼리: 더 작은 화면에서는 1열로 변경 */
+        @media (max-width: 768px) {
+            .chart-box {
+                flex: 1 1 90%; 
             }
         }
     </style>)";
     // ---------------------------------------------------------------------------------
 
-    html << R"(<div class="chart-container">
-    <div class="chart-item">
+    html << R"(<div class="chart-row">
+    <div class="chart-box">
+        <canvas id="malwareScanDonutChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
         <p>총 <b>)" << totalScans << R"(</b>회의 스캔이 진행되었습니다.</p>
-        <canvas id="malwareScanDonutChart" width="400" height="400"></canvas>
     </div>
-    <div class="chart-item">
+    <div class="chart-box">
+        <canvas id="hashYaraDonutChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
         <p>총 <b>)" << (hashYaraCounts["Hash"] + hashYaraCounts["YARA"]) << R"(</b>개의 악성코드가 탐지되었습니다.</p>
-        <canvas id="hashYaraDonutChart" width="400" height="400"></canvas>
     </div>
-    <div class="chart-item">
+    <div class="chart-box">
+        <canvas id="hourlyDetectionBarChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
         <p>시간대별 악성코드 탐지 현황</p>
-        <canvas id="hourlyDetectionBarChart" width="400" height="400"></canvas>
     </div>
 </div>
 
 <script>
 // (SIG Team Chart JS START)
 
+// 도넛 차트 클릭 시 하이라이팅을 위한 함수
 function highlightScanRows(type) {
     document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
         tr.classList.remove('highlight');
@@ -790,27 +795,24 @@ function highlightReasonRows(reasonType) {
     }
 }
 
-// 시간대별/Hash/YARA 하이라이팅 (새로 추가된 기능)
+// 시간대별/Hash/YARA 하이라이팅
 function highlightHourlyReasonRows(reasonType, hourSlot) {
     document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
         tr.classList.remove('highlight');
     });
 
-    // 00:00 -> 00, 03:00 -> 03 ... 21:00 -> 21
-    const targetHourStr = String(hourSlot).padStart(2, '0'); // 시간 슬롯을 두 자리 문자열로 변환 (예: 3 -> "03")
+    const targetHourSlotStr = String(hourSlot).padStart(2, '0'); 
 
     document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
         const trReason = tr.dataset.reason;
-        const trHour = tr.dataset.quarantineHour; // "data-quarantine-hour" 속성 사용
+        const trQuarantineHour = tr.dataset.quarantineHour;
 
-        // Reason이 일치하고, 시간 슬롯 범위 내에 있는지 확인
-        // 예: targetHourStr이 "03"이면, 03시, 04시, 05시까지의 기록을 포함
-        const trHourInt = parseInt(trHour, 10);
-        const hourSlotInt = parseInt(targetHourStr, 10);
+        const trHourInt = parseInt(trQuarantineHour, 10);
+        const hourSlotInt = parseInt(targetHourSlotStr, 10);
 
         if (trReason === reasonType && 
             trHourInt >= hourSlotInt && 
-            trHourInt < (hourSlotInt + 3)) {
+            trHourInt < (hourSlotInt + 3)) { // 3시간 범위 체크 로직 유지
             tr.classList.add('highlight');
         }
     });
@@ -843,10 +845,8 @@ const malwareScanDonutChart = new Chart(scanCtx, {
                 font: { weight: 'bold' },
                 formatter: (value) => value
             },
-            title: { // SIG 팀 첫 번째 원형 그래프 제목
-                display: true,
-                text: "Malware Scan Detection", // 제목 텍스트
-                font: { size: 16, weight: 'bold' } // 다른 팀 코드와 동일한 크기
+            title: { // HTML p 태그로 제목을 표시하므로, Chart.js 자체의 title은 비활성화
+                display: false
             }
         }
         // 이 그래프에는 onClick 하이라이팅 없음 - 요청 반영
@@ -877,10 +877,8 @@ new Chart(hashYaraCtx, {
                 font: { weight: 'bold' },
                 formatter: (value) => value
             },
-            title: { // SIG 팀 두 번째 원형 그래프 제목
-                display: true,
-                text: "Detection by Type", // 제목 텍스트
-                font: { size: 16, weight: 'bold' }
+            title: { // HTML p 태그로 제목을 표시하므로, Chart.js 자체의 title은 비활성화
+                display: false
             }
         },
         onClick: (evt) => {
@@ -987,10 +985,8 @@ const hourlyDetectionBarChart = new Chart(barCtx, { // Chart 객체 변수 추�
             datalabels: {
                 display: false
             },
-            title: { // SIG 팀 막대 그래프 제목
-                display: true,
-                text: "Hourly Malware Detections", // 제목 텍스트
-                font: { size: 16, weight: 'bold' } // 다른 팀 코드와 동일한 크기
+            title: { // HTML p 태그로 제목을 표시하므로, Chart.js 자체의 title은 비활성화
+                display: false
             }
         },
         onClick: (evt) => { // 막대 그래프 onClick 이벤트 추가
@@ -999,7 +995,7 @@ const hourlyDetectionBarChart = new Chart(barCtx, { // Chart 객체 변수 추�
                 const datasetIndex = points[0].datasetIndex; // Hash인지 YARA인지 (0 또는 1)
                 const elementIndex = points[0].index;      // 시간 슬롯 인덱스 (0~7)
 
-                const reasonType = (datasetIndex === 0) ? 'Hash' : 'YARA';
+                const reasonType = (datasetIndex === 0) ? 'Hash' : 'YARA'; // datasets[0]이 Hash, [1]이 YARA로 일치해야 함
                 const hourSlot = elementIndex * 3; // 시간 슬롯 인덱스를 실제 시간으로 변환 (예: 0->0, 1->3, 7->21)
                 
                 highlightHourlyReasonRows(reasonType, hourSlot);
