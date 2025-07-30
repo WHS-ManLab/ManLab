@@ -13,8 +13,7 @@
 #include <thread>     // sleep
 #include <map>
 #include <spdlog/spdlog.h>
-#include <numeric>
-#include <iomanip>
+#include <algorithm>
 
 using namespace std::chrono;
 using namespace manlab::utils;
@@ -26,7 +25,10 @@ std::string get3HourBucketLabel(const std::string& datetimeStr)
     std::istringstream ss(datetimeStr);
     ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
 
-    if (ss.fail()) return "";  // 파싱 실패 시 빈 문자열 반환
+    if (ss.fail())
+    {
+        return "";  // 파싱 실패 시 빈 문자열 반환
+    }
 
     int bucketStart = (tm.tm_hour / 3) * 3;
     char buf[32];
@@ -38,13 +40,14 @@ std::string get3HourBucketLabel(const std::string& datetimeStr)
 
 //Time 차트용 함수 (x축 라벨과 y축 라벨 자동으로 채워줌)
  void generate3HourLabels(const std::string& startTime, const std::string& endTime,
-                         std::vector<std::string>& labels, std::vector<int>& counts,
+                         std::vector<std::string>& timeLabels, std::vector<int>& counts,
                          const std::map<std::string, int>& bucketMap)
 {
-    labels.clear();
+    timeLabels.clear();
     counts.clear();
 
-    std::tm t0 = {}, t1 = {};
+    std::tm t0 = {};
+    std::tm t1 = {};
     std::istringstream(startTime) >> std::get_time(&t0, "%Y-%m-%d %H:%M:%S");
     std::istringstream(endTime)   >> std::get_time(&t1, "%Y-%m-%d %H:%M:%S");
     auto start = std::mktime(&t0);
@@ -61,7 +64,7 @@ std::string get3HourBucketLabel(const std::string& datetimeStr)
         char buf[32];
         std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:00", &tb);
         std::string lbl(buf);
-        labels.push_back(lbl);
+        timeLabels.push_back(lbl);
         counts.push_back(bucketMap.count(lbl) ? bucketMap.at(lbl) : 0);
     }
 }
@@ -263,6 +266,21 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
             display: block;
             margin: 0 auto;
         }
+        hr {
+            height : 50px;
+            border : 0;
+        }
+        .chart-row {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .chart-box {
+            flex: 1 1 30%;
+            max-width: 400px;
+        }            
     </style>
 </head>
 <body>
@@ -315,10 +333,12 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     std::vector<ModifiedEntry> modifiedRecords;
     std::map<std::string, int> manualTypeCounts;
     std::map<std::string, int> manualReasonCounts;
+
     // [추가] 추가된 시간대별 통계
     std::map<std::string, int> manualTimeBuckets;
     std::vector<std::string> allTimeLabels;
-    std::vector<int>         allTimeCounts; 
+    std::vector<int> allTimeCounts;
+
     try {
         auto& modifiedStorage = DBManager::GetInstance().GetModifiedStorage();
         modifiedRecords = modifiedStorage.get_all<ModifiedEntry>(
@@ -371,15 +391,18 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
                 if (record.current_mtime != baseline.mtime) manualReasonCounts["MTime 변경"]++;
                 if (record.current_size != baseline.size) manualReasonCounts["크기 변경"]++;
             }
-            //[추가] 3시간 단위 시간 라벨 추출
+             //[추가] 3시간 단위 시간 라벨 추출
             std::string timeLabel = get3HourBucketLabel(record.current_mtime);
-            if (!timeLabel.empty()) {
-            manualTimeBuckets[timeLabel]++;
+            if (!timeLabel.empty())
+            {
+                manualTimeBuckets[timeLabel]++;
             }
         }
-         // [추가]최종 라벨/카운트 배열 생성
-        generate3HourLabels(mStartTime, mEndTime, allTimeLabels, allTimeCounts, manualTimeBuckets);
+
+    // [추가]최종 라벨/카운트 배열 생성
+    generate3HourLabels(mStartTime, mEndTime, allTimeLabels, allTimeCounts, manualTimeBuckets);
     }
+
     html << R"(</tbody></table>)";
 
     
@@ -430,18 +453,21 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         }
     }
     html << R"(</tbody></table>)";
+
     //시간 차트 추가
     std::map<std::string, int> realTimeTimeBuckets;
-    for (const auto& record : realTimeRecords) {
+    for (const auto& record : realTimeRecords)
+    {
         std::string timeLabel = get3HourBucketLabel(record.timestamp);
-        if (!timeLabel.empty()) {
+        if (!timeLabel.empty())
+        {
             realTimeTimeBuckets[timeLabel]++;
         }
     }
+
     std::vector<std::string> eventTimeLabels;
     std::vector<int> eventTimeCounts;
     generate3HourLabels(mStartTime, mEndTime, eventTimeLabels, eventTimeCounts, realTimeTimeBuckets);
-
 
     // FIM 차트 스크립트
     html << R"(
@@ -635,7 +661,7 @@ const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
                 grid: { display: true, drawBorder: true },
                 ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 },
                 title : {
-                    display : true,
+                    display : false,
                     text : 'Time Interval (3hours)',
                     font: {
                         size : 13,
@@ -648,7 +674,7 @@ const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
                 beginAtZero: true,
                 grid: { display: true },
                 title: {
-                    display: true,
+                    display: false,
                     text: 'Number of Events',
                     font: {
                         size: 13,
@@ -696,7 +722,7 @@ new Chart(rtCtx, {
     options: {
         responsive: false,
         plugins: {
-            legend: { position: 'bottom' },
+            legend: { display: false },
             title: {
                 display: true,
                 text: ' Events By Type',
@@ -771,7 +797,7 @@ html << R"(
                 grid: { display: true, drawBorder: true },
                 ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 },
                 title : {
-                    display : true,
+                    display : false,
                     text : 'Time Interval (3hours)',
                     font: {
                         size : 13,
@@ -784,7 +810,7 @@ html << R"(
                 beginAtZero: true,
                 grid: { display: true },
                 title: {
-                    display: true,
+                    display: false,
                     text: 'Number of Events',
                     font: {
                         size: 13,
@@ -936,10 +962,40 @@ new Chart(scanCtx, {
     if (!events.empty())
     {
         html << R"(
-<h2>• Detected Malicious Behavior Types Overview</h2>
-<canvas id="typeDonutChart" width="400" height="400"></canvas>
+<h2>• Malicious Behavior Overview</h2>
+<div class="chart-row">
+    <div class="chart-box">
+        <canvas id="typeDonutChart" width="400" height="400"></canvas>
+    </div>
+    <div class="chart-box">
+        <canvas id="userBarChart" width="400" height="400"></canvas>
+    </div>
+    <div class="chart-box">
+        <canvas id="timeHistogram" width="400" height="400"></canvas>
+    </div>
+</div>
 )";
     }
+
+    std::map<std::string, int> logTypeCounts;
+    std::map<std::string, int> logUserCounts;
+    std::map<std::string, int> logTimeBuckets;
+
+    for (const auto &e : events)
+    {
+        logTypeCounts[e.type]++;
+        logUserCounts[e.username]++;
+
+        std::string timeLabel = get3HourBucketLabel(e.timestamp);
+        if (!timeLabel.empty())
+        {
+            logTimeBuckets[timeLabel]++;
+        }  
+    }
+
+    std::vector<std::string> logTimeLabels;
+    std::vector<int> logTimeCounts;
+    generate3HourLabels(mStartTime, mEndTime, logTimeLabels, logTimeCounts, logTimeBuckets);
 
     html << R"(
 <h2>• Detected Malicious Behavior Details</h2>
@@ -970,12 +1026,9 @@ new Chart(scanCtx, {
     }
     else
     {
-        std::map<std::string, int> typeCounts;
         int id = 0;
-
         for (const auto &e : events)
         {
-            typeCounts[e.type]++;
             id++;
             html << "<tr>";
             html << "<td><a href=\"#raw-" << id << "\">" << id << "</a></td>";
@@ -990,7 +1043,7 @@ new Chart(scanCtx, {
         html << R"(</tbody>
 </table>
 
-<h2>Event Log Line by ID</h2>
+<h2>• Event Log Line by ID</h2>
 <table>
     <thead>
         <tr>
@@ -1001,11 +1054,11 @@ new Chart(scanCtx, {
     <tbody>
 )";
 
-        id = 1;
+        id = 0;
         for (const auto &e : events)
         {
-            html << "<tr id=\"raw-" << id << "\">";
-            html << "<td>" << id++ << "</td>";
+            html << "<tr id=\"raw-" << ++id << "\">";
+            html << "<td>" << id << "</td>";
             html << "<td>" << e.rawLine << "</td>";
             html << "</tr>\n";
         }
@@ -1014,29 +1067,59 @@ new Chart(scanCtx, {
 </table>
 )";
 
-        std::string labelsStr, dataStr, colorStr;
+        std::string typeLabels, typeData, typeColorStr, userLabels, userData, userColorStr;
         bool firstLogChartItem = true;
-        size_t colorIdx = 0;
+        size_t typeColorIdx = 0, userColorIdx = 0;
 
-        for (const auto &pair : typeCounts)
+        for (const auto &pair : logTypeCounts)
         {
             if (!firstLogChartItem)
             {
-                labelsStr += ", ";
-                dataStr += ", ";
-                colorStr += ", ";
+                typeLabels += ", ";
+                typeData += ", ";
+                typeColorStr += ", ";
             }
-            labelsStr += "\"" + pair.first + "\"";
-            dataStr += std::to_string(pair.second);
-            colorStr += "\"" + ReportService::generateColor(colorIdx) + "\"";
-            colorIdx++;
+            typeLabels += "\"" + pair.first + "\"";
+            typeData += std::to_string(pair.second);
+            typeColorStr += "\"" + ReportService::generateColor(typeColorIdx) + "\"";
+            typeColorIdx++;
             firstLogChartItem = false;
         }
 
-        // LOG 차트 스
+        firstLogChartItem = true;
+        for (const auto &pair : logUserCounts)
+        {
+            if (!firstLogChartItem)
+            {
+                userLabels += ", ";
+                userData += ", ";
+                userColorStr += ", ";
+            }
+            userLabels += "\"" + pair.first + "\"";
+            userData += std::to_string(pair.second);
+            userColorStr += "\"" + ReportService::generateColor(userColorIdx) + "\"";
+            userColorIdx++;
+            firstLogChartItem = false;
+        }
+        
+        firstLogChartItem = true;
+        std::string timeLabels, timeData;
+        for (size_t i = 0; i < logTimeLabels.size(); ++i)
+        {
+            if (!firstLogChartItem)
+            {
+                timeLabels += ", ";
+                timeData += ", ";
+            }
+            timeLabels += "\"" + logTimeLabels[i] + "\"";
+            timeData += std::to_string(logTimeCounts[i]);
+            firstLogChartItem = false;
+        }
+
+        // LOG 차트 스크립트
         html << R"(
 <script>
-function highlightRow(type) {
+function highlightRowType(type) {
     console.log("highlightRow called with type:", type);
 
     document.querySelectorAll('table tbody tr').forEach(tr => {
@@ -1049,25 +1132,74 @@ function highlightRow(type) {
             const cellText = td.textContent.trim();
             if (cellText === type) {
                 tr.classList.add('highlight');
-                tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
     });
+
+    const firstHighlighted = document.querySelector('#LogDetailTable tbody tr.highlight');
+    if (firstHighlighted) {
+        firstHighlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 }
-const ctx = document.getElementById('typeDonutChart').getContext('2d');
-const logTypeChart = new Chart(ctx, {
+
+function highlightRowUser(user) {
+    console.log("highlightRow called with user:", user);
+
+    document.querySelectorAll('table tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    document.querySelectorAll('#LogDetailTable tbody tr').forEach(tr => {
+        const td = tr.querySelector('td:nth-child(5)');
+        if (td) {
+            const cellText = td.textContent.trim();
+            if (cellText === user) {
+                tr.classList.add('highlight');
+            }
+        }
+    });
+
+    const firstHighlighted = document.querySelector('#LogDetailTable tbody tr.highlight');
+    if (firstHighlighted) {
+        firstHighlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function highlightRowTime(timeLabel) {
+    console.log("highlightRow called with time:", timeLabel);
+
+    const startTime = new Date(timeLabel.replace(" ", "T") + ":00");
+    const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000); // +3시간
+
+    document.querySelectorAll('table tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    document.querySelectorAll('#LogDetailTable tbody tr').forEach(tr => {
+        const td = tr.querySelector('td:nth-child(4)');
+        if (td) {
+            const cellText = td.textContent.trim();
+            const eventTime = new Date(cellText.replace(" ", "T"));
+            if (eventTime >= startTime && eventTime < endTime) {
+                tr.classList.add('highlight');
+            }
+        }
+    });
+
+    const firstHighlighted = document.querySelector('#LogDetailTable tbody tr.highlight');
+    if (firstHighlighted) {
+        firstHighlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+const logTypeCtx = document.getElementById('typeDonutChart').getContext('2d');
+const logTypeChart = new Chart(logTypeCtx, {
     type: 'doughnut',
     data: {
-        labels: [)";
-        html << labelsStr;
-        html << R"(],
+        labels: [)" << typeLabels << R"(],
         datasets: [{
-            data: [)";
-        html << dataStr;
-        html << R"(],
-            backgroundColor: [)";
-        html << colorStr;
-        html << R"(]
+            data: [)" << typeData << R"(],
+            backgroundColor: [)" << typeColorStr << R"(]
         }]
     },
     options: {
@@ -1078,6 +1210,11 @@ const logTypeChart = new Chart(ctx, {
                 color : '#000',
                 font: { weight: 'bold' },
                 formatter: (value) => value
+            },
+            title: { 
+                display: true,
+                text: "Malicious Behavior By Type",
+                font: { size: 16, weight: 'bold' }
             }
         },
         onClick: (evt) => {
@@ -1086,7 +1223,103 @@ const logTypeChart = new Chart(ctx, {
                 const index = points[0].index;
                 const label = logTypeChart.data.labels[index];
                 console.log("Clicked label:", label);
-                highlightRow(label);
+                highlightRowType(label);
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+const logUserCtx = document.getElementById('userBarChart').getContext('2d');
+const logUserChart = new Chart(logUserCtx, {
+    type: 'bar',
+    data: {
+            labels: [)" << userLabels << R"(],
+            datasets: [{
+            label: 'Event Count',
+            data: [)" << userData << R"(],
+            backgroundColor: 'rgba(54,162,235,0.6)'
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: false, 
+        plugins: { 
+            legend: { display: false },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'right'
+            },
+            title: { 
+                display: true,
+                text: "Malicious Behavior by Username",
+                font: { size: 16, weight: 'bold' } 
+            }
+        },
+        onClick: (evt) => {
+            const points = logUserChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const index = points[0].index;
+                const label = logUserChart.data.labels[index];
+                console.log("Clicked label:", label);
+                highlightRowUser(label);
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+const logTimeCtx = document.getElementById('timeHistogram').getContext('2d');
+const logTimeChart = new Chart(logTimeCtx, {
+    type: 'bar',
+    data: {
+        labels: [)" << timeLabels << R"(],
+        datasets: [{
+            label: 'Event Count',
+            data: [)" << timeData << R"(],
+            backgroundColor: 'rgba(255,99,132,0.6)'
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top'
+            },
+            title: {
+                display: true,
+                text: "Malicious Behavior By Time",
+                font: { size: 16, weight: 'bold' }
+            }
+        },
+        onClick: (evt) => {
+            const points = logTimeChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const index = points[0].index;
+                const label = logTimeChart.data.labels[index];
+                console.log("Clicked label:", label);
+                highlightRowTime(label);
+            }
+        },
+        scales: {
+            x: {
+                title: {
+                    display: false,
+                    text: 'Time Interval (3 hours)'
+                }
+            },
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: false,
+                    text: 'Number of Events'
+                }
             }
         }
     },
