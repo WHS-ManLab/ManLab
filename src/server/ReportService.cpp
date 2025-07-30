@@ -313,7 +313,7 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     </div>
 </div>
 
-<table>
+<table id = "manualScanTable">
     <thead>
         <tr>
             <th>ID</th>
@@ -359,38 +359,54 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     } else {
 
         auto& baselineStorage = DBManager::GetInstance().GetBaselineStorage();
-
         int rowId = 1;
-        
-        for (const auto& record : modifiedRecords) {
+
+        for (const auto& record : modifiedRecords) 
+        {
             html << "<tr>";
             html << "<td>" << rowId++ << "</td>";
             html << "<td>" << record.path << "</td>";
-            html << "<td>" << record.current_md5 << "</td>";
-            html << "<td>" << record.current_permission << "</td>";
-            html << "<td>" << record.current_uid << "</td>";
-            html << "<td>" << record.current_gid << "</td>";
-            html << "<td>" << record.current_ctime << "</td>";
-            html << "<td>" << record.current_mtime << "</td>";
-            html << "<td>" << record.current_size << "</td>";
-            html << "</tr>\n";
-            std::string ext = record.path.substr(record.path.find_last_of('.') + 1);
-            if (ext.empty()) ext = "unknown";
-            manualTypeCounts[ext]++;
 
             auto baselineEntryOptional = baselineStorage.get_optional<BaselineEntry>(record.path);
 
-            if (baselineEntryOptional) {
-                const auto& baseline = *baselineEntryOptional;
+            bool changed_md5 = false, changed_perm = false, changed_uid = false;
+            bool changed_gid = false, changed_ctime = false, changed_mtime = false, changed_size = false;
 
-                if (record.current_md5 != baseline.md5) manualReasonCounts["해시값 변경"]++;
-                if (record.current_permission != baseline.permission) manualReasonCounts["권한 변경"]++;
-                if (record.current_uid != baseline.uid) manualReasonCounts["UID 변경"]++;
-                if (record.current_gid != baseline.gid) manualReasonCounts["GID 변경"]++;
-                if (record.current_ctime != baseline.ctime) manualReasonCounts["CTime 변경"]++;
-                if (record.current_mtime != baseline.mtime) manualReasonCounts["MTime 변경"]++;
-                if (record.current_size != baseline.size) manualReasonCounts["크기 변경"]++;
+            if (baselineEntryOptional) 
+            {
+                const auto& baseline = *baselineEntryOptional;
+                changed_md5   = record.current_md5 != baseline.md5;
+                changed_perm  = record.current_permission != baseline.permission;
+                changed_uid   = record.current_uid != baseline.uid;
+                changed_gid   = record.current_gid != baseline.gid;
+                changed_ctime = record.current_ctime != baseline.ctime;
+                changed_mtime = record.current_mtime != baseline.mtime;
+                changed_size  = record.current_size != baseline.size;
+
+                // 수치 카운트
+                if (changed_md5)   manualReasonCounts["해시값 변경"]++;
+                if (changed_perm)  manualReasonCounts["권한 변경"]++;
+                if (changed_uid)   manualReasonCounts["UID 변경"]++;
+                if (changed_gid)   manualReasonCounts["GID 변경"]++;
+                if (changed_ctime) manualReasonCounts["CTime 변경"]++;
+                if (changed_mtime) manualReasonCounts["MTime 변경"]++;
+                if (changed_size)  manualReasonCounts["크기 변경"]++;
             }
+
+            // 변경 여부에 따라 data-changed 속성 부여
+            html << "<td data-changed=\"" << (changed_md5   ? "true" : "false") << "\">" << record.current_md5 << "</td>";
+            html << "<td data-changed=\"" << (changed_perm  ? "true" : "false") << "\">" << record.current_permission << "</td>";
+            html << "<td data-changed=\"" << (changed_uid   ? "true" : "false") << "\">" << record.current_uid << "</td>";
+            html << "<td data-changed=\"" << (changed_gid   ? "true" : "false") << "\">" << record.current_gid << "</td>";
+            html << "<td data-changed=\"" << (changed_ctime ? "true" : "false") << "\">" << record.current_ctime << "</td>";
+            html << "<td data-changed=\"" << (changed_mtime ? "true" : "false") << "\">" << record.current_mtime << "</td>";
+            html << "<td data-changed=\"" << (changed_size  ? "true" : "false") << "\">" << record.current_size << "</td>";
+            html << "</tr>\n";
+
+            // 확장자 카운트
+            std::string ext = record.path.substr(record.path.find_last_of('.') + 1);
+            if (ext.empty()) ext = "unknown";
+            manualTypeCounts[ext]++;
              //[추가] 3시간 단위 시간 라벨 추출
             std::string timeLabel = get3HourBucketLabel(record.current_mtime);
             if (!timeLabel.empty())
@@ -413,7 +429,7 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     <canvas id="realtimeChart" style="margin-right: 10px;" width="400" height="400"></canvas>
     <canvas id="realtimeTimeChart" width="400" height="400"></canvas>
 </div>
-<table>
+<table id = "realtimeTable">
     <thead>
         <tr>
             <th>ID</th>
@@ -473,6 +489,85 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     html << R"(
 <script>
 
+function highlightManualRowByExt(ext) {
+    document.querySelectorAll('#manualScanTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+        const pathCell = tr.querySelector('td:nth-child(2)');
+        if (pathCell && pathCell.textContent.trim().endsWith('.' + ext)) {
+            tr.classList.add('highlight');
+        }
+    });
+}
+
+function highlightManualRowByReason(reason) {
+    const reasonColMap = {
+        "해시값 변경": 3,
+        "권한 변경": 4,
+        "UID 변경": 5,
+        "GID 변경": 6,
+        "CTime 변경": 7,
+        "MTime 변경": 8,
+        "크기 변경": 9
+    };
+    const colIdx = reasonColMap[reason];
+
+    document.querySelectorAll('#manualScanTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+        const td = tr.querySelector(`td:nth-child(${colIdx})`);
+        if (td && td.dataset.changed === "true") {
+            tr.classList.add('highlight');
+        }
+    });
+}
+
+function highlightManualRowByTime(timeLabel) {
+    const startTime = new Date(timeLabel.replace(" ", "T") + ":00");
+    const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000);
+
+    document.querySelectorAll('#manualScanTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+        const mtimeCell = tr.querySelector('td:nth-child(8)');
+        if (mtimeCell) {
+            const mtime = new Date(mtimeCell.textContent.trim().replace(" ", "T"));
+            if (mtime >= startTime && mtime < endTime) {
+                tr.classList.add('highlight');
+            }
+        }
+    });
+}
+
+function highlightRealtimeRowByType(type) {
+    document.querySelectorAll('#realtimeTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+        const td = tr.querySelector('td:nth-child(3)');
+        if (td && td.textContent.trim() === type) {
+            tr.classList.add('highlight');
+        }
+    });
+
+    const first = document.querySelector('#realtimeTable tbody tr.highlight');
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function highlightRealtimeRowByTime(label) {
+    const startTime = new Date(label.replace(" ", "T") + ":00");
+    const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000);
+
+    document.querySelectorAll('#realtimeTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+        const td = tr.querySelector('td:nth-child(5)');
+        if (td) {
+            const eventTime = new Date(td.textContent.trim().replace(" ", "T"));
+            if (eventTime >= startTime && eventTime < endTime) {
+                tr.classList.add('highlight');
+            }
+        }
+    });
+
+    const first = document.querySelector('#realtimeTable tbody tr.highlight');
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 // File Extension 도넛
 const extCtx = document.getElementById('manualScanExtChart').getContext('2d');
 const extChart = new Chart(extCtx, {
@@ -505,6 +600,13 @@ const extChart = new Chart(extCtx, {
     },
     options: {
         responsive: false,
+        onClick: (evt) => {
+            const points = extChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const label = extChart.data.labels[points[0].index];
+                highlightManualRowByExt(label);
+            }
+        },
         plugins: {
             legend: { position: 'bottom' },
             datalabels: {
@@ -549,7 +651,7 @@ const extChart = new Chart(extCtx, {
 
 //File Change Reasons 막대 그래프
 const reasonCtx = document.getElementById('manualScanReasonChart').getContext('2d');
-new Chart(reasonCtx, {
+const reasonChart = new Chart(reasonCtx, {
     type: 'bar',
     data: {
         labels: [)";
@@ -580,6 +682,14 @@ html << R"(]
     },
     options: {
         responsive: false,
+        onClick: (evt) => {
+            const points = reasonChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const label = reasonChart.data.labels[points[0].index];
+                highlightManualRowByReason(label);
+            }
+        },
+
         plugins: {
             legend: { display: false },
             datalabels: {
@@ -611,7 +721,7 @@ html << R"(]
 
 //Modification By Time
 const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
-    new Chart(timeCtx, {
+    const timeChart = new Chart(timeCtx, {
         type: 'bar',
         data: {
             labels: [)";
@@ -641,6 +751,13 @@ const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
     },
     options: {
         responsive: false,
+        onClick: (evt) => {
+            const points = timeChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const label = timeChart.data.labels[points[0].index];
+                highlightManualRowByTime(label);
+            }
+        },
         plugins: {
             legend: { display: false },
             title: {
@@ -690,7 +807,7 @@ const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
 
 //Events By Type 막대 그래프
 const rtCtx = document.getElementById('realtimeChart').getContext('2d');
-new Chart(rtCtx, {
+const rtChart = new Chart(rtCtx, {
     type: 'bar',
     data: {
         labels: [)";
@@ -721,6 +838,13 @@ new Chart(rtCtx, {
     },
     options: {
         responsive: false,
+        onClick: (evt) => {
+            const points = rtChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const label = rtChart.data.labels[points[0].index];
+                highlightRealtimeRowByType(label);
+            }
+        },
         plugins: {
             legend: { display: false },
             title: {
@@ -749,7 +873,7 @@ new Chart(rtCtx, {
 
 //Events by Time 시간 막대 그래프
 const rtTimeCtx = document.getElementById('realtimeTimeChart').getContext('2d');
-new Chart(rtTimeCtx, {
+const rtTimeChart = new Chart(rtTimeCtx, {
     type: 'bar',
     data: {
         labels: [)";
@@ -777,6 +901,13 @@ html << R"(
     },
     options: {
         responsive: false,
+        onClick: (evt) => {
+            const points = rtTimeChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const label = rtTimeChart.data.labels[points[0].index];
+                highlightRealtimeRowByTime(label);
+            }
+        },
         plugins: {
             legend: { display: false },
             title: {
