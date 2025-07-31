@@ -67,7 +67,7 @@ std::string get3HourBucketLabel(const std::string& datetimeStr)
     return std::string(buf);
 }
 
-//Time 차트용 함수
+//Time 차트용 함수 (x축 라벨과 y축 라벨 자동으로 채워줌)
  void generate3HourLabels(const std::string& startTime, const std::string& endTime,
                          std::vector<std::string>& timeLabels, std::vector<int>& counts,
                          const std::map<std::string, int>& bucketMap)
@@ -75,34 +75,26 @@ std::string get3HourBucketLabel(const std::string& datetimeStr)
     timeLabels.clear();
     counts.clear();
 
-    // 시작 시간 파싱 및 3시간 단위로 내림
     std::tm t0 = {};
-    std::istringstream(startTime) >> std::get_time(&t0, "%Y-%m-%d %H:%M:%S");
-    auto start_time_t = std::mktime(&t0);
-
-    // 끝 시간 파싱 (3시간 단위로 올릴 필요는 없음, 포함 여부만 확인)
     std::tm t1 = {};
-    std::istringstream(endTime) >> std::get_time(&t1, "%Y-%m-%d %H:%M:%S");
-    auto end_time_t = std::mktime(&t1);
+    std::istringstream(startTime) >> std::get_time(&t0, "%Y-%m-%d %H:%M:%S");
+    std::istringstream(endTime)   >> std::get_time(&t1, "%Y-%m-%d %H:%M:%S");
+    auto start = std::mktime(&t0);
+    auto end   = std::mktime(&t1);
 
-    // 시작 시간을 가장 가까운 3시간 단위로 정규화
-    t0 = *std::localtime(&start_time_t);
+    t0 = *std::localtime(&start);
     t0.tm_hour = (t0.tm_hour / 3) * 3;
-    t0.tm_min = 0;
-    t0.tm_sec = 0;
-    start_time_t = std::mktime(&t0); // 정규화된 시작 시간
+    t0.tm_min = t0.tm_sec = 0;
+    start = std::mktime(&t0);
 
-    // 3시간 간격으로 레이블과 카운트 생성
-    for (auto current_time_t = start_time_t; current_time_t <= end_time_t + 3 * 3600; current_time_t += 3 * 3600)
+    for (auto tt = start; tt <= end; tt += 3 * 3600)
     {
-        std::tm current_tm = *std::localtime(&current_time_t);
+        std::tm tb = *std::localtime(&tt);
         char buf[32];
-        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:00", &current_tm); // 레이블은 "YYYY-MM-DD HH:00" 형식
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:00", &tb);
         std::string lbl(buf);
         timeLabels.push_back(lbl);
         counts.push_back(bucketMap.count(lbl) ? bucketMap.at(lbl) : 0);
-
-        if (std::difftime(current_time_t, end_time_t) > 3 * 3600) break; // 너무 멀리 가지 않도록 조절
     }
 }
 
@@ -371,7 +363,7 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     std::map<std::string, int> manualTypeCounts;
     std::map<std::string, int> manualReasonCounts;
 
-    // 시간대별 통계
+    // [추가] 추가된 시간대별 통계
     std::map<std::string, int> manualTimeBuckets;
     std::vector<std::string> allTimeLabels;
     std::vector<int> allTimeCounts;
@@ -660,6 +652,7 @@ const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
         datasets: [{
             label: '이벤트 수',
             data: [)";
+// [바로 여기부터 allTimeCounts 삽입]
     for (size_t i = 0; i < allTimeCounts.size(); ++i) {
         if (i) html << ", ";
         html << allTimeCounts[i];
@@ -667,7 +660,7 @@ const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
     html << R"(],
             backgroundColor: [)";
     for (size_t i = 0; i < allTimeCounts.size(); ++i) {
-        if (i > 0) html << ", ";
+        if (i) html << ", ";
         html << "\"" << ReportService::generateColor(i) << "\"";
     }
     html << R"(]
@@ -786,7 +779,7 @@ const rtTimeCtx = document.getElementById('realtimeTimeChart').getContext('2d');
 new Chart(rtTimeCtx, {
     type: 'bar',
     data: {
-        labels: [);
+        labels: [)";
 for (size_t i = 0; i < eventTimeLabels.size(); ++i) {
     if (i) html << ", ";
     html << "\"" << eventTimeLabels[i] << "\"";
@@ -794,13 +787,13 @@ for (size_t i = 0; i < eventTimeLabels.size(); ++i) {
 html << R"(],
         datasets: [{
             label: 'Events By Time',
-            data: [);
+            data: [)";
 for (size_t i = 0; i < eventTimeCounts.size(); ++i) {
     if (i) html << ", ";
     html << eventTimeCounts[i];
 }
 html << R"(],
-            backgroundColor: [);
+            backgroundColor: [)";
 for (size_t i = 0; i < eventTimeCounts.size(); ++i) {
     if (i) html << ", ";
     html << "\"" << ReportService::generateColor(i) << "\"";
@@ -1165,14 +1158,14 @@ const hourlyDetectionBarChart = new Chart(barCtx, {
         labels: hourlyLabels,
         datasets: [
             {
-                label: 'Hash Detections',
+                label: 'Hash',
                 data: hashData,
                 backgroundColor: barChartColors['Hash'],
                 borderColor: barChartColors['Hash'].replace('0.7', '1'),
                 borderWidth: 1
             },
             {
-                label: 'YARA Detections',
+                label: 'YARA',
                 data: yaraData,
                 backgroundColor: barChartColors['YARA'],
                 borderColor: barChartColors['YARA'].replace('0.7', '1'),
