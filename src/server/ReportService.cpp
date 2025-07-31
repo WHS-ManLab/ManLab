@@ -13,12 +13,98 @@
 #include <thread>     // sleep
 #include <map>
 #include <spdlog/spdlog.h>
-#include <iomanip> // put_time
-#include <ctime> // std::tm
-#include <algorithm> // std::min_element, std::abs
+#include <algorithm>
+#include <iomanip>    // std::put_time
 
 using namespace std::chrono;
 using namespace manlab::utils;
+
+namespace 
+{
+    // "YYYYMMDD_HHMMSS" -> "YYYY-MM-DD HH:MM:SS" 형식으로 변환 (std::get_time 파싱용)
+    std::string convertQuarantineDateFormatToStdFormat(const std::string& quarantineDate)
+    {
+        if (quarantineDate.length() != 15 || quarantineDate[8] != '_')
+        {
+            return quarantineDate;
+        }
+        return quarantineDate.substr(0, 4) + "-" + quarantineDate.substr(4, 2) + "-" + quarantineDate.substr(6, 2) + " " +
+               quarantineDate.substr(9, 2) + ":" + quarantineDate.substr(11, 2) + ":" + quarantineDate.substr(13, 2);
+    }
+
+    // std::string 형태의 날짜/시간을 std::chrono::system_clock::time_point로 파싱
+    std::chrono::system_clock::time_point parseDateTime(const std::string& datetimeStr) 
+    {
+        std::tm tm = {};
+        std::istringstream ss(datetimeStr);
+        ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+        if (ss.fail()) 
+        {
+            throw std::runtime_error("Failed to parse datetime string: " + datetimeStr);
+        }
+        tm.tm_isdst = -1;
+        return std::chrono::system_clock::from_time_t(std::mktime(&tm));
+    }
+}
+
+//3시간 단위로 시간 분리
+std::string get3HourBucketLabel(const std::string& datetimeStr)
+{
+    std::tm tm = {};
+    std::istringstream ss(datetimeStr);
+    ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+
+    if (ss.fail())
+    {
+        return "";  // 파싱 실패 시 빈 문자열 반환
+    }
+
+    int bucketStart = (tm.tm_hour / 3) * 3;
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%s %02d:00",
+                  datetimeStr.substr(0,10).c_str(),  // 날짜
+                  bucketStart);                     // 3시간 단위로 내림
+    return std::string(buf);
+}
+
+//Time 차트용 함수
+ void generate3HourLabels(const std::string& startTime, const std::string& endTime,
+                         std::vector<std::string>& timeLabels, std::vector<int>& counts,
+                         const std::map<std::string, int>& bucketMap)
+{
+    timeLabels.clear();
+    counts.clear();
+
+    // 시작 시간 파싱 및 3시간 단위로 내림
+    std::tm t0 = {};
+    std::istringstream(startTime) >> std::get_time(&t0, "%Y-%m-%d %H:%M:%S");
+    auto start_time_t = std::mktime(&t0);
+
+    // 끝 시간 파싱 (3시간 단위로 올릴 필요는 없음, 포함 여부만 확인)
+    std::tm t1 = {};
+    std::istringstream(endTime) >> std::get_time(&t1, "%Y-%m-%d %H:%M:%S");
+    auto end_time_t = std::mktime(&t1);
+
+    // 시작 시간을 가장 가까운 3시간 단위로 정규화
+    t0 = *std::localtime(&start_time_t);
+    t0.tm_hour = (t0.tm_hour / 3) * 3;
+    t0.tm_min = 0;
+    t0.tm_sec = 0;
+    start_time_t = std::mktime(&t0); // 정규화된 시작 시간
+
+    // 3시간 간격으로 레이블과 카운트 생성
+    for (auto current_time_t = start_time_t; current_time_t <= end_time_t + 3 * 3600; current_time_t += 3 * 3600)
+    {
+        std::tm current_tm = *std::localtime(&current_time_t);
+        char buf[32];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:00", &current_tm); // 레이블은 "YYYY-MM-DD HH:00" 형식
+        std::string lbl(buf);
+        timeLabels.push_back(lbl);
+        counts.push_back(bucketMap.count(lbl) ? bucketMap.at(lbl) : 0);
+
+        if (std::difftime(current_time_t, end_time_t) > 3 * 3600) break; // 너무 멀리 가지 않도록 조절
+    }
+}
 
 // "YYYY-MM-DD HH:MM:SS" -> "YYYYMMDD_HHMMSS" 형식으로 변환 (QuarantineMetadata 쿼리에 필요)
 std::string convertToQuarantineDateFormat(const std::string& dateTimeStr)
@@ -37,22 +123,6 @@ std::string convertToQuarantineDateFormat(const std::string& dateTimeStr)
 
     return year + month + day + "_" + hour + minute + second;
 }
-
-// "YYYYMMDD_HHMMSS" -> "YYYY-MM-DD HH:MM:SS" 형식으로 변환 (std::tm 파싱용)
-std::string convertQuarantineDateFormatToStdFormat(const std::string& quarantineDate)
-{
-    if (quarantineDate.length() != 15) return quarantineDate;
-    
-    std::string year = quarantineDate.substr(0, 4);
-    std::string month = quarantineDate.substr(4, 2);
-    std::string day = quarantineDate.substr(6, 2);
-    std::string hour = quarantineDate.substr(9, 2);
-    std::string minute = quarantineDate.substr(11, 2);
-    std::string second = quarantineDate.substr(13, 2);
-
-    return year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + second;
-}
-
 
 // 파일 경로에서 파일 이름만 추출하는 함수
 std::string getFileNameFromPath(const std::string& filePath)
@@ -199,15 +269,6 @@ std::string ReportService::getCurrentTimeString() const
     return buf;
 }
 
-// string (YYYY-MM-DD HH:MM:SS) to time_point
-system_clock::time_point parseDateTime(const std::string& dateTimeStr) {
-    std::tm t = {};
-    std::istringstream ss(dateTimeStr);
-    ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
-    return system_clock::from_time_t(std::mktime(&t));
-}
-
-
 bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<LogAnalysisResult> &events) const
 {
     std::ofstream html(htmlFile);
@@ -216,8 +277,6 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
         return false;
     }
 
-    // --------------------------------------------------
-    // LOG 팀 리포트
     html << R"(<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -244,187 +303,57 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
             display: block;
             margin: 0 auto;
         }
+        hr {
+            height : 50px;
+            border : 0;
+        }
+        .chart-row {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .chart-box {
+            flex: 1 1 30%;
+            max-width: 400px;
+        }            
     </style>
 </head>
 <body>
-<h1>Malicious Behavior Report</h1>
+<h1 style="text-align: center;">ManLab Regular Security Report</h1>
 <p style="text-align: right;">Report period: )";
+    html << mStartTime << " ~ " << mEndTime << "</p>\n";
 
-    html << mStartTime << " ~ " << mEndTime  << "</p>\n";
-
-    if (!events.empty())
-    {
-        html << R"(
-<h2>Detected Malicious Behavior Types Overview</h2>)";
-        html << R"(<canvas id="typeDonutChart" width="400" height="400"></canvas>)";
-    }
-
+    // --------------------------------------------------
+    // FIM팀 리포트
     html << R"(
-<h2>Detected Malicious Behavior Details</h2>
-<table id="LogDetailTable">
-    <thead>
-        <tr>
-            <th>Event ID</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Timestamp</th>
-            <th>Username</th>
-            <th>Original Log Path</th>
-        </tr>
-    </thead>
-    <tbody>
-)";
-
-    if (events.empty())
-    {
-        html << R"(<tr>
-            <td colspan="7" style="text-align: center; font-style: italic;">
-            No malicious behavior events detected during this period.
-            </td>
-        </tr>
-    </tbody>
-</table>
-)";
-    }
-    else
-    {
-        std::map<std::string, int> typeCounts;
-        int id = 0;
-
-        for (const auto &e : events)
-        {
-            typeCounts[e.type]++;
-            id++;
-            html << "<tr>";
-            html << "<td><a href=\"#raw-" << id << "\">" << id << "</a></td>";
-            html << "<td>" << e.type << "</td>";
-            html << "<td>" << e.description << "</td>";
-            html << "<td>" << e.timestamp << "</td>";
-            html << "<td>" << e.username << "</td>";
-            html << "<td>" << e.originalLogPath << "</td>";
-            html << "</tr>\n";
-        }
-
-        html << R"(</tbody>
-</table>
-
-<h2>Event Log Line by ID</h2>
-<table>
-    <thead>
-        <tr>
-            <th>Event ID</th>
-            <th>Raw Log Line</th>
-        </tr>
-    </thead>
-    <tbody>
-)";
-
-        id = 1;
-        for (const auto &e : events)
-        {
-            html << "<tr id=\"raw-" << id << "\">";
-            html << "<td>" << id++ << "</td>";
-            html << "<td>" << e.rawLine << "</td>";
-            html << "</tr>\n";
-        }
-
-        html << R"(</tbody>
-</table>
-)";
-
-        std::string labelsStr, dataStr, colorStr;
-        bool first = true;
-        size_t colorIdx = 0;
-
-        for (const auto &pair : typeCounts)
-        {
-            if (!first)
-            {
-                labelsStr += ", ";
-                dataStr += ", ";
-                colorStr += ", ";
-            }
-            labelsStr += "\"" + pair.first + "\"";
-            dataStr += std::to_string(pair.second);
-            colorStr += "\"" + ReportService::generateColor(colorIdx) + "\"";
-            colorIdx++;
-            first = false;
-        }
-
-        html << R"(
-<script>
-function highlightRow(type) {
-    console.log("highlightRow called with type:", type);
-
-    document.querySelectorAll('table tbody tr').forEach(tr => {
-        tr.classList.remove('highlight');
-    });
-
-    document.querySelectorAll('#LogDetailTable tbody tr').forEach(tr => {
-        const td = tr.querySelector('td:nth-child(2)');
-        if (td) {
-            const cellText = td.textContent.trim();
-            if (cellText === type) {
-                tr.classList.add('highlight');
-                tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-    });
-}
-const ctx = document.getElementById('typeDonutChart').getContext('2d');
-const logTypeChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-        labels: [)";
-        html << labelsStr;
-        html << R"(],
-        datasets: [{
-            data: [)";
-        html << dataStr;
-        html << R"(],
-            backgroundColor: [)";
-        html << colorStr;
-        html << R"(]
-        }]
-    },
-    options: {
-        responsive: false,
-        plugins: {
-            legend: { position: 'bottom' },
-            datalabels: {
-                color : '#000',
-                font: { weight: 'bold' },
-                formatter: (value) => value
-            }
-        },
-        onClick: (evt) => {
-            const points = logTypeChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
-            if (points.length > 0) {
-                const index = points[0].index;
-                const label = logTypeChart.data.labels[index];
-                console.log("Clicked label:", label);
-                highlightRow(label);
-            }
-        }
-    },
-    plugins: [ChartDataLabels]
-});
-</script>
-)";
-    }
-
-    // -------------------------------------------------------
-    // FIM 팀 리포트
-    // 수동검사
-    html << R"(
+<hr/>
 <h1>📂 File Integrity Monitoring Report</h1>
 
-<h2>Modified Files (Manual Scan Results)</h2>
-<p>List of files with changed MD5 hashes detected during manual scans:</p>
-<canvas id="manualScanChart" width="400" height="400"></canvas>
+<h2>• Modified Files (Manual Scan Results)</h2>
+<div style="display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+    <!-- 확장자별 차트 + 범례 -->
+    <div style="display: flex; align-items: center;">
+        <canvas id="manualScanExtChart" width="400" height="400"></canvas>
+        <div id="manualScanExtLegend" style="margin-left: 20px;"></div>
+    </div>
+
+    <!-- 변경 사유별 차트 -->
+    <div>
+        <canvas id="manualScanReasonChart" width="400" height="400"></canvas>
+    </div>
+
+    <!-- 시간대별 차트 -->
+    <div>
+        <canvas id="manualScanTimeChart" width="400" height="400"></canvas>
+    </div>
+</div>
+
 <table>
     <thead>
         <tr>
+            <th>ID</th>
             <th>Path</th>
             <th>Current MD5 Hash</th>
             <th>Permission</th>
@@ -438,118 +367,174 @@ const logTypeChart = new Chart(ctx, {
     <tbody>
 )";
 
-// 수동검사 데이터 수집
-std::vector<ModifiedEntry> modifiedRecords;
-try {
-    auto& modifiedStorage = DBManager::GetInstance().GetModifiedStorage();
-    modifiedRecords = modifiedStorage.get_all<ModifiedEntry>();
-} catch (const std::exception& e) {
-    html << "<tr><td colspan='2' style='color:red;'>Error: " << e.what() << "</td></tr>";
-}
+    std::vector<ModifiedEntry> modifiedRecords;
+    std::map<std::string, int> manualTypeCounts;
+    std::map<std::string, int> manualReasonCounts;
 
-std::map<std::string, int> manualTypeCounts;
+    // 시간대별 통계
+    std::map<std::string, int> manualTimeBuckets;
+    std::vector<std::string> allTimeLabels;
+    std::vector<int> allTimeCounts;
 
-if (modifiedRecords.empty()) {
-    html << R"(<tr>
-        <td colspan="2" style="text-align: center; font-style: italic;">
-        No file integrity changes detected during manual scans.
-        </td>
-    </tr>
-)";
-} else {
-    for (const auto& record : modifiedRecords) {
-        html << "<tr>";
-        html << "<td>" << record.path << "</td>";
-        html << "<td>" << record.current_md5 << "</td>";
-        html << "<td>" << record.current_permission << "</td>";
-        html << "<td>" << record.current_uid << "</td>";
-        html << "<td>" << record.current_gid << "</td>";
-        html << "<td>" << record.current_ctime << "</td>";
-        html << "<td>" << record.current_mtime << "</td>";
-        html << "<td>" << record.current_size << "</td>";
-        html << "</tr>\n";
-        std::string ext = record.path.substr(record.path.find_last_of('.') + 1);
-        manualTypeCounts[ext]++;
+    try {
+        auto& modifiedStorage = DBManager::GetInstance().GetModifiedStorage();
+        modifiedRecords = modifiedStorage.get_all<ModifiedEntry>(
+            sqlite_orm::where(sqlite_orm::between(&ModifiedEntry::current_mtime, mStartTime, mEndTime))
+        );
+    } catch (const std::exception& e) {
+        html << "<tr><td colspan='9' style='color:red; text-align: center;'>Error fetching manual scan data: " << e.what() << "</td></tr>";
     }
-}
-html << R"(</tbody></table>)";
 
-// 실시간 검사
-html << R"(
-<h2>Real-time Monitoring Events</h2>
-<p>Events from )" << mStartTime << " to " << mEndTime << R"(</p>
-<canvas id="realtimeChart" width="400" height="400"></canvas>
+
+    if (modifiedRecords.empty()) {
+        html << R"(<tr>
+            <td colspan="9" style="text-align: center; font-style: italic;">
+            No file integrity changes detected during manual scans.
+            </td>
+        </tr>
+)";
+    } else {
+
+        auto& baselineStorage = DBManager::GetInstance().GetBaselineStorage();
+
+        int rowId = 1;
+        
+        for (const auto& record : modifiedRecords) {
+            html << "<tr>";
+            html << "<td>" << rowId++ << "</td>";
+            html << "<td>" << record.path << "</td>";
+            html << "<td>" << record.current_md5 << "</td>";
+            html << "<td>" << record.current_permission << "</td>";
+            html << "<td>" << record.current_uid << "</td>";
+            html << "<td>" << record.current_gid << "</td>";
+            html << "<td>" << record.current_ctime << "</td>";
+            html << "<td>" << record.current_mtime << "</td>";
+            html << "<td>" << record.current_size << "</td>";
+            html << "</tr>\n";
+            std::string ext = record.path.substr(record.path.find_last_of('.') + 1);
+            if (ext.empty()) ext = "unknown";
+            manualTypeCounts[ext]++;
+
+            auto baselineEntryOptional = baselineStorage.get_optional<BaselineEntry>(record.path);
+
+            if (baselineEntryOptional) {
+                const auto& baseline = *baselineEntryOptional;
+
+                if (record.current_md5 != baseline.md5) manualReasonCounts["해시값 변경"]++;
+                if (record.current_permission != baseline.permission) manualReasonCounts["권한 변경"]++;
+                if (record.current_uid != baseline.uid) manualReasonCounts["UID 변경"]++;
+                if (record.current_gid != baseline.gid) manualReasonCounts["GID 변경"]++;
+                if (record.current_ctime != baseline.ctime) manualReasonCounts["CTime 변경"]++;
+                if (record.current_mtime != baseline.mtime) manualReasonCounts["MTime 변경"]++;
+                if (record.current_size != baseline.size) manualReasonCounts["크기 변경"]++;
+            }
+             //[추가] 3시간 단위 시간 라벨 추출
+            std::string timeLabel = get3HourBucketLabel(record.current_mtime);
+            if (!timeLabel.empty())
+            {
+                manualTimeBuckets[timeLabel]++;
+            }
+        }
+
+    // [추가]최종 라벨/카운트 배열 생성
+    generate3HourLabels(mStartTime, mEndTime, allTimeLabels, allTimeCounts, manualTimeBuckets);
+    }
+
+    html << R"(</tbody></table>)";
+
+    html << R"(
+<h2>• Real-time Monitoring Events</h2>
+<div style="display: flex; justify-content: center;">
+    <canvas id="realtimeChart" style="margin-right: 10px;" width="400" height="400"></canvas>
+    <canvas id="realtimeTimeChart" width="400" height="400"></canvas>
+</div>
 <table>
     <thead>
         <tr>
             <th>ID</th>
             <th>Path</th>
             <th>Event Type</th>
+            <th>New Name</th>
             <th>Timestamp</th>
         </tr>
     </thead>
     <tbody>
 )";
 
-// 실시간 검사 데이터 수집
-std::vector<RealtimeEventLog> realTimeRecords;
-std::map<std::string, int> eventTypeCounts;
+    std::vector<RealtimeEventLog> realTimeRecords;
+    std::map<std::string, int> eventTypeCounts;
 
-try {
-    auto& realTimeStorage = DBManager::GetInstance().GetRealTimeMonitorStorage();
-    realTimeRecords = realTimeStorage.get_all<RealtimeEventLog>(
-        sqlite_orm::where(sqlite_orm::between(&RealtimeEventLog::timestamp, mStartTime, mEndTime)));
-} catch (const std::exception& e) {
-    html << "<tr><td colspan='4' style='color:red;'>Error: " << e.what() << "</td></tr>";
-}
-
-if (realTimeRecords.empty()) {
-    html << R"(<tr>
-        <td colspan="4" style="text-align: center; font-style: italic;">
-        No real-time monitoring events detected during this period.
-        </td>
-    </tr>
-)";
-} else {
-    for (const auto& record : realTimeRecords) {
-        html << "<tr><td>" << record.id << "</td><td>" << record.path
-             << "</td><td>" << record.eventType << "</td><td>" << record.timestamp << "</td></tr>";
-        eventTypeCounts[record.eventType]++;
+    try {
+        auto& realTimeStorage = DBManager::GetInstance().GetRealTimeMonitorStorage();
+        realTimeRecords = realTimeStorage.get_all<RealtimeEventLog>(
+            sqlite_orm::where(sqlite_orm::between(&RealtimeEventLog::timestamp, mStartTime, mEndTime)));
+    } catch (const std::exception& e) {
+        html << "<tr><td colspan='4' style='color:red; text-align: center;'>Error fetching real-time monitoring data: " << e.what() << "</td></tr>";
     }
-}
-html << R"(</tbody></table>)";
 
-// 시각화용 스크립트 추가
-// 수동검사 차트
-html << R"(
+    if (realTimeRecords.empty()) {
+        html << R"(<tr>
+            <td colspan="4" style="text-align: center; font-style: italic;">
+            No real-time monitoring events detected during this period.
+            </td>
+        </tr>
+)";
+    } else {
+        int rowId = 1;
+        for (const auto& record : realTimeRecords) {
+            html << "<tr><td>" << rowId++ << "</td><td>" << record.path
+                 << "</td><td>" << record.eventType << "</td><td>" << record.newName << "</td><td>" << record.timestamp << "</td></tr>";
+            eventTypeCounts[record.eventType]++;
+        }
+    }
+    html << R"(</tbody></table>)";
+
+    //시간 차트 추가
+    std::map<std::string, int> realTimeTimeBuckets;
+    for (const auto& record : realTimeRecords)
+    {
+        std::string timeLabel = get3HourBucketLabel(record.timestamp);
+        if (!timeLabel.empty())
+        {
+            realTimeTimeBuckets[timeLabel]++;
+        }
+    }
+
+    std::vector<std::string> eventTimeLabels;
+    std::vector<int> eventTimeCounts;
+    generate3HourLabels(mStartTime, mEndTime, eventTimeLabels, eventTimeCounts, realTimeTimeBuckets);
+
+    // FIM 차트 스크립트
+    html << R"(
 <script>
-const manualCtx = document.getElementById('manualScanChart').getContext('2d');
-new Chart(manualCtx, {
+// File Extension 도넛
+const extCtx = document.getElementById('manualScanExtChart').getContext('2d');
+const extChart = new Chart(extCtx, {
     type: 'doughnut',
     data: {
         labels: [)";
-bool first = true;
-for (const auto& [ext, _] : manualTypeCounts) {
-    if (!first) html << ", ";
-    html << "\"" << ext << "\"";
-    first = false;
-}
-html << R"(],
+    bool firstChartItem = true;
+    for (const auto& [ext, _] : manualTypeCounts) {
+        if (!firstChartItem) html << ", ";
+        html << "\"" << ext << "\"";
+        firstChartItem = false;
+    }
+    html << R"(],
         datasets: [{
             data: [)";
-first = true;
-for (const auto& [_, count] : manualTypeCounts) {
-    if (!first) html << ", ";
-    html << count;
-    first = false;
-}
-html << R"(],
+    firstChartItem = true;
+    for (const auto& [_, count] : manualTypeCounts) {
+        if (!firstChartItem) html << ", ";
+        html << count;
+        firstChartItem = false;
+    }
+    html << R"(],
             backgroundColor: [)";
-for (size_t i = 0; i < manualTypeCounts.size(); ++i) {
-    if (i > 0) html << ", ";
-    html << "\"" << ReportService::generateColor(i) << "\"";
-}
-html << R"(]
+    for (size_t i = 0; i < manualTypeCounts.size(); ++i) {
+        if (i > 0) html << ", ";
+        html << "\"" << ReportService::generateColor(i) << "\"";
+    }
+    html << R"(]
         }]
     },
     options: {
@@ -560,36 +545,68 @@ html << R"(]
                 color : '#000',
                 font: { weight: 'bold' },
                 formatter: (value) => value
+            },
+            title: {
+                display: true,
+                text: "File Extension",
+                font: {size: 18, weight: 'bold' }
             }
         }
     },
     plugins: [ChartDataLabels]
 });
 
-// 실시간 검사 차트
-const rtCtx = document.getElementById('realtimeChart').getContext('2d');
-new Chart(rtCtx, {
-    type: 'doughnut',
+//도넛 요약 차트 표
+
+(function() {
+    const data = extChart.data;
+    const total = data.datasets[0].data.reduce((sum, v) => sum + v, 0);
+    let htmlLegend = '<table style="border-collapse: collapse; text-align: right;">';
+    data.labels.forEach((label, i) => {
+        const count = data.datasets[0].data[i];
+        const pct   = ((count/total)*100).toFixed(2) + '%';
+        const color = data.datasets[0].backgroundColor[i];
+        htmlLegend += `
+            <tr>
+              <td style="padding:4px;">
+                <span style="display:inline-block;width:12px;height:12px;
+                          background-color:${color};margin-right:8px;"></span>
+                ${label}
+              </td>
+              <td style="padding:4px;">${count}</td>
+              <td style="padding:4px;">${pct}</td>
+            </tr>`;
+    });
+    htmlLegend += '</table>';
+    document.getElementById('manualScanExtLegend').innerHTML = htmlLegend;
+})();
+
+
+//File Change Reasons 막대 그래프
+const reasonCtx = document.getElementById('manualScanReasonChart').getContext('2d');
+new Chart(reasonCtx, {
+    type: 'bar',
     data: {
         labels: [)";
-first = true;
-for (const auto& [type, _] : eventTypeCounts) {
-    if (!first) html << ", ";
-    html << "\"" << type << "\"";
-    first = false;
+firstChartItem = true;
+for (const auto& [reason, _] : manualReasonCounts) {
+    if (!firstChartItem) html << ", ";
+    html << "\"" << reason << "\"";
+    firstChartItem = false;
 }
 html << R"(],
         datasets: [{
+            label: '변경된 파일 수',
             data: [)";
-first = true;
-for (const auto& [_, count] : eventTypeCounts) {
-    if (!first) html << ", ";
+firstChartItem = true;
+for (const auto& [_, count] : manualReasonCounts) {
+    if (!firstChartItem) html << ", ";
     html << count;
-    first = false;
+    firstChartItem = false;
 }
 html << R"(],
             backgroundColor: [)";
-for (size_t i = 0; i < eventTypeCounts.size(); ++i) {
+for (size_t i = 0; i < manualReasonCounts.size(); ++i) {
     if (i > 0) html << ", ";
     html << "\"" << ReportService::generateColor(i) << "\"";
 }
@@ -599,11 +616,242 @@ html << R"(]
     options: {
         responsive: false,
         plugins: {
+            legend: { display: false },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top',
+                formatter: (value) => value
+            },
+            title: {
+                display: true,
+                text: "File Change Reasons",
+                font: {size: 18, weight: 'bold' },
+                padding: { bottom : 20}
+            }
+        },
+        scales: {
+            y:{
+                beginAtZero: true,
+                ticks:{
+                    stepSize: 1,
+                    precision: 0
+                }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+//Modification By Time
+const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
+    new Chart(timeCtx, {
+        type: 'bar',
+        data: {
+            labels: [)";
+
+    // 수정된 파일 갯수
+    for (size_t i = 0; i < allTimeLabels.size(); ++i) {
+        if (i) html << ", ";
+        html << "\"" << allTimeLabels[i] << "\"";
+    }
+    html << R"(],
+        datasets: [{
+            label: '이벤트 수',
+            data: [)";
+    for (size_t i = 0; i < allTimeCounts.size(); ++i) {
+        if (i) html << ", ";
+        html << allTimeCounts[i];
+    }
+    html << R"(],
+            backgroundColor: [)";
+    for (size_t i = 0; i < allTimeCounts.size(); ++i) {
+        if (i > 0) html << ", ";
+        html << "\"" << ReportService::generateColor(i) << "\"";
+    }
+    html << R"(]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            title: {
+                display: true,
+                text: ' Modification By Time',
+                font: {size: 18, weight: 'bold' }
+            },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top',
+                formatter: (v) => v
+            }
+        },
+        scales: {
+            x: {
+                grid: { display: true, drawBorder: true },
+                ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 },
+                title : {
+                    display : false,
+                    text : 'Time Interval (3hours)',
+                    font: {
+                        size : 13,
+                        weight: 'bold'
+                    },
+                    padding: {top : 10},
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grid: { display: true },
+                title: {
+                    display: false,
+                    text: 'Number of Events',
+                    font: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    padding: { bottom: 10 },
+                }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+//Events By Type 막대 그래프
+const rtCtx = document.getElementById('realtimeChart').getContext('2d');
+new Chart(rtCtx, {
+    type: 'bar',
+    data: {
+        labels: [)";
+    firstChartItem = true;
+    for (const auto& [type, _] : eventTypeCounts) {
+        if (!firstChartItem) html << ", ";
+        html << "\"" << type << "\"";
+        firstChartItem = false;
+    }
+    html << R"(],
+        datasets: [{
+            label: 'Event Count',
+            data: [)";
+    firstChartItem = true;
+    for (const auto& [_, count] : eventTypeCounts) {
+        if (!firstChartItem) html << ", ";
+        html << count;
+        firstChartItem = false;
+    }
+    html << R"(],
+            backgroundColor: [)";
+    for (size_t i = 0; i < eventTypeCounts.size(); ++i) {
+        if (i > 0) html << ", ";
+        html << "\"" << ReportService::generateColor(i) << "\"";
+    }
+    html << R"(]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
             legend: { position: 'bottom' },
+            title: {
+                display: true,
+                text: ' Events By Type',
+                font: {size: 18, weight: 'bold' }
+            },
             datalabels: {
                 color : '#000',
                 font: { weight: 'bold' },
                 formatter: (value) => value
+            }
+        },
+        scales: {
+            y:{
+                beginAtZero: true,
+                ticks:{
+                    stepSize: 1,
+                    precision: 0
+                }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+//Events by Time 시간 막대 그래프
+const rtTimeCtx = document.getElementById('realtimeTimeChart').getContext('2d');
+new Chart(rtTimeCtx, {
+    type: 'bar',
+    data: {
+        labels: [);
+for (size_t i = 0; i < eventTimeLabels.size(); ++i) {
+    if (i) html << ", ";
+    html << "\"" << eventTimeLabels[i] << "\"";
+}
+html << R"(],
+        datasets: [{
+            label: 'Events By Time',
+            data: [);
+for (size_t i = 0; i < eventTimeCounts.size(); ++i) {
+    if (i) html << ", ";
+    html << eventTimeCounts[i];
+}
+html << R"(],
+            backgroundColor: [);
+for (size_t i = 0; i < eventTimeCounts.size(); ++i) {
+    if (i) html << ", ";
+    html << "\"" << ReportService::generateColor(i) << "\"";
+}
+html << R"(
+            ]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            title: {
+                display: true,
+                text: 'Events by Time',
+                font: {size: 18, weight: 'bold' }
+            },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top',
+                formatter: (value) => value
+            }
+        },
+        scales: {
+            x: {
+                grid: { display: true, drawBorder: true },
+                ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 },
+                title : {
+                    display : false,
+                    text : 'Time Interval (3hours)',
+                    font: {
+                        size : 13,
+                        weight: 'bold'
+                    },
+                    padding: {top : 10},
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grid: { display: true },
+                title: {
+                    display: false,
+                    text: 'Number of Events',
+                    font: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    padding: { bottom: 10 },
+                }
             }
         }
     },
@@ -616,7 +864,7 @@ html << R"(]
     // SIG 팀 리포트
     html << R"(
 <h1>🔍 Malware Scan Report</h1>
-<p>Scan records from )" << mStartTime << " to " << mEndTime << "</p>\n";
+)";
 
     auto& scanStorage = DBManager::GetInstance().GetScanReportStorage();
     auto scanReports = scanStorage.get_all<ScanReport>
@@ -662,8 +910,8 @@ html << R"(]
     std::map<int, std::vector<QuarantineMetadata>> quarantinedFilesGroupedByScan;
     // Hash/YARA 탐지 갯수 집계 맵
     std::map<std::string, int> hashYaraCounts; 
-    // 시간대별 탐지 결과 집계를 위한 맵
-    std::map<int, std::map<std::string, int>> hourlyDetectionCounts; // hour_slot -> reason -> count
+    // 시간대별 탐지 결과 집계를 위한 임시 맵 (generate3HourLabels에 사용하기 위함)
+    std::map<std::string, std::map<std::string, int>> tempHourlyReasonCounts; 
 
     // QuarantineMetadata를 시간 순으로 정렬하여 동일 스캔 ID 그룹화 준비
     std::vector<QuarantineMetadata> sortedQuarantineEntries = quarantineEntries;
@@ -676,22 +924,22 @@ html << R"(]
 
     // 탐지 기록이 있는 경우에만 ID 부여
     if (!sortedQuarantineEntries.empty()) {
+        // 첫 번째 항목 처리
         last_entry_time = parseDateTime(convertQuarantineDateFormatToStdFormat(sortedQuarantineEntries[0].QuarantineDate));
         quarantinedFilesGroupedByScan[current_scan_id].push_back(sortedQuarantineEntries[0]);
         std::string first_reason = generalizeReason(sortedQuarantineEntries[0].QuarantineReason);
-        std::string first_hour_str = sortedQuarantineEntries[0].QuarantineDate.substr(9, 2);
-        int first_hour = std::stoi(first_hour_str);
-        int first_hour_slot = (first_hour / 3) * 3;
-        hourlyDetectionCounts[first_hour_slot][first_reason]++;
+        std::string first_bucket_label = get3HourBucketLabel(convertQuarantineDateFormatToStdFormat(sortedQuarantineEntries[0].QuarantineDate));
+        tempHourlyReasonCounts[first_bucket_label][first_reason]++;
         hashYaraCounts[first_reason]++;
 
+        // 나머지 항목 처리
         for (size_t i = 1; i < sortedQuarantineEntries.size(); ++i) {
             const auto& entry = sortedQuarantineEntries[i];
             system_clock::time_point entry_time = parseDateTime(convertQuarantineDateFormatToStdFormat(entry.QuarantineDate));
             
             long long diff_sec = std::abs(duration_cast<seconds>(entry_time - last_entry_time).count());
             
-            if (diff_sec > 10) { // 10초 초과 시 새로운 스캔으로 간주
+            if (diff_sec > 10) { // 10초 초과 시 새로운 스캔으로 간주 (기준을 유동적으로 조정할 수 있습니다)
                 current_scan_id++;
             }
             quarantinedFilesGroupedByScan[current_scan_id].push_back(entry);
@@ -699,44 +947,37 @@ html << R"(]
 
             // 데이터 집계
             std::string reason = generalizeReason(entry.QuarantineReason);
-            std::string hour_str = entry.QuarantineDate.substr(9, 2);
-            int hour = std::stoi(hour_str);
-            int hour_slot = (hour / 3) * 3;
-            hourlyDetectionCounts[hour_slot][reason]++;
+            std::string bucket_label = get3HourBucketLabel(convertQuarantineDateFormatToStdFormat(entry.QuarantineDate));
+            tempHourlyReasonCounts[bucket_label][reason]++;
             hashYaraCounts[reason]++;
         }
     }
+    
+    // generate3HourLabels 함수를 사용하여 모든 시간대 라벨과 각 시간대의 Hash, YARA 카운트 추출
+    std::vector<std::string> sigHourlyLabels;
+    std::vector<int> dummySigCounts; // generate3HourLabels 호출을 위한 더미
+    std::map<std::string, int> dummyBucketMapForLabels; // 시간 라벨만 얻기 위한 더미 맵
 
-    html << R"(<style>
-        .chart-row {
-            display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-            gap: 30px; /* 각 차트 박스 사이의 간격 */
-            margin-bottom: 40px;
-        }
-        .chart-box {
-            flex: 1 1 30%; /* 3개 항목이 한 줄에 */
-            max-width: 400px; /* 캔버스 크기(400px)에 맞춤 */
-            box-sizing: border-box; /* 패딩 포함한 크기 계산 */
-            padding: 10px; /* 내부 여백 */
-            text-align: center;
-        }
-        /* 미디어 쿼리: 3개 차트가 나란히 들어가지 않을 때, 2열로 변경 */
-        @media (max-width: 1300px) { 
-            .chart-box {
-                flex: 1 1 45%; 
-            }
-        }
-        /* 미디어 쿼리: 더 작은 화면에서는 1열로 변경 */
-        @media (max-width: 768px) {
-            .chart-box {
-                flex: 1 1 90%; 
-            }
-        }
-    </style>)";
-    // ---------------------------------------------------------------------------------
+    generate3HourLabels(mStartTime, mEndTime, sigHourlyLabels, dummySigCounts, dummyBucketMapForLabels);
 
+    // 이제 sigHourlyLabels를 기준으로 실제 hashData와 yaraData를 채웁니다.
+    std::string sigHourlyLabelsJs, hashDataJs, yaraDataJs;
+    bool firstHourlyItem = true;
+
+    for (const auto& label : sigHourlyLabels) {
+        if (!firstHourlyItem) {
+            sigHourlyLabelsJs += ", ";
+            hashDataJs += ", ";
+            yaraDataJs += ", ";
+        }
+        sigHourlyLabelsJs += "\"" + label + "\"";
+        hashDataJs += std::to_string(tempHourlyReasonCounts[label]["Hash"]);
+        yaraDataJs += std::to_string(tempHourlyReasonCounts[label]["YARA"]);
+        firstHourlyItem = false;
+    }
+
+
+    // html << R"(<style> ... </style>)"; // 이 부분 삭제 (요청 4 반영)
     html << R"(<div class="chart-row">
     <div class="chart-box">
         <canvas id="malwareScanDonutChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
@@ -796,23 +1037,32 @@ function highlightReasonRows(reasonType) {
 }
 
 // 시간대별/Hash/YARA 하이라이팅
-function highlightHourlyReasonRows(reasonType, hourSlot) {
+function highlightHourlyReasonRows(reasonType, hourSlotLabel) {
     document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
         tr.classList.remove('highlight');
     });
 
-    const targetHourSlotStr = String(hourSlot).padStart(2, '0'); 
+    // 'YYYY-MM-DD HH:00' 형태의 시간 라벨을 Date 객체로 변환
+    const startTimeLabel = hourSlotLabel;
+    const startTime = new Date(startTimeLabel.replace(" ", "T") + ":00"); // 예: "2025-07-31T09:00:00"
+    const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000); // 3시간 후
 
     document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
         const trReason = tr.dataset.reason;
-        const trQuarantineHour = tr.dataset.quarantineHour;
+        const trQuarantineDateStr = tr.dataset.quarantineDate; // YYYYMMDD_HHMMSS
+        
+        // 표의 QuarantineDate를 Date 객체로 변환
+        if (!trQuarantineDateStr) return; // 데이터가 없으면 스킵
 
-        const trHourInt = parseInt(trQuarantineHour, 10);
-        const hourSlotInt = parseInt(targetHourSlotStr, 10);
-
-        if (trReason === reasonType && 
-            trHourInt >= hourSlotInt && 
-            trHourInt < (hourSlotInt + 3)) { // 3시간 범위 체크 로직 유지
+        const year = trQuarantineDateStr.substring(0, 4);
+        const month = trQuarantineDateStr.substring(4, 6);
+        const day = trQuarantineDateStr.substring(6, 8);
+        const hour = trQuarantineDateStr.substring(9, 11);
+        const minute = trQuarantineDateStr.substring(11, 13);
+        const second = trQuarantineDateStr.substring(13, 15);
+        const entryDateTime = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+        
+        if (trReason === reasonType && entryDateTime >= startTime && entryDateTime < endTime) {
             tr.classList.add('highlight');
         }
     });
@@ -845,8 +1095,10 @@ const malwareScanDonutChart = new Chart(scanCtx, {
                 font: { weight: 'bold' },
                 formatter: (value) => value
             },
-            title: { // HTML p 태그로 제목을 표시하므로, Chart.js 자체의 title은 비활성화
-                display: false
+            title: { 
+                display: true,
+                text: "Malware Scan Result",
+                font: { size: 16, weight: 'bold' }
             }
         }
         // 이 그래프에는 onClick 하이라이팅 없음 - 요청 반영
@@ -877,8 +1129,10 @@ new Chart(hashYaraCtx, {
                 font: { weight: 'bold' },
                 formatter: (value) => value
             },
-            title: { // HTML p 태그로 제목을 표시하므로, Chart.js 자체의 title은 비활성화
-                display: false
+            title: { 
+                display: true,
+                text: "Malware Detection By Type",
+                font: { size: 16, weight: 'bold' }
             }
         },
         onClick: (evt) => {
@@ -894,48 +1148,18 @@ new Chart(hashYaraCtx, {
 });
 
 
-// 시간대별 막대 그래프 데이터
-const hourlyLabels = [];
-const hashData = [];
-const yaraData = [];
+// 시간대별 막대 그래프 데이터 (generate3HourLabels 로직 반영)
+const hourlyLabels = [)" << sigHourlyLabelsJs << R"(]; // 직접 C++에서 생성한 라벨 사용 (요청 5 반영)
+const hashData = [)" << hashDataJs << R"(];
+const yaraData = [)" << yaraDataJs << R"(];
+
 const barChartColors = {
     'Hash': 'rgba(255, 159, 64, 0.7)', // Orange for Hash
     'YARA': 'rgba(153, 102, 255, 0.7)' // Purple for YARA
 };
 
-)";
-    // 시간대별 데이터 스크립트에 삽입 (시간대 라벨 형식 변경)
-    std::time_t start_time_t = system_clock::to_time_t(parseDateTime(mStartTime));
-    std::tm* start_local_tm = std::localtime(&start_time_t);
-    char start_date_buf[11]; 
-    std::strftime(start_date_buf, sizeof(start_date_buf), "%Y-%m-%d", start_local_tm);
-    std::string start_date_str = start_date_buf;
-
-    std::time_t end_time_t = system_clock::to_time_t(parseDateTime(mEndTime));
-    std::tm* end_local_tm = std::localtime(&end_time_t);
-    char end_date_buf[11]; 
-    std::strftime(end_date_buf, sizeof(end_date_buf), "%Y-%m-%d", end_local_tm);
-    std::string end_date_str = end_date_buf;
-
-    for (int h_idx = 0; h_idx < 8; ++h_idx) {
-        int h = h_idx * 3;
-        std::string label_str;
-        if (h_idx == 0) { // 첫 번째 라벨 (0시)
-            label_str = start_date_str + " " + std::string(std::to_string(h)).insert(0, 2 - std::to_string(h).length(), '0') + ":00";
-        } else if (h_idx == 7) { // 마지막 라벨 (21시)
-             label_str = end_date_str + " " + std::string(std::to_string(h)).insert(0, 2 - std::to_string(h).length(), '0') + ":00";
-        } else { // 중간 라벨
-            label_str = std::string(std::to_string(h)).insert(0, 2 - std::to_string(h).length(), '0') + ":00";
-        }
-        html << "hourlyLabels.push('" << label_str << "');\n";
-        
-        html << "hashData.push(" << hourlyDetectionCounts[h]["Hash"] << ");\n";
-        html << "yaraData.push(" << hourlyDetectionCounts[h]["YARA"] << ");\n";
-    }
-
-html << R"(
 const barCtx = document.getElementById('hourlyDetectionBarChart').getContext('2d');
-const hourlyDetectionBarChart = new Chart(barCtx, { // Chart 객체 변수 추가
+const hourlyDetectionBarChart = new Chart(barCtx, { 
     type: 'bar',
     data: {
         labels: hourlyLabels,
@@ -958,47 +1182,58 @@ const hourlyDetectionBarChart = new Chart(barCtx, { // Chart 객체 변수 추�
     },
     options: {
         responsive: false,
-        scales: {
+        scales: 
+        {
             x: {
                 stacked: true,
-                title: {
-                    display: true,
-                    text: 'Time Interval'
+                title: 
+                {
+                    display: false
                 }
             },
-            y: {
+            y: 
+            {
                 stacked: true,
                 beginAtZero: true,
-                ticks: {
-                    stepSize: 1 // Y축 단위를 1로 설정
+                ticks: 
+                {
+                    stepSize: 1 
                 },
-                title: {
-                    display: true,
-                    text: 'Number of Detections'
+                title: 
+                {
+                    display: false
                 }
             }
         },
-        plugins: {
-            legend: {
+        plugins: 
+        {
+            legend: 
+            {
                 position: 'bottom'
             },
-            datalabels: {
+            datalabels: 
+            {
                 display: false
             },
-            title: { // HTML p 태그로 제목을 표시하므로, Chart.js 자체의 title은 비활성화
-                display: false
+            title: 
+            { 
+                display: true,
+                text: "Malware Detection By Time",
+                font: { size: 16, weight: 'bold' }
             }
         },
-        onClick: (evt) => { // 막대 그래프 onClick 이벤트 추가
+        onClick: (evt) => 
+        { 
             const points = hourlyDetectionBarChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
-            if (points.length > 0) {
-                const datasetIndex = points[0].datasetIndex; // Hash인지 YARA인지 (0 또는 1)
-                const elementIndex = points[0].index;      // 시간 슬롯 인덱스 (0~7)
+            if (points.length > 0) 
+            {
+                const datasetIndex = points[0].datasetIndex; 
+                const elementIndex = points[0].index;      
 
-                const reasonType = (datasetIndex === 0) ? 'Hash' : 'YARA'; // datasets[0]이 Hash, [1]이 YARA로 일치해야 함
-                const hourSlot = elementIndex * 3; // 시간 슬롯 인덱스를 실제 시간으로 변환 (예: 0->0, 1->3, 7->21)
+                const reasonType = (datasetIndex === 0) ? 'Hash' : 'YARA'; 
+                const hourSlotLabel = hourlyLabels[elementIndex]; // 직접 라벨 전달
                 
-                highlightHourlyReasonRows(reasonType, hourSlot);
+                highlightHourlyReasonRows(reasonType, hourSlotLabel);
             }
         }
     },
@@ -1017,9 +1252,7 @@ const hourlyDetectionBarChart = new Chart(barCtx, { // Chart 객체 변수 추�
             <th>File Name</th>
             <th>Date</th>
             <th>Quarantine Success Status</th>
-        </tr>
-    </thead>
-    <tbody>
+        </tr></thead><tbody>
 )";
 
     // 탐지된 악성코드 기록이 없는 경우
@@ -1028,11 +1261,7 @@ const hourlyDetectionBarChart = new Chart(barCtx, { // Chart 객체 변수 추�
         html << R"(<tr class="no-detection-row">
             <td colspan="7" style="text-align: center; font-style: italic;">
             탐지된 악성코드가 없습니다.
-            </td>
-        </tr>
-    </tbody>
-</table>
-)";
+            </td></tr></tbody></table>)";
     }
     else
     {
@@ -1048,8 +1277,8 @@ const hourlyDetectionBarChart = new Chart(barCtx, { // Chart 객체 변수 추�
             });
 
             for (const auto& entry : sorted_entries_in_group) {
-                std::string quarantineHourStr = entry.QuarantineDate.substr(9, 2);
-                html << "<tr data-scan-id=\"" << scan_id << "\" data-reason=\"" << generalizeReason(entry.QuarantineReason) << "\" data-quarantine-hour=\"" << quarantineHourStr << "\">"; 
+                // Table row에 data-quarantine-date 속성 추가
+                html << "<tr data-scan-id=\"" << scan_id << "\" data-reason=\"" << generalizeReason(entry.QuarantineReason) << "\" data-quarantine-date=\"" << entry.QuarantineDate << "\">"; 
                 html << "<td>" << scan_id << "</td>"; // Scan ID 표시
                 html << "<td>" << generalizeReason(entry.QuarantineReason) << "</td>"; // generalizeReason 사용
                 html << "<td>" << entry.MalwareNameOrRule << "</td>"; // Malware Name / Rule
@@ -1060,8 +1289,384 @@ const hourlyDetectionBarChart = new Chart(barCtx, { // Chart 객체 변수 추�
                 html << "</tr>\n";
             }
         }
+        html << R"(</tbody></table>)";
+    }
+
+
+    // --------------------------------------------------
+    // LOG팀 리포트
+    html << R"(
+<hr/>
+<h1>📜Malicious Behavior Report</h1>
+)";
+
+    if (!events.empty())
+    {
+        html << R"(
+<h2>• Malicious Behavior Overview</h2>
+<div class="chart-row">
+    <div class="chart-box">
+        <canvas id="typeDonutChart" width="400" height="400"></canvas>
+    </div>
+    <div class="chart-box">
+        <canvas id="userBarChart" width="400" height="400"></canvas>
+    </div>
+    <div class="chart-box">
+        <canvas id="timeHistogram" width="400" height="400"></canvas>
+    </div>
+</div>
+)";
+    }
+
+    std::map<std::string, int> logTypeCounts;
+    std::map<std::string, int> logUserCounts;
+    std::map<std::string, int> logTimeBuckets;
+
+    for (const auto &e : events)
+    {
+        logTypeCounts[e.type]++;
+        logUserCounts[e.username]++;
+
+        std::string timeLabel = get3HourBucketLabel(e.timestamp);
+        if (!timeLabel.empty())
+        {
+            logTimeBuckets[timeLabel]++;
+        }  
+    }
+
+    std::vector<std::string> logTimeLabels;
+    std::vector<int> logTimeCounts;
+    generate3HourLabels(mStartTime, mEndTime, logTimeLabels, logTimeCounts, logTimeBuckets);
+
+    html << R"(
+<h2>• Detected Malicious Behavior Details</h2>
+<table id="LogDetailTable">
+    <thead>
+        <tr>
+            <th>Event ID</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Timestamp</th>
+            <th>Username</th>
+            <th>Original Log Path</th>
+        </tr>
+    </thead>
+    <tbody>
+)";
+
+    if (events.empty())
+    {
+        html << R"(<tr>
+            <td colspan="7" style="text-align: center; font-style: italic;">
+            No malicious behavior events detected during this period.
+            </td>
+        </tr>
+    </tbody>
+</table>
+)";
+    }
+    else
+    {
+        int id = 0;
+        for (const auto &e : events)
+        {
+            id++;
+            html << "<tr>";
+            html << "<td><a href=\"#raw-" << id << "\">" << id << "</a></td>";
+            html << "<td>" << e.type << "</td>";
+            html << "<td>" << e.description << "</td>";
+            html << "<td>" << e.timestamp << "</td>";
+            html << "<td>" << e.username << "</td>";
+            html << "<td>" << e.originalLogPath << "</td>";
+            html << "</tr>\n";
+        }
+
         html << R"(</tbody>
 </table>
+
+<h2>• Event Log Line by ID</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Event ID</th>
+            <th>Raw Log Line</th>
+        </tr>
+    </thead>
+    <tbody>
+)";
+
+        id = 0;
+        for (const auto &e : events)
+        {
+            html << "<tr id=\"raw-" << ++id << "\">";
+            html << "<td>" << id << "</td>";
+            html << "<td>" << e.rawLine << "</td>";
+            html << "</tr>\n";
+        }
+
+        html << R"(</tbody>
+</table>
+)";
+
+        std::string typeLabels, typeData, typeColorStr, userLabels, userData, userColorStr;
+        bool firstLogChartItem = true;
+        size_t typeColorIdx = 0, userColorIdx = 0;
+
+        for (const auto &pair : logTypeCounts)
+        {
+            if (!firstLogChartItem)
+            {
+                typeLabels += ", ";
+                typeData += ", ";
+                typeColorStr += ", ";
+            }
+            typeLabels += "\"" + pair.first + "\"";
+            typeData += std::to_string(pair.second);
+            typeColorStr += "\"" + ReportService::generateColor(typeColorIdx) + "\"";
+            typeColorIdx++;
+            firstLogChartItem = false;
+        }
+
+        firstLogChartItem = true;
+        for (const auto &pair : logUserCounts)
+        {
+            if (!firstLogChartItem)
+            {
+                userLabels += ", ";
+                userData += ", ";
+                userColorStr += ", ";
+            }
+            userLabels += "\"" + pair.first + "\"";
+            userData += std::to_string(pair.second);
+            userColorStr += "\"" + ReportService::generateColor(userColorIdx) + "\"";
+            userColorIdx++;
+            firstLogChartItem = false;
+        }
+        
+        firstLogChartItem = true;
+        std::string timeLabels, timeData;
+        for (size_t i = 0; i < logTimeLabels.size(); ++i)
+        {
+            if (!firstLogChartItem)
+            {
+                timeLabels += ", ";
+                timeData += ", ";
+            }
+            timeLabels += "\"" + logTimeLabels[i] + "\"";
+            timeData += std::to_string(logTimeCounts[i]);
+            firstLogChartItem = false;
+        }
+
+        // LOG 차트 스크립트
+        html << R"(
+<script>
+function highlightRowType(type) {
+    console.log("highlightRow called with type:", type);
+
+    document.querySelectorAll('table tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    document.querySelectorAll('#LogDetailTable tbody tr').forEach(tr => {
+        const td = tr.querySelector('td:nth-child(2)');
+        if (td) {
+            const cellText = td.textContent.trim();
+            if (cellText === type) {
+                tr.classList.add('highlight');
+            }
+        }
+    });
+
+    const firstHighlighted = document.querySelector('#LogDetailTable tbody tr.highlight');
+    if (firstHighlighted) {
+        firstHighlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function highlightRowUser(user) {
+    console.log("highlightRow called with user:", user);
+
+    document.querySelectorAll('table tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    document.querySelectorAll('#LogDetailTable tbody tr').forEach(tr => {
+        const td = tr.querySelector('td:nth-child(5)');
+        if (td) {
+            const cellText = td.textContent.trim();
+            if (cellText === user) {
+                tr.classList.add('highlight');
+            }
+        }
+    });
+
+    const firstHighlighted = document.querySelector('#LogDetailTable tbody tr.highlight');
+    if (firstHighlighted) {
+        firstHighlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function highlightRowTime(timeLabel) {
+    console.log("highlightRow called with time:", timeLabel);
+
+    const startTime = new Date(timeLabel.replace(" ", "T") + ":00");
+    const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000); // +3시간
+
+    document.querySelectorAll('table tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    document.querySelectorAll('#LogDetailTable tbody tr').forEach(tr => {
+        const td = tr.querySelector('td:nth-child(4)');
+        if (td) {
+            const cellText = td.textContent.trim();
+            const eventTime = new Date(cellText.replace(" ", "T"));
+            if (eventTime >= startTime && eventTime < endTime) {
+                tr.classList.add('highlight');
+            }
+        }
+    });
+
+    const firstHighlighted = document.querySelector('#LogDetailTable tbody tr.highlight');
+    if (firstHighlighted) {
+        firstHighlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+const logTypeCtx = document.getElementById('typeDonutChart').getContext('2d');
+const logTypeChart = new Chart(logTypeCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [)" << typeLabels << R"(],
+        datasets: [{
+            data: [)" << typeData << R"(],
+            backgroundColor: [)" << typeColorStr << R"(]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            },
+            title: { 
+                display: true,
+                text: "Malicious Behavior By Type",
+                font: { size: 16, weight: 'bold' }
+            }
+        },
+        onClick: (evt) => {
+            const points = logTypeChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const index = points[0].index;
+                const label = logTypeChart.data.labels[index];
+                console.log("Clicked label:", label);
+                highlightRowType(label);
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+const logUserCtx = document.getElementById('userBarChart').getContext('2d');
+const logUserChart = new Chart(logUserCtx, {
+    type: 'bar',
+    data: {
+            labels: [)" << userLabels << R"(],
+            datasets: [{
+            label: 'Event Count',
+            data: [)" << userData << R"(],
+            backgroundColor: 'rgba(54,162,235,0.6)'
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: false, 
+        plugins: { 
+            legend: { display: false },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'right'
+            },
+            title: { 
+                display: true,
+                text: "Malicious Behavior by Username",
+                font: { size: 16, weight: 'bold' } 
+            }
+        },
+        onClick: (evt) => {
+            const points = logUserChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const index = points[0].index;
+                const label = logUserChart.data.labels[index];
+                console.log("Clicked label:", label);
+                highlightRowUser(label);
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+const logTimeCtx = document.getElementById('timeHistogram').getContext('2d');
+const logTimeChart = new Chart(logTimeCtx, {
+    type: 'bar',
+    data: {
+        labels: [)" << timeLabels << R"(],
+        datasets: [{
+            label: 'Event Count',
+            data: [)" << timeData << R"(],
+            backgroundColor: 'rgba(255,99,132,0.6)'
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { display: false },
+            datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                anchor: 'end',
+                align: 'top'
+            },
+            title: {
+                display: true,
+                text: "Malicious Behavior By Time",
+                font: { size: 16, weight: 'bold' }
+            }
+        },
+        onClick: (evt) => {
+            const points = logTimeChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const index = points[0].index;
+                const label = logTimeChart.data.labels[index];
+                console.log("Clicked label:", label);
+                highlightRowTime(label);
+            }
+        },
+        scales: {
+            x: {
+                title: {
+                    display: false,
+                    text: 'Time Interval (3 hours)'
+                }
+            },
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: false,
+                    text: 'Number of Events'
+                }
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+</script>
 )";
     }
 
