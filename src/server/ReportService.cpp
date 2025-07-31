@@ -537,10 +537,12 @@ function highlightManualRowByTime(timeLabel) {
 }
 
 function highlightRealtimeRowByType(type) {
+    const target = type.trim().toLowerCase();
+
     document.querySelectorAll('#realtimeTable tbody tr').forEach(tr => {
         tr.classList.remove('highlight');
         const td = tr.querySelector('td:nth-child(3)');
-        if (td && td.textContent.trim() === type) {
+        if (td && td.textContent.trim().toLowerCase() === target) {
             tr.classList.add('highlight');
         }
     });
