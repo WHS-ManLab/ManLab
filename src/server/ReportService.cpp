@@ -485,7 +485,7 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
 
     if (realTimeRecords.empty()) {
         html << R"(<tr>
-            <td colspan="4" style="text-align: center; font-style: italic;">
+            <td colspan="5" style="text-align: center; font-style: italic;">
             No real-time monitoring events detected during this period.
             </td>
         </tr>
@@ -1000,6 +1000,7 @@ html << R"(
     // -------------------------------------------------------
     // SIG 팀 리포트
     html << R"(
+<hr/>
 <h1>🔍 Malware Scan Report</h1>
 <h2>• Malware Scan Detection Overview</h2>
 )";
@@ -1233,7 +1234,7 @@ const malwareScanDonutChart = new Chart(scanCtx, {
             title: { 
                 display: true,
                 text: "Malware Scan Result",
-                font: { size: 16, weight: 'bold' }
+                font: { size: 18, weight: 'bold' }
             }
         }
         // 이 그래프에는 onClick 하이라이팅 없음 - 요청 반영
@@ -1267,7 +1268,7 @@ new Chart(hashYaraCtx, {
             title: { 
                 display: true,
                 text: "Malware Detection By Type",
-                font: { size: 16, weight: 'bold' }
+                font: { size: 18, weight: 'bold' }
             }
         },
         onClick: (evt) => {
@@ -1354,7 +1355,7 @@ const hourlyDetectionBarChart = new Chart(barCtx, {
             { 
                 display: true,
                 text: "Malware Detection By Time",
-                font: { size: 16, weight: 'bold' }
+                font: { size: 18, weight: 'bold' }
             }
         },
         onClick: (evt) => 
@@ -1376,7 +1377,7 @@ const hourlyDetectionBarChart = new Chart(barCtx, {
 });
 </script>
 
-<h2>Scan Details</h2>
+<h2>• Scan Details</h2>
 <table id="ScanDetailsTable">
     <thead>
         <tr>
@@ -1395,7 +1396,7 @@ const hourlyDetectionBarChart = new Chart(barCtx, {
     {
         html << R"(<tr class="no-detection-row">
             <td colspan="7" style="text-align: center; font-style: italic;">
-            탐지된 악성코드가 없습니다.
+            No quarantined files found during this period.
             </td></tr></tbody></table>)";
     }
     else
@@ -1690,7 +1691,7 @@ const logTypeChart = new Chart(logTypeCtx, {
             title: { 
                 display: true,
                 text: "Malicious Behavior By Type",
-                font: { size: 16, weight: 'bold' }
+                font: { size: 18, weight: 'bold' }
             }
         },
         onClick: (evt) => {
@@ -1731,7 +1732,7 @@ const logUserChart = new Chart(logUserCtx, {
             title: { 
                 display: true,
                 text: "Malicious Behavior by Username",
-                font: { size: 16, weight: 'bold' } 
+                font: { size: 18, weight: 'bold' } 
             }
         },
         onClick: (evt) => {
@@ -1771,7 +1772,7 @@ const logTimeChart = new Chart(logTimeCtx, {
             title: {
                 display: true,
                 text: "Malicious Behavior By Time",
-                font: { size: 16, weight: 'bold' }
+                font: { size: 18, weight: 'bold' }
             }
         },
         onClick: (evt) => {
