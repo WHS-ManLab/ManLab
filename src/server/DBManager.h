@@ -39,6 +39,8 @@ struct QuarantineMetadata
     std::string QuarantineReason;
     std::string MalwareNameOrRule;
     long long OriginalPermissions;
+    int OriginalUID;
+    int OriginalGID;
 };
 
 // 로그 분석 결과 DB 테이블 구조
@@ -118,7 +120,9 @@ using StorageQuarantine = decltype(sqlite_orm::make_storage("",
         sqlite_orm::make_column("QuarantineDate", &QuarantineMetadata::QuarantineDate),
         sqlite_orm::make_column("QuarantineReason", &QuarantineMetadata::QuarantineReason),
         sqlite_orm::make_column("MalwareNameOrRule", &QuarantineMetadata::MalwareNameOrRule),
-        sqlite_orm::make_column("OriginalPermissionsValue", &QuarantineMetadata::OriginalPermissions))));
+        sqlite_orm::make_column("OriginalPermissionsValue", &QuarantineMetadata::OriginalPermissions),
+        sqlite_orm::make_column("OriginalUID", &QuarantineMetadata::OriginalUID),
+        sqlite_orm::make_column("OriginalGID", &QuarantineMetadata::OriginalGID))));
 
 // 로그 분석 결과에 대한 storage 타입 정의
 using StorageLogAnalysisResult = decltype(sqlite_orm::make_storage("",
