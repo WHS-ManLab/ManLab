@@ -463,8 +463,16 @@ bool ReportService::generateHTML(const std::string &htmlFile, const std::vector<
     } else {
         int rowId = 1;
         for (const auto& record : realTimeRecords) {
+            std::string trimmedTimestamp = record.timestamp;
+            std::size_t dotPos = trimmedTimestamp.find('.');
+            if (dotPos != std::string::npos) {
+                trimmedTimestamp = trimmedTimestamp.substr(0, dotPos);
+            }
+
             html << "<tr><td>" << rowId++ << "</td><td>" << record.path
-                 << "</td><td>" << record.eventType << "</td><td>" << record.newName << "</td><td>" << record.timestamp << "</td></tr>";
+                << "</td><td>" << record.eventType << "</td><td>" << record.newName
+                << "</td><td>" << trimmedTimestamp << "</td></tr>";
+
             eventTypeCounts[record.eventType]++;
         }
     }
@@ -743,7 +751,7 @@ const timeCtx = document.getElementById('manualScanTimeChart').getContext('2d');
         html << allTimeCounts[i];
     }
     html << R"(],
-            backgroundColor: [)";
+            Color: [)";
     for (size_t i = 0; i < allTimeCounts.size(); ++i) {
         if (i) html << ", ";
         html << "\"" << ReportService::generateColor(i) << "\"";
