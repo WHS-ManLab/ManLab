@@ -857,6 +857,7 @@ html << R"(
     // SIG 팀 리포트
     html << R"(
 <h1>🔍 Malware Scan Report</h1>
+<h2>• Malware Scan Detection Overview</h2>
 )";
 
     auto& scanStorage = DBManager::GetInstance().GetScanReportStorage();
@@ -969,8 +970,6 @@ html << R"(
         firstHourlyItem = false;
     }
 
-
-    // html << R"(<style> ... </style>)"; // 이 부분 삭제 (요청 4 반영)
     html << R"(<div class="chart-row">
     <div class="chart-box">
         <canvas id="malwareScanDonutChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
@@ -982,7 +981,6 @@ html << R"(
     </div>
     <div class="chart-box">
         <canvas id="hourlyDetectionBarChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
-        <p>시간대별 악성코드 탐지 현황</p>
     </div>
 </div>
 
