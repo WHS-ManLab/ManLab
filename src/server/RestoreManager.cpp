@@ -2,6 +2,7 @@
 #include "Paths.h"
 #include "DBManager.h"
 #include <fstream>
+#include <unistd.h>
 #include <iostream>
 #include <filesystem>
 #include <openssl/evp.h>
@@ -121,6 +122,20 @@ void RestoreManager::Run()
 
             fs::rename(tempDecryptedPath, dstPath); // 원본 경로로 이동(복원)
             spdlog::info("복호화 및 복원 완료: {}", dstPath.string());
+            // 획득한 원본 UID, GID를 적용
+            if (meta.OriginalUID != -1 && meta.OriginalGID != -1) // 유효한 UID, GID가 저장된 경우에만 실행
+            {
+                if (chown(dstPath.c_str(), meta.OriginalUID, meta.OriginalGID) == 0)
+                {
+                    // 복원 파일 소유자 및 그룹 변경 완료
+                }
+                else
+                {
+                    spdlog::warn("복원 파일 소유자/그룹 변경 실패: {} (오류: {})", dstPath.string(), strerror(errno));
+                }
+            } else {
+                spdlog::warn("저장된 원본 UID/GID가 유효하지 않아 소유자/그룹을 변경하지 못했습니다. 파일: {}", dstPath.string());
+            }
 
             fs::remove(srcPath); // 격리된 원본 파일 삭제
             spdlog::debug("격리 파일 삭제 완료: {}", srcPath.string());

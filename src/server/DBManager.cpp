@@ -36,7 +36,9 @@ DBManager::DBManager()
             sqlite_orm::make_column("QuarantineDate", &QuarantineMetadata::QuarantineDate),
             sqlite_orm::make_column("QuarantineReason", &QuarantineMetadata::QuarantineReason),
             sqlite_orm::make_column("MalwareNameOrRule", &QuarantineMetadata::MalwareNameOrRule),
-            sqlite_orm::make_column("OriginalPermissions", &QuarantineMetadata::OriginalPermissions)))),
+            sqlite_orm::make_column("OriginalPermissions", &QuarantineMetadata::OriginalPermissions),
+            sqlite_orm::make_column("OriginalUID", &QuarantineMetadata::OriginalUID),
+            sqlite_orm::make_column("OriginalGID", &QuarantineMetadata::OriginalGID)))),
 
       mLogAnalysisResultStorage(sqlite_orm::make_storage(
         PATH_LOG_ANALYSIS_DB,

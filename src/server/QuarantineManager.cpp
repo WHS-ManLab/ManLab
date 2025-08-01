@@ -11,6 +11,7 @@
 #include <openssl/evp.h>
 #include <openssl/aes.h>
 #include <spdlog/spdlog.h>
+#include <sys/stat.h>
 
 namespace fs = std::filesystem;
 
@@ -125,11 +126,22 @@ void QuarantineManager::Run()
 
         spdlog::info("격리 시작: {}", originalPath.string());
 
-        // DB 저장을 위해, 원본 파일의 권한 획득
+        // DB 저장을 위해, 원본 파일의 권한, UID, GID 획득
         fs::perms original_perms = fs::perms::unknown;
+        int original_uid = -1; 
+        int original_gid = -1; 
+        
         try 
         {
-            original_perms = fs::status(originalPath).permissions();
+            struct stat file_stat;
+            if (stat(originalPath.c_str(), &file_stat) == 0) 
+            {
+                original_perms = fs::status(originalPath).permissions();
+                original_uid = file_stat.st_uid;
+                original_gid = file_stat.st_gid;
+            } else {
+                spdlog::warn("파일 stat 정보 획득 실패: {} - {}", originalPath.string(), strerror(errno));
+            }
         } catch (const fs::filesystem_error& e) 
         {
             spdlog::warn("권한 정보 조회 실패: {} - {}", originalPath.string(), e.what());
@@ -142,7 +154,9 @@ void QuarantineManager::Run()
             getCurrentDateTime(),
             info.cause,
             info.name,
-            static_cast<long long>(original_perms) // 획득한 원본 권한 정보를 메타데이터에 저장
+            static_cast<long long>(original_perms),
+            original_uid, 
+            original_gid  
         };
 
         bool success = false;
@@ -176,7 +190,7 @@ void QuarantineManager::Run()
         if(success)
         {
             mIsQuarantineSuccess[i] = true;
-            mStorage->insert(meta);
+            mStorage->insert(meta); 
             spdlog::debug("격리 메타데이터 DB 삽입 완료: {}", qName);
         }
         else

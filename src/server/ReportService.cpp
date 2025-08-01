@@ -14,9 +14,39 @@
 #include <map>
 #include <spdlog/spdlog.h>
 #include <algorithm>
+#include <iomanip>    // std::put_time
+
 
 using namespace std::chrono;
 using namespace manlab::utils;
+
+namespace 
+{
+    // "YYYYMMDD_HHMMSS" -> "YYYY-MM-DD HH:MM:SS" 형식으로 변환 (std::get_time 파싱용)
+    std::string convertQuarantineDateFormatToStdFormat(const std::string& quarantineDate)
+    {
+        if (quarantineDate.length() != 15 || quarantineDate[8] != '_')
+        {
+            return quarantineDate;
+        }
+        return quarantineDate.substr(0, 4) + "-" + quarantineDate.substr(4, 2) + "-" + quarantineDate.substr(6, 2) + " " +
+               quarantineDate.substr(9, 2) + ":" + quarantineDate.substr(11, 2) + ":" + quarantineDate.substr(13, 2);
+    }
+
+    // std::string 형태의 날짜/시간을 std::chrono::system_clock::time_point로 파싱
+    std::chrono::system_clock::time_point parseDateTime(const std::string& datetimeStr) 
+    {
+        std::tm tm = {};
+        std::istringstream ss(datetimeStr);
+        ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+        if (ss.fail()) 
+        {
+            throw std::runtime_error("Failed to parse datetime string: " + datetimeStr);
+        }
+        tm.tm_isdst = -1;
+        return std::chrono::system_clock::from_time_t(std::mktime(&tm));
+    }
+}
 
 //3시간 단위로 시간 분리
 std::string get3HourBucketLabel(const std::string& datetimeStr)
@@ -968,36 +998,21 @@ html << R"(
 )";
 
     // -------------------------------------------------------
-    // SIG팀 리포트
+    // SIG 팀 리포트
     html << R"(
-<hr/>
 <h1>🔍 Malware Scan Report</h1>
 <h2>• Malware Scan Detection Overview</h2>
-<canvas id="malwareScanDonutChart" width="400" height="400"></canvas>
-
-<h2>• Scan Details</h2>
-<table>
-    <thead>
-        <tr>
-            <th>Date</th>
-            <th>ID</th>
-            <th>File Path</th>
-            <th>File Name</th>
-            <th>Reason</th>
-            <th>Malware Name / Rule</th>
-            <th>Quarantine Success Status</th>
-        </tr>
-    </thead>
-    <tbody>
 )";
 
     auto& scanStorage = DBManager::GetInstance().GetScanReportStorage();
-    auto scanReports = scanStorage.get_all<ScanReport>(
+    auto scanReports = scanStorage.get_all<ScanReport>
+    (
         sqlite_orm::where(sqlite_orm::between(&ScanReport::date, mStartTime, mEndTime))
     );
 
     int detectedCount = 0;
     int notDetectedCount = 0;
+    int totalScans = scanReports.size(); // 총 스캔 횟수
 
     if (!scanReports.empty())
     {
@@ -1014,58 +1029,187 @@ html << R"(
         }
     }
     
-    // QuarantineDB에서 데이터를 가져와 Scan Details 표를 채웁니다.
-    auto& quarantineStorage = DBManager::GetInstance().GetQuarantineStorage();
-
+    // QuarantineDB에서 데이터를 가져와 Scan Details 표 및 막대 그래프를 위한 데이터로 사용
     std::string convertedStartTimeForQuarantine = convertToQuarantineDateFormat(mStartTime);
     std::string convertedEndTimeForQuarantine = convertToQuarantineDateFormat(mEndTime);
 
-    auto quarantineEntries = quarantineStorage.get_all<QuarantineMetadata>(
+    auto quarantineEntries = DBManager::GetInstance().GetQuarantineStorage().get_all<QuarantineMetadata>
+    (
         sqlite_orm::where(
             sqlite_orm::between(
-                &QuarantineMetadata::QuarantineDate,
-                convertedStartTimeForQuarantine,
-                convertedEndTimeForQuarantine
-            )
-        )
+                &QuarantineMetadata::QuarantineDate, 
+                                    convertedStartTimeForQuarantine, 
+                                    convertedEndTimeForQuarantine
+                                )
+                        )
     );
 
-    if (quarantineEntries.empty())
-    {
-        html << R"(<tr>
-            <td colspan="7" style="text-align: center; font-style: italic;">
-            No quarantined files found during this period.
-            </td>
-        </tr>
-    </tbody>
-</table>
-)";
-    }
-    else
-    {
-        int id_counter = 1; // ID 순번을 위한 카운터
-        for (const auto& entry : quarantineEntries)
-        {
-            html << "<tr>";
-            html << "<td>" << formatQuarantineDateForDisplay(entry.QuarantineDate) << "</td>"; // Date
-            html << "<td>" << id_counter++ << "</td>"; // ID 순번 표시
-            html << "<td>" << entry.OriginalPath << "</td>";
-            html << "<td>" << getFileNameFromPath(entry.OriginalPath) << "</td>"; // OriginalPath에서 파일 이름 추출
-            html << "<td>" << generalizeReason(entry.QuarantineReason) << "</td>"; // generalizeReason 사용
-            html << "<td>" << entry.MalwareNameOrRule << "</td>"; // Malware Name / Rule
-            html << "<td>" << "Yes" << "</td>"; // QuarantineMetadata에 있으면 성공으로 간주
-            html << "</tr>\n";
+    // Scan ID 별로 그룹화된 격리된 파일 데이터를 저장할 맵
+    std::map<int, std::vector<QuarantineMetadata>> quarantinedFilesGroupedByScan;
+    // Hash/YARA 탐지 갯수 집계 맵
+    std::map<std::string, int> hashYaraCounts; 
+    // 시간대별 탐지 결과 집계를 위한 임시 맵 (generate3HourLabels에 사용하기 위함)
+    std::map<std::string, std::map<std::string, int>> tempHourlyReasonCounts; 
+
+    // QuarantineMetadata를 시간 순으로 정렬하여 동일 스캔 ID 그룹화 준비
+    std::vector<QuarantineMetadata> sortedQuarantineEntries = quarantineEntries;
+    std::sort(sortedQuarantineEntries.begin(), sortedQuarantineEntries.end(), [](const QuarantineMetadata& a, const QuarantineMetadata& b) {
+        return a.QuarantineDate < b.QuarantineDate;
+    });
+
+    int current_scan_id = 1; // Scan ID는 1부터 순차적으로 시작
+    system_clock::time_point last_entry_time;
+
+    // 탐지 기록이 있는 경우에만 ID 부여
+    if (!sortedQuarantineEntries.empty()) {
+        // 첫 번째 항목 처리
+        last_entry_time = parseDateTime(convertQuarantineDateFormatToStdFormat(sortedQuarantineEntries[0].QuarantineDate));
+        quarantinedFilesGroupedByScan[current_scan_id].push_back(sortedQuarantineEntries[0]);
+        std::string first_reason = generalizeReason(sortedQuarantineEntries[0].QuarantineReason);
+        std::string first_bucket_label = get3HourBucketLabel(convertQuarantineDateFormatToStdFormat(sortedQuarantineEntries[0].QuarantineDate));
+        tempHourlyReasonCounts[first_bucket_label][first_reason]++;
+        hashYaraCounts[first_reason]++;
+
+        // 나머지 항목 처리
+        for (size_t i = 1; i < sortedQuarantineEntries.size(); ++i) {
+            const auto& entry = sortedQuarantineEntries[i];
+            system_clock::time_point entry_time = parseDateTime(convertQuarantineDateFormatToStdFormat(entry.QuarantineDate));
+            
+            long long diff_sec = std::abs(duration_cast<seconds>(entry_time - last_entry_time).count());
+            
+            if (diff_sec > 10) { // 10초 초과 시 새로운 스캔으로 간주 (기준을 유동적으로 조정할 수 있습니다)
+                current_scan_id++;
+            }
+            quarantinedFilesGroupedByScan[current_scan_id].push_back(entry);
+            last_entry_time = entry_time; // 마지막 기록 시간 업데이트
+
+            // 데이터 집계
+            std::string reason = generalizeReason(entry.QuarantineReason);
+            std::string bucket_label = get3HourBucketLabel(convertQuarantineDateFormatToStdFormat(entry.QuarantineDate));
+            tempHourlyReasonCounts[bucket_label][reason]++;
+            hashYaraCounts[reason]++;
         }
-        html << R"(</tbody>
-</table>
-)";
+    }
+    
+    // generate3HourLabels 함수를 사용하여 모든 시간대 라벨과 각 시간대의 Hash, YARA 카운트 추출
+    std::vector<std::string> sigHourlyLabels;
+    std::vector<int> dummySigCounts; // generate3HourLabels 호출을 위한 더미
+    std::map<std::string, int> dummyBucketMapForLabels; // 시간 라벨만 얻기 위한 더미 맵
+
+    generate3HourLabels(mStartTime, mEndTime, sigHourlyLabels, dummySigCounts, dummyBucketMapForLabels);
+
+    // 이제 sigHourlyLabels를 기준으로 실제 hashData와 yaraData를 채웁니다.
+    std::string sigHourlyLabelsJs, hashDataJs, yaraDataJs;
+    bool firstHourlyItem = true;
+
+    for (const auto& label : sigHourlyLabels) {
+        if (!firstHourlyItem) {
+            sigHourlyLabelsJs += ", ";
+            hashDataJs += ", ";
+            yaraDataJs += ", ";
+        }
+        sigHourlyLabelsJs += "\"" + label + "\"";
+        hashDataJs += std::to_string(tempHourlyReasonCounts[label]["Hash"]);
+        yaraDataJs += std::to_string(tempHourlyReasonCounts[label]["YARA"]);
+        firstHourlyItem = false;
     }
 
-    // SIG 차트 
-    html << R"(
+    html << R"(<div class="chart-row">
+    <div class="chart-box">
+        <canvas id="malwareScanDonutChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
+        <p>총 <b>)" << totalScans << R"(</b>회의 스캔이 진행되었습니다.</p>
+    </div>
+    <div class="chart-box">
+        <canvas id="hashYaraDonutChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
+        <p>총 <b>)" << (hashYaraCounts["Hash"] + hashYaraCounts["YARA"]) << R"(</b>개의 악성코드가 탐지되었습니다.</p>
+    </div>
+    <div class="chart-box">
+        <canvas id="hourlyDetectionBarChart" width="375" height="375" style="display: block; box-sizing: border-box; height: 400px; width: 400px;"></canvas>
+    </div>
+</div>
+
 <script>
+// (SIG Team Chart JS START)
+
+// 도넛 차트 클릭 시 하이라이팅을 위한 함수
+function highlightScanRows(type) {
+    document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    if (type === 'Detected') {
+        document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+            if (!tr.classList.contains('no-detection-row')) {
+                tr.classList.add('highlight');
+            }
+        });
+    } else if (type === 'Not Detected') {
+        const noDetectionRow = document.querySelector('#ScanDetailsTable .no-detection-row');
+        if (noDetectionRow) {
+            noDetectionRow.classList.add('highlight');
+        }
+    }
+    const firstHighlightedRow = document.querySelector('#ScanDetailsTable .highlight');
+    if (firstHighlightedRow) {
+        firstHighlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// Hash/YARA 도넛 차트 클릭 시 하이라이팅
+function highlightReasonRows(reasonType) {
+    document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+    document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+        if (tr.dataset.reason === reasonType) {
+            tr.classList.add('highlight');
+        }
+    });
+    const firstHighlightedRow = document.querySelector('#ScanDetailsTable .highlight');
+    if (firstHighlightedRow) {
+        firstHighlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// 시간대별/Hash/YARA 하이라이팅
+function highlightHourlyReasonRows(reasonType, hourSlotLabel) {
+    document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+        tr.classList.remove('highlight');
+    });
+
+    // 'YYYY-MM-DD HH:00' 형태의 시간 라벨을 Date 객체로 변환
+    const startTimeLabel = hourSlotLabel;
+    const startTime = new Date(startTimeLabel.replace(" ", "T") + ":00"); // 예: "2025-07-31T09:00:00"
+    const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000); // 3시간 후
+
+    document.querySelectorAll('#ScanDetailsTable tbody tr').forEach(tr => {
+        const trReason = tr.dataset.reason;
+        const trQuarantineDateStr = tr.dataset.quarantineDate; // YYYYMMDD_HHMMSS
+        
+        // 표의 QuarantineDate를 Date 객체로 변환
+        if (!trQuarantineDateStr) return; // 데이터가 없으면 스킵
+
+        const year = trQuarantineDateStr.substring(0, 4);
+        const month = trQuarantineDateStr.substring(4, 6);
+        const day = trQuarantineDateStr.substring(6, 8);
+        const hour = trQuarantineDateStr.substring(9, 11);
+        const minute = trQuarantineDateStr.substring(11, 13);
+        const second = trQuarantineDateStr.substring(13, 15);
+        const entryDateTime = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+        
+        if (trReason === reasonType && entryDateTime >= startTime && entryDateTime < endTime) {
+            tr.classList.add('highlight');
+        }
+    });
+    const firstHighlightedRow = document.querySelector('#ScanDetailsTable .highlight');
+    if (firstHighlightedRow) {
+        firstHighlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+
 const scanCtx = document.getElementById('malwareScanDonutChart').getContext('2d');
-new Chart(scanCtx, {
+const malwareScanDonutChart = new Chart(scanCtx, {
     type: 'doughnut',
     data: {
         labels: ['Detected', 'Not Detected'],
@@ -1085,13 +1229,204 @@ new Chart(scanCtx, {
                 color : '#000',
                 font: { weight: 'bold' },
                 formatter: (value) => value
+            },
+            title: { 
+                display: true,
+                text: "Malware Scan Result",
+                font: { size: 16, weight: 'bold' }
+            }
+        }
+        // 이 그래프에는 onClick 하이라이팅 없음 - 요청 반영
+    },
+    plugins: [ChartDataLabels]
+});
+
+// Hash vs YARA 탐지율 도넛 차트
+const hashYaraCtx = document.getElementById('hashYaraDonutChart').getContext('2d');
+new Chart(hashYaraCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Hash', 'YARA'],
+        datasets: [{
+            data: [)" << hashYaraCounts["Hash"] << ", " << hashYaraCounts["YARA"] << R"(],
+            backgroundColor: [
+                'rgba(255, 159, 64, 0.6)',  // Hash (Orange)
+                'rgba(153, 102, 255, 0.6)'  // YARA (Purple)
+            ]
+        }]
+    },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: {
+                color : '#000',
+                font: { weight: 'bold' },
+                formatter: (value) => value
+            },
+            title: { 
+                display: true,
+                text: "Malware Detection By Type",
+                font: { size: 16, weight: 'bold' }
+            }
+        },
+        onClick: (evt) => {
+            const points = hashYaraCtx.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) {
+                const index = points[0].index;
+                const label = hashYaraCtx.data.labels[index];
+                highlightReasonRows(label);
+            }
+        }
+    },
+    plugins: [ChartDataLabels]
+});
+
+
+// 시간대별 막대 그래프 데이터 (generate3HourLabels 로직 반영)
+const hourlyLabels = [)" << sigHourlyLabelsJs << R"(]; // 직접 C++에서 생성한 라벨 사용 (요청 5 반영)
+const hashData = [)" << hashDataJs << R"(];
+const yaraData = [)" << yaraDataJs << R"(];
+
+const barChartColors = {
+    'Hash': 'rgba(255, 159, 64, 0.7)', // Orange for Hash
+    'YARA': 'rgba(153, 102, 255, 0.7)' // Purple for YARA
+};
+
+const barCtx = document.getElementById('hourlyDetectionBarChart').getContext('2d');
+const hourlyDetectionBarChart = new Chart(barCtx, { 
+    type: 'bar',
+    data: {
+        labels: hourlyLabels,
+        datasets: [
+            {
+                label: 'Hash',
+                data: hashData,
+                backgroundColor: barChartColors['Hash'],
+                borderColor: barChartColors['Hash'].replace('0.7', '1'),
+                borderWidth: 1
+            },
+            {
+                label: 'YARA',
+                data: yaraData,
+                backgroundColor: barChartColors['YARA'],
+                borderColor: barChartColors['YARA'].replace('0.7', '1'),
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: false,
+        scales: 
+        {
+            x: {
+                stacked: true,
+                title: 
+                {
+                    display: false
+                }
+            },
+            y: 
+            {
+                stacked: true,
+                beginAtZero: true,
+                ticks: 
+                {
+                    stepSize: 1 
+                },
+                title: 
+                {
+                    display: false
+                }
+            }
+        },
+        plugins: 
+        {
+            legend: 
+            {
+                position: 'bottom'
+            },
+            datalabels: 
+            {
+                display: false
+            },
+            title: 
+            { 
+                display: true,
+                text: "Malware Detection By Time",
+                font: { size: 16, weight: 'bold' }
+            }
+        },
+        onClick: (evt) => 
+        { 
+            const points = hourlyDetectionBarChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            if (points.length > 0) 
+            {
+                const datasetIndex = points[0].datasetIndex; 
+                const elementIndex = points[0].index;      
+
+                const reasonType = (datasetIndex === 0) ? 'Hash' : 'YARA'; 
+                const hourSlotLabel = hourlyLabels[elementIndex]; // 직접 라벨 전달
+                
+                highlightHourlyReasonRows(reasonType, hourSlotLabel);
             }
         }
     },
     plugins: [ChartDataLabels]
 });
 </script>
+
+<h2>Scan Details</h2>
+<table id="ScanDetailsTable">
+    <thead>
+        <tr>
+            <th>Scan ID</th>
+            <th>Reason</th>
+            <th>Malware Name / Rule</th>
+            <th>File Path</th>
+            <th>File Name</th>
+            <th>Date</th>
+            <th>Quarantine Success Status</th>
+        </tr></thead><tbody>
 )";
+
+    // 탐지된 악성코드 기록이 없는 경우
+    if (quarantineEntries.empty())
+    {
+        html << R"(<tr class="no-detection-row">
+            <td colspan="7" style="text-align: center; font-style: italic;">
+            탐지된 악성코드가 없습니다.
+            </td></tr></tbody></table>)";
+    }
+    else
+    {
+        // Scan ID 별로 그룹화된 데이터를 출력 (Scan ID 기준 오름차순 정렬)
+        for (const auto& pair : quarantinedFilesGroupedByScan) {
+            int scan_id = pair.first;
+            const auto& entries_for_scan = pair.second;
+            
+            // 각 스캔 ID 그룹 내에서는 QuarantineDate를 기준으로 정렬
+            std::vector<QuarantineMetadata> sorted_entries_in_group = entries_for_scan;
+            std::sort(sorted_entries_in_group.begin(), sorted_entries_in_group.end(), [](const QuarantineMetadata& a, const QuarantineMetadata& b) {
+                return a.QuarantineDate < b.QuarantineDate;
+            });
+
+            for (const auto& entry : sorted_entries_in_group) {
+                // Table row에 data-quarantine-date 속성 추가
+                html << "<tr data-scan-id=\"" << scan_id << "\" data-reason=\"" << generalizeReason(entry.QuarantineReason) << "\" data-quarantine-date=\"" << entry.QuarantineDate << "\">"; 
+                html << "<td>" << scan_id << "</td>"; // Scan ID 표시
+                html << "<td>" << generalizeReason(entry.QuarantineReason) << "</td>"; // generalizeReason 사용
+                html << "<td>" << entry.MalwareNameOrRule << "</td>"; // Malware Name / Rule
+                html << "<td>" << entry.OriginalPath << "</td>";
+                html << "<td>" << getFileNameFromPath(entry.OriginalPath) << "</td>"; // OriginalPath에서 파일 이름 추출
+                html << "<td>" << formatQuarantineDateForDisplay(entry.QuarantineDate) << "</td>"; // Date
+                html << "<td>" << "Yes" << "</td>"; // QuarantineMetadata에 있으면 성공으로 간주
+                html << "</tr>\n";
+            }
+        }
+        html << R"(</tbody></table>)";
+    }
+
 
     // --------------------------------------------------
     // LOG팀 리포트
